@@ -14,7 +14,7 @@
 
 ## Étape 2 - Design et site vitrine
 
-- [ ] Construire une page d'accueil responsive à partir de la maquette validée.
+- [x] Construire une page d'accueil responsive à partir de la maquette validée.
 - [ ] Créer les pages Services, Enseignants, Tarifs, À propos et Contact.
 - [x] Créer le premier formulaire de réservation (prototype HTML autonome).
 - [x] Ajouter le formulaire de candidature enseignant (prototype HTML autonome).
