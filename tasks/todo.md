@@ -15,7 +15,8 @@
 ## Étape 2 - Design et site vitrine
 
 - [x] Construire une page d'accueil responsive à partir de la maquette validée.
-- [ ] Créer les pages Services, Enseignants, Tarifs, À propos et Contact.
+- [x] Créer la page Services.
+- [ ] Créer les pages Enseignants, Tarifs, À propos et Contact.
 - [x] Créer le premier formulaire de réservation (prototype HTML autonome).
 - [x] Ajouter le formulaire de candidature enseignant (prototype HTML autonome).
 
@@ -34,8 +35,8 @@
 ## Conservation du projet
 
 - [x] Ajouter une documentation de maintenance locale.
-- [ ] Créer une sauvegarde ZIP après chaque étape importante.
-- [ ] Enregistrer chaque étape importante dans l'historique Git local.
+- [x] Créer une sauvegarde ZIP après chaque étape importante.
+- [x] Enregistrer chaque étape importante dans l'historique Git local.
 
 ## Notes d'analyse
 
