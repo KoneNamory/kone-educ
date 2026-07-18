@@ -18,7 +18,8 @@
 - [x] Créer la page Services.
 - [x] Créer la page Enseignants.
 - [x] Créer la page Tarifs.
-- [ ] Créer les pages À propos et Contact.
+- [x] Créer la page À propos.
+- [ ] Créer la page Contact.
 - [x] Créer le premier formulaire de réservation (prototype HTML autonome).
 - [x] Ajouter le formulaire de candidature enseignant (prototype HTML autonome).
 
