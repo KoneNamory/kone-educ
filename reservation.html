@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Réservez un enseignant à domicile avec KONE.EDUC.">
   <title>Réserver un enseignant | KONE.EDUC</title>
+  <script src="supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
@@ -85,12 +87,17 @@
       otherSubject.required = isOther;
       if (!isOther) otherSubject.value = '';
     });
-    document.getElementById('booking-form').addEventListener('submit', function (event) {
+    const bookingClient = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+    document.getElementById('booking-form').addEventListener('submit', async function (event) {
       event.preventDefault();
-      document.getElementById('confirmation').classList.add('show');
-      const button = this.querySelector('button');
-      button.textContent = 'Demande envoyée ✓';
-      button.disabled = true;
+      const confirmation = document.getElementById('confirmation');
+      const { data: { user } } = await bookingClient.auth.getUser();
+      if (!user) { confirmation.textContent = 'Connectez-vous d’abord pour enregistrer votre demande.'; confirmation.classList.add('show'); return; }
+      const form = new FormData(this);
+      const { error } = await bookingClient.from('course_requests').insert({ parent_id: user.id, student_name: form.get('studentName'), school_level: form.get('level'), subject: form.get('subject') === 'other' ? form.get('otherSubject') : form.get('subject'), location: form.get('location'), format: form.get('format'), availability: form.get('availability'), details: form.get('details') });
+      if (error) { confirmation.textContent = 'Erreur : ' + error.message; confirmation.classList.add('show'); return; }
+      confirmation.textContent = 'Demande enregistrée avec succès !'; confirmation.classList.add('show');
+      const button = this.querySelector('button'); button.textContent = 'Demande envoyée ✓'; button.disabled = true;
     });
   </script>
 </body>
