@@ -27,6 +27,7 @@
 
 - [x] Créer le premier espace Parent en mode démo.
 - [x] Créer le premier espace Enseignant en mode démo.
+- [x] Créer le premier espace Administrateur en mode démo.
 - [ ] Mettre en place l'authentification et les rôles Parent, Enseignant, Administrateur.
 - [ ] Construire les tableaux de bord et le suivi des demandes.
 - [ ] Ajouter messagerie, paiements et notifications avec des services adaptés.
