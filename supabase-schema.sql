@@ -1,8 +1,8 @@
--- KONE.EDUC - schéma initial Supabase
+-- KONE.EDUC - schéma et droits Supabase
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
-  role text not null check (role in ('parent', 'teacher', 'admin')),
+  role text not null check (role in ('parent','teacher','admin')),
   phone text,
   created_at timestamptz not null default now()
 );
@@ -17,27 +17,23 @@ create table if not exists public.course_requests (
   format text not null,
   availability text not null,
   details text,
-  status text not null default 'pending' check (status in ('pending', 'assigned', 'completed', 'cancelled')),
+  status text not null default 'pending',
   created_at timestamptz not null default now()
-);
-
-create table if not exists public.teacher_profiles (
-  id uuid primary key references public.profiles(id) on delete cascade,
-  degree text,
-  subject text,
-  experience text,
-  availability text,
-  format text,
-  bio text,
-  approved boolean not null default false
 );
 
 alter table public.profiles enable row level security;
 alter table public.course_requests enable row level security;
-alter table public.teacher_profiles enable row level security;
 
-create policy "Users read own profile" on public.profiles for select using (auth.uid() = id);
-create policy "Parents create requests" on public.course_requests for insert with check (auth.uid() = parent_id);
-create policy "Parents read own requests" on public.course_requests for select using (auth.uid() = parent_id);
-create policy "Teachers update own profile" on public.teacher_profiles for update using (auth.uid() = id);
-create policy "Teachers read own profile" on public.teacher_profiles for select using (auth.uid() = id);
+grant usage on schema public to authenticated;
+grant insert, select on public.course_requests to authenticated;
+grant usage, select on sequence public.course_requests_id_seq to authenticated;
+
+drop policy if exists "Users create own profile" on public.profiles;
+drop policy if exists "Users read own profile" on public.profiles;
+drop policy if exists "Allow authenticated request inserts" on public.course_requests;
+drop policy if exists "Parents read own requests" on public.course_requests;
+
+create policy "Users create own profile" on public.profiles for insert to authenticated with check (auth.uid() = id);
+create policy "Users read own profile" on public.profiles for select to authenticated using (auth.uid() = id);
+create policy "Allow authenticated request inserts" on public.course_requests for insert to authenticated with check (auth.uid() = parent_id);
+create policy "Parents read own requests" on public.course_requests for select to authenticated using (auth.uid() = parent_id);
