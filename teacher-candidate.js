@@ -5,7 +5,7 @@ document.getElementById('teacher-form').addEventListener('submit', async functio
   const form = new FormData(this);
   const subject = form.get('subject') === 'other' ? form.get('otherSubject') : form.get('subject');
   const degree = form.get('degree') === 'other' ? form.get('otherDegree') : form.get('degree');
-  const { error } = await teacherDb.from('teacher_profiles').insert({ id: user.id, degree, subject, experience: form.get('experience'), availability: form.get('availability'), course_format: form.get('format'), bio: form.get('bio') });
+  const { error } = await teacherDb.from('teacher_profiles').insert({ id: user.id, degree, subject, experience: form.get('experience'), availability: form.get('availability'), format: form.get('format'), bio: form.get('bio') });
   const message = document.getElementById('confirmation');
   if (error) { message.textContent = 'Erreur : ' + error.message; message.classList.add('show'); return; }
   message.textContent = 'Candidature enregistrée avec succès !'; message.classList.add('show');
