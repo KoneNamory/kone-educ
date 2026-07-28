@@ -63,3 +63,22 @@ drop policy if exists "Admins read teacher profiles" on public.teacher_profiles;
 drop policy if exists "Admins update teacher profiles" on public.teacher_profiles;
 create policy "Admins read teacher profiles" on public.teacher_profiles for select to authenticated using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
 create policy "Admins update teacher profiles" on public.teacher_profiles for update to authenticated using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+
+-- Attribution d'un enseignant par l'administrateur
+alter table public.course_requests
+  add column if not exists teacher_id uuid references public.profiles(id) on delete set null;
+
+grant update on public.course_requests to authenticated;
+drop policy if exists "Admins read all course requests" on public.course_requests;
+drop policy if exists "Admins update course requests" on public.course_requests;
+drop policy if exists "Teachers read assigned course requests" on public.course_requests;
+create policy "Admins read all course requests" on public.course_requests
+  for select to authenticated
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+create policy "Admins update course requests" on public.course_requests
+  for update to authenticated
+  using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'))
+  with check (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+create policy "Teachers read assigned course requests" on public.course_requests
+  for select to authenticated
+  using (teacher_id = auth.uid());
