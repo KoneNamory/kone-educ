@@ -52,3 +52,9 @@ alter table public.teacher_profiles enable row level security;
 grant insert, select on public.teacher_profiles to authenticated;
 drop policy if exists "Teachers create own profile" on public.teacher_profiles;
 create policy "Teachers create own profile" on public.teacher_profiles for insert to authenticated with check (auth.uid() = id);
+
+grant update on public.teacher_profiles to authenticated;
+drop policy if exists "Admins read teacher profiles" on public.teacher_profiles;
+drop policy if exists "Admins update teacher profiles" on public.teacher_profiles;
+create policy "Admins read teacher profiles" on public.teacher_profiles for select to authenticated using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+create policy "Admins update teacher profiles" on public.teacher_profiles for update to authenticated using (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
