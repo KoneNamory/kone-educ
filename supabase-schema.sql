@@ -44,7 +44,7 @@ create table if not exists public.teacher_profiles (
   subject text,
   experience text,
   availability text,
-  course_format text,
+  format text,
   bio text,
   approved boolean not null default false
 );
@@ -52,6 +52,10 @@ alter table public.teacher_profiles enable row level security;
 grant insert, select on public.teacher_profiles to authenticated;
 drop policy if exists "Teachers create own profile" on public.teacher_profiles;
 create policy "Teachers create own profile" on public.teacher_profiles for insert to authenticated with check (auth.uid() = id);
+drop policy if exists "Teachers read own profile" on public.teacher_profiles;
+drop policy if exists "Teachers update own profile" on public.teacher_profiles;
+create policy "Teachers read own profile" on public.teacher_profiles for select to authenticated using (auth.uid() = id);
+create policy "Teachers update own profile" on public.teacher_profiles for update to authenticated using (auth.uid() = id);
 
 grant update on public.teacher_profiles to authenticated;
 drop policy if exists "Admins read teacher profiles" on public.teacher_profiles;
