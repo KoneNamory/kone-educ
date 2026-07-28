@@ -25,6 +25,7 @@ alter table public.profiles enable row level security;
 alter table public.course_requests enable row level security;
 
 grant usage on schema public to authenticated;
+grant select on public.profiles to authenticated;
 grant insert, select on public.course_requests to authenticated;
 grant usage, select on sequence public.course_requests_id_seq to authenticated;
 
