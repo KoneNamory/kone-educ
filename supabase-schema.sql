@@ -36,6 +36,10 @@ drop policy if exists "Parents read own requests" on public.course_requests;
 
 create policy "Users create own profile" on public.profiles for insert to authenticated with check (auth.uid() = id);
 create policy "Users read own profile" on public.profiles for select to authenticated using (auth.uid() = id);
+grant update on public.profiles to authenticated;
+drop policy if exists "Users update own profile" on public.profiles;
+create policy "Users update own profile" on public.profiles
+  for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 create policy "Allow authenticated request inserts" on public.course_requests for insert to authenticated with check (auth.uid() = parent_id);
 create policy "Parents read own requests" on public.course_requests for select to authenticated using (auth.uid() = parent_id);
 

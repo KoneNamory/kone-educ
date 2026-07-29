@@ -94,6 +94,8 @@
       const { data: { user } } = await bookingClient.auth.getUser();
       if (!user) { confirmation.textContent = 'Connectez-vous d’abord pour enregistrer votre demande.'; confirmation.classList.add('show'); return; }
       const form = new FormData(this);
+      const profileUpdate = await bookingClient.from('profiles').update({ full_name: form.get('parentName'), phone: form.get('phone') }).eq('id', user.id);
+      if (profileUpdate.error) { confirmation.textContent = 'Erreur : ' + profileUpdate.error.message; confirmation.classList.add('show'); return; }
       const { error } = await bookingClient.from('course_requests').insert({ parent_id: user.id, student_name: form.get('studentName'), school_level: form.get('level'), subject: form.get('subject') === 'other' ? form.get('otherSubject') : form.get('subject'), location: form.get('location'), format: form.get('format'), availability: form.get('availability'), details: form.get('details') });
       if (error) { confirmation.textContent = 'Erreur : ' + error.message; confirmation.classList.add('show'); return; }
       confirmation.textContent = 'Demande enregistrée avec succès !'; confirmation.classList.add('show');
