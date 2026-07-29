@@ -82,3 +82,26 @@ create policy "Admins update course requests" on public.course_requests
 create policy "Teachers read assigned course requests" on public.course_requests
   for select to authenticated
   using (teacher_id = auth.uid());
+
+-- Notifications visibles dans les espaces Parent et Enseignant
+create table if not exists public.notifications (
+  id bigint generated always as identity primary key,
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  body text not null,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.notifications enable row level security;
+grant select, insert, update on public.notifications to authenticated;
+grant usage, select on sequence public.notifications_id_seq to authenticated;
+drop policy if exists "Users read own notifications" on public.notifications;
+drop policy if exists "Users mark own notifications read" on public.notifications;
+drop policy if exists "Admins create notifications" on public.notifications;
+create policy "Users read own notifications" on public.notifications
+  for select to authenticated using (recipient_id = auth.uid());
+create policy "Users mark own notifications read" on public.notifications
+  for update to authenticated using (recipient_id = auth.uid());
+create policy "Admins create notifications" on public.notifications
+  for insert to authenticated
+  with check (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
