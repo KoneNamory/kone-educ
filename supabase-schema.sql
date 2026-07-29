@@ -49,11 +49,13 @@ create table if not exists public.teacher_profiles (
   subject text,
   experience text,
   availability text,
+  location text,
   format text,
   bio text,
   approved boolean not null default false
 );
 alter table public.teacher_profiles enable row level security;
+alter table public.teacher_profiles add column if not exists location text;
 grant insert, select on public.teacher_profiles to authenticated;
 drop policy if exists "Teachers create own profile" on public.teacher_profiles;
 create policy "Teachers create own profile" on public.teacher_profiles for insert to authenticated with check (auth.uid() = id);
