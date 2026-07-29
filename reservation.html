@@ -92,7 +92,7 @@
       event.preventDefault();
       const confirmation = document.getElementById('confirmation');
       const { data: { user } } = await bookingClient.auth.getUser();
-      if (!user) { confirmation.textContent = 'Connectez-vous d’abord pour enregistrer votre demande.'; confirmation.classList.add('show'); return; }
+      if (!user) { location.href = 'connexion.html?redirect=reservation.html'; return; }
       const form = new FormData(this);
       const profileUpdate = await bookingClient.from('profiles').update({ full_name: form.get('parentName'), phone: form.get('phone') }).eq('id', user.id);
       if (profileUpdate.error) { confirmation.textContent = 'Erreur : ' + profileUpdate.error.message; confirmation.classList.add('show'); return; }
