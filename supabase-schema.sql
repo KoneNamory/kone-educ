@@ -111,3 +111,49 @@ create policy "Users mark own notifications read" on public.notifications
 create policy "Admins create notifications" on public.notifications
   for insert to authenticated
   with check (exists (select 1 from public.profiles where profiles.id = auth.uid() and profiles.role = 'admin'));
+
+create table if not exists public.documents (
+  id bigint generated always as identity primary key,
+  title text not null,
+  description text,
+  audience text not null check (audience in ('parent','teacher','all')),
+  storage_path text not null unique,
+  file_name text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.documents enable row level security;
+grant select, insert, delete on public.documents to authenticated;
+grant usage, select on sequence public.documents_id_seq to authenticated;
+create policy "Users read intended documents" on public.documents for select to authenticated using (audience='all' or audience=(select role from public.profiles where id=auth.uid()) or exists(select 1 from public.profiles where id=auth.uid() and role='admin'));
+create policy "Admins manage documents" on public.documents for all to authenticated using (exists(select 1 from public.profiles where id=auth.uid() and role='admin')) with check (exists(select 1 from public.profiles where id=auth.uid() and role='admin'));
+
+-- Messagerie entre le parent et l'enseignant attribué à une demande de cours
+create table if not exists public.messages (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  recipient_id uuid not null references public.profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.messages enable row level security;
+grant select, insert on public.messages to authenticated;
+grant usage, select on sequence public.messages_id_seq to authenticated;
+drop policy if exists "Participants read own messages" on public.messages;
+drop policy if exists "Participants send messages on their course" on public.messages;
+create policy "Participants read own messages" on public.messages
+  for select to authenticated
+  using (sender_id = auth.uid() or recipient_id = auth.uid());
+create policy "Participants send messages on their course" on public.messages
+  for insert to authenticated
+  with check (
+    sender_id = auth.uid()
+    and exists (
+      select 1 from public.course_requests cr
+      where cr.id = course_request_id
+        and cr.parent_id is not null and cr.teacher_id is not null
+        and (cr.parent_id = auth.uid() or cr.teacher_id = auth.uid())
+        and (recipient_id = cr.parent_id or recipient_id = cr.teacher_id)
+        and recipient_id <> auth.uid()
+    )
+  );
