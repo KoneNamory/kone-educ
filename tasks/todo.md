@@ -28,9 +28,12 @@
 - [x] Créer le premier espace Parent en mode démo.
 - [x] Créer le premier espace Enseignant en mode démo.
 - [x] Créer le premier espace Administrateur en mode démo.
-- [ ] Mettre en place l'authentification et les rôles Parent, Enseignant, Administrateur.
-- [ ] Construire les tableaux de bord et le suivi des demandes.
-- [ ] Ajouter messagerie, paiements et notifications avec des services adaptés.
+- [x] Mettre en place l'authentification et les rôles Parent, Enseignant, Administrateur.
+- [x] Construire les tableaux de bord et le suivi des demandes.
+- [x] Ajouter les notifications dans les espaces Parent et Enseignant.
+- [x] Ajouter la bibliothèque de documents.
+- [x] Ajouter la messagerie entre le parent et l'enseignant attribué (`messagerie.html`).
+- [ ] Ajouter les paiements (Mobile Money, carte) avec un service adapté.
 
 ## Étape 4 - Qualité et mise en ligne
 

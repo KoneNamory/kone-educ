@@ -20,3 +20,4 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 
 - `reservation.html` : demande de cours pour les parents.
 - `candidature-enseignant.html` : candidature des enseignants.
+- `messagerie.html?cours=ID` : échanges entre le parent et l'enseignant attribué à un cours.
