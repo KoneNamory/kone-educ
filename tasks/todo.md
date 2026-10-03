@@ -28,14 +28,23 @@
 - [x] Créer le premier espace Parent en mode démo.
 - [x] Créer le premier espace Enseignant en mode démo.
 - [x] Créer le premier espace Administrateur en mode démo.
-- [ ] Mettre en place l'authentification et les rôles Parent, Enseignant, Administrateur.
-- [ ] Construire les tableaux de bord et le suivi des demandes.
-- [ ] Ajouter messagerie, paiements et notifications avec des services adaptés.
+- [x] Mettre en place l'authentification et les rôles Parent, Enseignant, Administrateur.
+- [x] Construire les tableaux de bord et le suivi des demandes.
+- [x] Ajouter les notifications dans les espaces Parent et Enseignant.
+- [x] Ajouter la bibliothèque de documents.
+- [x] Ajouter la messagerie entre le parent et l'enseignant attribué (`messagerie.html`).
+- [x] Facturation mensuelle : l'administrateur crée les factures, le parent paie par Wave ou Orange Money et indique la référence, l'administrateur confirme (`paiements.html`).
+- [ ] Renseigner le lien Wave Business et le numéro marchand Orange Money dans `payment-config.js`.
+- [ ] Confirmation automatique des paiements via les API Wave Checkout et Orange Money Web Payment (nécessite les contrats marchands et une fonction serveur).
 
 ## Étape 4 - Qualité et mise en ligne
 
 - [ ] Tester l'expérience mobile, les formulaires et les parcours principaux.
-- [ ] Préparer les données de démonstration, la sécurité et les mentions légales.
+- [x] Sécuriser les rôles (pas d'auto-promotion administrateur ni d'auto-validation enseignant).
+- [x] Enregistrer les messages du formulaire de contact et les afficher dans l'espace Administration.
+- [x] Rédiger les mentions légales et la politique de confidentialité (`mentions-legales.html`).
+- [ ] Compléter les informations marquées « à compléter » dans `mentions-legales.html` (RCCM, adresse, responsable, durées de conservation).
+- [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 
 ## Conservation du projet

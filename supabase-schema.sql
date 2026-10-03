@@ -124,6 +124,8 @@ create table if not exists public.documents (
 alter table public.documents enable row level security;
 grant select, insert, delete on public.documents to authenticated;
 grant usage, select on sequence public.documents_id_seq to authenticated;
+drop policy if exists "Users read intended documents" on public.documents;
+drop policy if exists "Admins manage documents" on public.documents;
 create policy "Users read intended documents" on public.documents for select to authenticated using (audience='all' or audience=(select role from public.profiles where id=auth.uid()) or exists(select 1 from public.profiles where id=auth.uid() and role='admin'));
 create policy "Admins manage documents" on public.documents for all to authenticated using (exists(select 1 from public.profiles where id=auth.uid() and role='admin')) with check (exists(select 1 from public.profiles where id=auth.uid() and role='admin'));
 
@@ -157,3 +159,155 @@ create policy "Participants send messages on their course" on public.messages
         and recipient_id <> auth.uid()
     )
   );
+
+-- Sécurité : empêcher un utilisateur de se donner des droits qu'il n'a pas
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
+$$;
+
+-- À l'inscription, seuls les rôles Parent et Enseignant peuvent être choisis
+drop policy if exists "Users create own profile" on public.profiles;
+create policy "Users create own profile" on public.profiles for insert to authenticated
+  with check (auth.uid() = id and role in ('parent','teacher'));
+
+-- Le rôle ne peut être modifié que par un administrateur (ou depuis le tableau de bord Supabase)
+create or replace function public.protect_profile_role() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.role is distinct from old.role and auth.uid() is not null and not public.is_admin() then
+    raise exception 'Modification du rôle non autorisée';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_profile_role on public.profiles;
+create trigger protect_profile_role before update on public.profiles
+  for each row execute function public.protect_profile_role();
+
+-- Un enseignant ne peut pas valider sa propre candidature
+drop policy if exists "Teachers create own profile" on public.teacher_profiles;
+create policy "Teachers create own profile" on public.teacher_profiles for insert to authenticated
+  with check (auth.uid() = id and approved = false);
+create or replace function public.protect_teacher_approval() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.approved is distinct from old.approved and auth.uid() is not null and not public.is_admin() then
+    raise exception 'Seul un administrateur peut valider une candidature';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_teacher_approval on public.teacher_profiles;
+create trigger protect_teacher_approval before update on public.teacher_profiles
+  for each row execute function public.protect_teacher_approval();
+
+-- Une nouvelle demande de cours est toujours en attente et sans enseignant
+drop policy if exists "Allow authenticated request inserts" on public.course_requests;
+create policy "Allow authenticated request inserts" on public.course_requests for insert to authenticated
+  with check (auth.uid() = parent_id and teacher_id is null and status = 'pending');
+
+-- Notification automatique du destinataire à chaque nouveau message
+create or replace function public.notify_new_message() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select new.recipient_id, 'Nouveau message',
+         'Nouveau message concernant le cours de ' || cr.subject || ' pour ' || cr.student_name || '.'
+  from public.course_requests cr where cr.id = new.course_request_id;
+  return new;
+end;
+$$;
+drop trigger if exists notify_new_message on public.messages;
+create trigger notify_new_message after insert on public.messages
+  for each row execute function public.notify_new_message();
+
+-- Messages envoyés depuis le formulaire de contact (visiteurs connectés ou non)
+create table if not exists public.contact_messages (
+  id bigint generated always as identity primary key,
+  name text not null check (char_length(name) <= 120),
+  email text not null check (char_length(email) <= 200),
+  subject text not null check (char_length(subject) <= 100),
+  message text not null check (char_length(message) <= 3000),
+  created_at timestamptz not null default now()
+);
+alter table public.contact_messages enable row level security;
+grant insert on public.contact_messages to anon, authenticated;
+grant select, delete on public.contact_messages to authenticated;
+drop policy if exists "Anyone sends a contact message" on public.contact_messages;
+drop policy if exists "Admins read contact messages" on public.contact_messages;
+drop policy if exists "Admins delete contact messages" on public.contact_messages;
+create policy "Anyone sends a contact message" on public.contact_messages for insert to anon, authenticated with check (true);
+create policy "Admins read contact messages" on public.contact_messages for select to authenticated using (public.is_admin());
+create policy "Admins delete contact messages" on public.contact_messages for delete to authenticated using (public.is_admin());
+
+-- Factures mensuelles et paiements (Wave Business, Orange Money)
+create table if not exists public.invoices (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  parent_id uuid not null references public.profiles(id) on delete cascade,
+  month date not null,
+  amount integer not null check (amount > 0),
+  status text not null default 'unpaid' check (status in ('unpaid','pending','paid')),
+  payment_method text check (payment_method in ('wave','orange_money')),
+  payment_reference text check (char_length(payment_reference) <= 100),
+  paid_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (course_request_id, month)
+);
+alter table public.invoices enable row level security;
+grant select, update on public.invoices to authenticated;
+grant insert, delete on public.invoices to authenticated;
+grant usage, select on sequence public.invoices_id_seq to authenticated;
+drop policy if exists "Parents read own invoices" on public.invoices;
+drop policy if exists "Parents declare payment" on public.invoices;
+drop policy if exists "Admins manage invoices" on public.invoices;
+create policy "Parents read own invoices" on public.invoices for select to authenticated using (parent_id = auth.uid());
+create policy "Parents declare payment" on public.invoices for update to authenticated
+  using (parent_id = auth.uid() and status <> 'paid') with check (parent_id = auth.uid());
+create policy "Admins manage invoices" on public.invoices for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- Un parent peut seulement déclarer son paiement (moyen + référence) ; seul un administrateur confirme
+create or replace function public.protect_invoice() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or public.is_admin() then
+    if new.status = 'paid' and old.status <> 'paid' then new.paid_at := now(); end if;
+    return new;
+  end if;
+  if new.course_request_id <> old.course_request_id or new.parent_id <> old.parent_id
+     or new.month <> old.month or new.amount <> old.amount or new.paid_at is distinct from old.paid_at
+     or new.status <> 'pending' or new.payment_method is null or coalesce(trim(new.payment_reference),'') = '' then
+    raise exception 'Seuls le moyen de paiement et la référence de transaction peuvent être indiqués';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_invoice on public.invoices;
+create trigger protect_invoice before update on public.invoices
+  for each row execute function public.protect_invoice();
+
+-- Notifications liées aux factures
+create or replace function public.notify_invoice() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare label text;
+begin
+  label := to_char(new.month, 'MM/YYYY') || ' · ' || new.amount || ' FCFA';
+  if tg_op = 'INSERT' then
+    insert into public.notifications (recipient_id, title, body)
+    values (new.parent_id, 'Nouvelle facture', 'Votre facture de ' || label || ' est disponible dans « Mes paiements ».');
+  elsif new.status = 'pending' and old.status <> 'pending' then
+    insert into public.notifications (recipient_id, title, body)
+    select id, 'Paiement à vérifier', 'Paiement déclaré pour la facture de ' || label || ' (réf. ' || new.payment_reference || ').'
+    from public.profiles where role = 'admin';
+  elsif new.status = 'paid' and old.status <> 'paid' then
+    insert into public.notifications (recipient_id, title, body)
+    values (new.parent_id, 'Paiement confirmé', 'Merci ! Votre paiement de ' || label || ' a été confirmé.');
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_invoice on public.invoices;
+create trigger notify_invoice after insert or update on public.invoices
+  for each row execute function public.notify_invoice();
