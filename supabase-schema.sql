@@ -221,3 +221,22 @@ $$;
 drop trigger if exists notify_new_message on public.messages;
 create trigger notify_new_message after insert on public.messages
   for each row execute function public.notify_new_message();
+
+-- Messages envoyés depuis le formulaire de contact (visiteurs connectés ou non)
+create table if not exists public.contact_messages (
+  id bigint generated always as identity primary key,
+  name text not null check (char_length(name) <= 120),
+  email text not null check (char_length(email) <= 200),
+  subject text not null check (char_length(subject) <= 100),
+  message text not null check (char_length(message) <= 3000),
+  created_at timestamptz not null default now()
+);
+alter table public.contact_messages enable row level security;
+grant insert on public.contact_messages to anon, authenticated;
+grant select, delete on public.contact_messages to authenticated;
+drop policy if exists "Anyone sends a contact message" on public.contact_messages;
+drop policy if exists "Admins read contact messages" on public.contact_messages;
+drop policy if exists "Admins delete contact messages" on public.contact_messages;
+create policy "Anyone sends a contact message" on public.contact_messages for insert to anon, authenticated with check (true);
+create policy "Admins read contact messages" on public.contact_messages for select to authenticated using (public.is_admin());
+create policy "Admins delete contact messages" on public.contact_messages for delete to authenticated using (public.is_admin());

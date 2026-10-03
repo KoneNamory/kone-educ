@@ -38,7 +38,11 @@
 ## Étape 4 - Qualité et mise en ligne
 
 - [ ] Tester l'expérience mobile, les formulaires et les parcours principaux.
-- [ ] Préparer les données de démonstration, la sécurité et les mentions légales.
+- [x] Sécuriser les rôles (pas d'auto-promotion administrateur ni d'auto-validation enseignant).
+- [x] Enregistrer les messages du formulaire de contact et les afficher dans l'espace Administration.
+- [x] Rédiger les mentions légales et la politique de confidentialité (`mentions-legales.html`).
+- [ ] Compléter les informations marquées « à compléter » dans `mentions-legales.html` (RCCM, adresse, responsable, durées de conservation).
+- [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 
 ## Conservation du projet

@@ -21,3 +21,5 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `reservation.html` : demande de cours pour les parents.
 - `candidature-enseignant.html` : candidature des enseignants.
 - `messagerie.html?cours=ID` : échanges entre le parent et l'enseignant attribué à un cours.
+- `contact.html` : formulaire de contact ; les messages s'affichent dans `espace-admin.html`.
+- `mentions-legales.html` : mentions légales et politique de confidentialité.
