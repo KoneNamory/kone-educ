@@ -23,3 +23,5 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `messagerie.html?cours=ID` : échanges entre le parent et l'enseignant attribué à un cours.
 - `contact.html` : formulaire de contact ; les messages s'affichent dans `espace-admin.html`.
 - `mentions-legales.html` : mentions légales et politique de confidentialité.
+- `paiements.html` : factures mensuelles du parent et paiement par Wave ou Orange Money.
+- `payment-config.js` : lien de paiement Wave Business et numéro marchand Orange Money affichés aux parents.

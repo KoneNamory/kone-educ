@@ -33,7 +33,9 @@
 - [x] Ajouter les notifications dans les espaces Parent et Enseignant.
 - [x] Ajouter la bibliothèque de documents.
 - [x] Ajouter la messagerie entre le parent et l'enseignant attribué (`messagerie.html`).
-- [ ] Ajouter les paiements (Mobile Money, carte) avec un service adapté.
+- [x] Facturation mensuelle : l'administrateur crée les factures, le parent paie par Wave ou Orange Money et indique la référence, l'administrateur confirme (`paiements.html`).
+- [ ] Renseigner le lien Wave Business et le numéro marchand Orange Money dans `payment-config.js`.
+- [ ] Confirmation automatique des paiements via les API Wave Checkout et Orange Money Web Payment (nécessite les contrats marchands et une fonction serveur).
 
 ## Étape 4 - Qualité et mise en ligne
 

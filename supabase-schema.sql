@@ -240,3 +240,74 @@ drop policy if exists "Admins delete contact messages" on public.contact_message
 create policy "Anyone sends a contact message" on public.contact_messages for insert to anon, authenticated with check (true);
 create policy "Admins read contact messages" on public.contact_messages for select to authenticated using (public.is_admin());
 create policy "Admins delete contact messages" on public.contact_messages for delete to authenticated using (public.is_admin());
+
+-- Factures mensuelles et paiements (Wave Business, Orange Money)
+create table if not exists public.invoices (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  parent_id uuid not null references public.profiles(id) on delete cascade,
+  month date not null,
+  amount integer not null check (amount > 0),
+  status text not null default 'unpaid' check (status in ('unpaid','pending','paid')),
+  payment_method text check (payment_method in ('wave','orange_money')),
+  payment_reference text check (char_length(payment_reference) <= 100),
+  paid_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (course_request_id, month)
+);
+alter table public.invoices enable row level security;
+grant select, update on public.invoices to authenticated;
+grant insert, delete on public.invoices to authenticated;
+grant usage, select on sequence public.invoices_id_seq to authenticated;
+drop policy if exists "Parents read own invoices" on public.invoices;
+drop policy if exists "Parents declare payment" on public.invoices;
+drop policy if exists "Admins manage invoices" on public.invoices;
+create policy "Parents read own invoices" on public.invoices for select to authenticated using (parent_id = auth.uid());
+create policy "Parents declare payment" on public.invoices for update to authenticated
+  using (parent_id = auth.uid() and status <> 'paid') with check (parent_id = auth.uid());
+create policy "Admins manage invoices" on public.invoices for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- Un parent peut seulement déclarer son paiement (moyen + référence) ; seul un administrateur confirme
+create or replace function public.protect_invoice() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or public.is_admin() then
+    if new.status = 'paid' and old.status <> 'paid' then new.paid_at := now(); end if;
+    return new;
+  end if;
+  if new.course_request_id <> old.course_request_id or new.parent_id <> old.parent_id
+     or new.month <> old.month or new.amount <> old.amount or new.paid_at is distinct from old.paid_at
+     or new.status <> 'pending' or new.payment_method is null or coalesce(trim(new.payment_reference),'') = '' then
+    raise exception 'Seuls le moyen de paiement et la référence de transaction peuvent être indiqués';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_invoice on public.invoices;
+create trigger protect_invoice before update on public.invoices
+  for each row execute function public.protect_invoice();
+
+-- Notifications liées aux factures
+create or replace function public.notify_invoice() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare label text;
+begin
+  label := to_char(new.month, 'MM/YYYY') || ' · ' || new.amount || ' FCFA';
+  if tg_op = 'INSERT' then
+    insert into public.notifications (recipient_id, title, body)
+    values (new.parent_id, 'Nouvelle facture', 'Votre facture de ' || label || ' est disponible dans « Mes paiements ».');
+  elsif new.status = 'pending' and old.status <> 'pending' then
+    insert into public.notifications (recipient_id, title, body)
+    select id, 'Paiement à vérifier', 'Paiement déclaré pour la facture de ' || label || ' (réf. ' || new.payment_reference || ').'
+    from public.profiles where role = 'admin';
+  elsif new.status = 'paid' and old.status <> 'paid' then
+    insert into public.notifications (recipient_id, title, body)
+    values (new.parent_id, 'Paiement confirmé', 'Merci ! Votre paiement de ' || label || ' a été confirmé.');
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_invoice on public.invoices;
+create trigger notify_invoice after insert or update on public.invoices
+  for each row execute function public.notify_invoice();
