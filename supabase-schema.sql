@@ -376,3 +376,8 @@ create policy "Parents update own review" on public.reviews for update to authen
     where cr.id = course_request_id and cr.parent_id = auth.uid() and cr.teacher_id = reviews.teacher_id));
 create policy "Review participants read reviews" on public.reviews for select to authenticated
   using (parent_id = auth.uid() or teacher_id = auth.uid() or public.is_admin());
+
+-- Moov Money comme moyen de paiement supplémentaire
+alter table public.invoices drop constraint if exists invoices_payment_method_check;
+alter table public.invoices add constraint invoices_payment_method_check
+  check (payment_method in ('wave','orange_money','moov_money'));
