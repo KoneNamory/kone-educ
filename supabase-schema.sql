@@ -124,6 +124,8 @@ create table if not exists public.documents (
 alter table public.documents enable row level security;
 grant select, insert, delete on public.documents to authenticated;
 grant usage, select on sequence public.documents_id_seq to authenticated;
+drop policy if exists "Users read intended documents" on public.documents;
+drop policy if exists "Admins manage documents" on public.documents;
 create policy "Users read intended documents" on public.documents for select to authenticated using (audience='all' or audience=(select role from public.profiles where id=auth.uid()) or exists(select 1 from public.profiles where id=auth.uid() and role='admin'));
 create policy "Admins manage documents" on public.documents for all to authenticated using (exists(select 1 from public.profiles where id=auth.uid() and role='admin')) with check (exists(select 1 from public.profiles where id=auth.uid() and role='admin'));
 
@@ -157,3 +159,65 @@ create policy "Participants send messages on their course" on public.messages
         and recipient_id <> auth.uid()
     )
   );
+
+-- Sécurité : empêcher un utilisateur de se donner des droits qu'il n'a pas
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
+$$;
+
+-- À l'inscription, seuls les rôles Parent et Enseignant peuvent être choisis
+drop policy if exists "Users create own profile" on public.profiles;
+create policy "Users create own profile" on public.profiles for insert to authenticated
+  with check (auth.uid() = id and role in ('parent','teacher'));
+
+-- Le rôle ne peut être modifié que par un administrateur (ou depuis le tableau de bord Supabase)
+create or replace function public.protect_profile_role() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.role is distinct from old.role and auth.uid() is not null and not public.is_admin() then
+    raise exception 'Modification du rôle non autorisée';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_profile_role on public.profiles;
+create trigger protect_profile_role before update on public.profiles
+  for each row execute function public.protect_profile_role();
+
+-- Un enseignant ne peut pas valider sa propre candidature
+drop policy if exists "Teachers create own profile" on public.teacher_profiles;
+create policy "Teachers create own profile" on public.teacher_profiles for insert to authenticated
+  with check (auth.uid() = id and approved = false);
+create or replace function public.protect_teacher_approval() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.approved is distinct from old.approved and auth.uid() is not null and not public.is_admin() then
+    raise exception 'Seul un administrateur peut valider une candidature';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_teacher_approval on public.teacher_profiles;
+create trigger protect_teacher_approval before update on public.teacher_profiles
+  for each row execute function public.protect_teacher_approval();
+
+-- Une nouvelle demande de cours est toujours en attente et sans enseignant
+drop policy if exists "Allow authenticated request inserts" on public.course_requests;
+create policy "Allow authenticated request inserts" on public.course_requests for insert to authenticated
+  with check (auth.uid() = parent_id and teacher_id is null and status = 'pending');
+
+-- Notification automatique du destinataire à chaque nouveau message
+create or replace function public.notify_new_message() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select new.recipient_id, 'Nouveau message',
+         'Nouveau message concernant le cours de ' || cr.subject || ' pour ' || cr.student_name || '.'
+  from public.course_requests cr where cr.id = new.course_request_id;
+  return new;
+end;
+$$;
+drop trigger if exists notify_new_message on public.messages;
+create trigger notify_new_message after insert on public.messages
+  for each row execute function public.notify_new_message();

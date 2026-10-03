@@ -6,3 +6,13 @@
 4. Confirmez ensuite que les tables `profiles`, `course_requests` et `teacher_profiles` apparaissent dans **Table Editor**.
 
 La clé publique est enregistrée dans `supabase-config.js`. Elle peut être utilisée dans le site ; la clé `service_role` ne doit jamais être ajoutée au projet.
+
+## Mise à jour du schéma
+
+Après chaque modification de `supabase-schema.sql`, relancez **tout** le fichier dans **SQL Editor**. Il peut être relancé sans risque : il ne supprime aucune donnée.
+
+## Sécurité des rôles
+
+- À l'inscription, un utilisateur ne peut choisir que le rôle `parent` ou `teacher`.
+- Pour créer un administrateur, modifiez la colonne `role` du profil directement dans **Table Editor** (table `profiles`). Depuis le site, seul un administrateur peut changer un rôle.
+- Seul un administrateur peut valider une candidature enseignant (`approved`).
