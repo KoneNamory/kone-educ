@@ -1,7 +1,7 @@
 // Menu mobile et bouton WhatsApp des pages publiques KONE.EDUC
 (function () {
   // Numéro WhatsApp au format international sans « + » ni espaces, ex. '2250700000000'. Vide = bouton masqué.
-  var WHATSAPP = '';
+  var WHATSAPP = '2250161701361';
   var header = document.querySelector('.ke-header');
   var burger = document.querySelector('.ke-burger');
   if (header && burger) {

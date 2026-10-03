@@ -34,7 +34,7 @@
 - [x] Ajouter la bibliothèque de documents.
 - [x] Ajouter la messagerie entre le parent et l'enseignant attribué (`messagerie.html`).
 - [x] Facturation mensuelle : l'administrateur crée les factures, le parent paie par Wave ou Orange Money et indique la référence, l'administrateur confirme (`paiements.html`).
-- [ ] Renseigner le lien Wave Business et le numéro marchand Orange Money dans `payment-config.js`.
+- [x] Numéros de paiement renseignés dans `payment-config.js` (Wave, Orange Money, Moov Money).
 - [ ] Confirmation automatique des paiements via les API Wave Checkout et Orange Money Web Payment (nécessite les contrats marchands et une fonction serveur).
 
 ## Étape 4 - Qualité et mise en ligne
@@ -47,7 +47,8 @@
 - [x] En-tête et pied de page communs, menu mobile, référencement (descriptions, données structurées, sitemap).
 - [x] Suivi pédagogique : compte rendu après chaque séance et courbe de progression (`suivi.html`).
 - [x] Avis des parents sur les enseignants, note moyenne dans l'espace Administration.
-- [ ] Renseigner le numéro WhatsApp dans `site.js` et vérifier l'adresse du site dans `sitemap.xml` et `robots.txt`.
+- [x] Numéro WhatsApp renseigné dans `site.js`.
+- [ ] Vérifier l'adresse du site dans `sitemap.xml` et `robots.txt`.
 - [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 
