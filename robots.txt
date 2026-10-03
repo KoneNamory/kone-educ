@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /espace-admin.html
+Disallow: /espace-parent.html
+Disallow: /espace-enseignant.html
+Disallow: /gestion-documents.html
+Disallow: /messagerie.html
+Disallow: /paiements.html
+
+Sitemap: https://kone-educ.vercel.app/sitemap.xml

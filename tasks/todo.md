@@ -44,6 +44,10 @@
 - [x] Enregistrer les messages du formulaire de contact et les afficher dans l'espace Administration.
 - [x] Rédiger les mentions légales et la politique de confidentialité (`mentions-legales.html`).
 - [ ] Compléter les informations marquées « à compléter » dans `mentions-legales.html` (RCCM, adresse, responsable, durées de conservation).
+- [x] En-tête et pied de page communs, menu mobile, référencement (descriptions, données structurées, sitemap).
+- [x] Suivi pédagogique : compte rendu après chaque séance et courbe de progression (`suivi.html`).
+- [x] Avis des parents sur les enseignants, note moyenne dans l'espace Administration.
+- [ ] Renseigner le numéro WhatsApp dans `site.js` et vérifier l'adresse du site dans `sitemap.xml` et `robots.txt`.
 - [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 
