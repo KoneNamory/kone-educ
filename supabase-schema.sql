@@ -311,3 +311,68 @@ $$;
 drop trigger if exists notify_invoice on public.invoices;
 create trigger notify_invoice after insert or update on public.invoices
   for each row execute function public.notify_invoice();
+
+-- Suivi pédagogique : compte rendu de l'enseignant après chaque séance
+create table if not exists public.session_reports (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  teacher_id uuid not null references public.profiles(id) on delete cascade,
+  session_date date not null,
+  duration_minutes integer not null check (duration_minutes between 15 and 480),
+  topics text not null check (char_length(topics) <= 500),
+  understanding smallint not null check (understanding between 1 and 5),
+  homework text check (char_length(homework) <= 500),
+  comment text check (char_length(comment) <= 1500),
+  created_at timestamptz not null default now()
+);
+alter table public.session_reports enable row level security;
+grant select, insert on public.session_reports to authenticated;
+grant usage, select on sequence public.session_reports_id_seq to authenticated;
+drop policy if exists "Teachers write reports for assigned courses" on public.session_reports;
+drop policy if exists "Course participants read reports" on public.session_reports;
+create policy "Teachers write reports for assigned courses" on public.session_reports for insert to authenticated
+  with check (teacher_id = auth.uid() and exists (select 1 from public.course_requests cr where cr.id = course_request_id and cr.teacher_id = auth.uid()));
+create policy "Course participants read reports" on public.session_reports for select to authenticated
+  using (teacher_id = auth.uid() or public.is_admin()
+         or exists (select 1 from public.course_requests cr where cr.id = course_request_id and cr.parent_id = auth.uid()));
+
+create or replace function public.notify_session_report() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select cr.parent_id, 'Nouveau compte rendu',
+         'Séance de ' || cr.subject || ' du ' || to_char(new.session_date, 'DD/MM/YYYY') || ' pour ' || cr.student_name || ' : ' || new.topics
+  from public.course_requests cr where cr.id = new.course_request_id and cr.parent_id is not null;
+  return new;
+end;
+$$;
+drop trigger if exists notify_session_report on public.session_reports;
+create trigger notify_session_report after insert on public.session_reports
+  for each row execute function public.notify_session_report();
+
+-- Avis des parents sur l'enseignant attribué (un avis par cours, modifiable)
+create table if not exists public.reviews (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  parent_id uuid not null references public.profiles(id) on delete cascade,
+  teacher_id uuid not null references public.profiles(id) on delete cascade,
+  rating smallint not null check (rating between 1 and 5),
+  comment text check (char_length(comment) <= 1000),
+  created_at timestamptz not null default now(),
+  unique (course_request_id, parent_id)
+);
+alter table public.reviews enable row level security;
+grant select, insert, update on public.reviews to authenticated;
+grant usage, select on sequence public.reviews_id_seq to authenticated;
+drop policy if exists "Parents review their course teacher" on public.reviews;
+drop policy if exists "Parents update own review" on public.reviews;
+drop policy if exists "Review participants read reviews" on public.reviews;
+create policy "Parents review their course teacher" on public.reviews for insert to authenticated
+  with check (parent_id = auth.uid() and exists (select 1 from public.course_requests cr
+    where cr.id = course_request_id and cr.parent_id = auth.uid() and cr.teacher_id = reviews.teacher_id));
+create policy "Parents update own review" on public.reviews for update to authenticated
+  using (parent_id = auth.uid())
+  with check (parent_id = auth.uid() and exists (select 1 from public.course_requests cr
+    where cr.id = course_request_id and cr.parent_id = auth.uid() and cr.teacher_id = reviews.teacher_id));
+create policy "Review participants read reviews" on public.reviews for select to authenticated
+  using (parent_id = auth.uid() or teacher_id = auth.uid() or public.is_admin());

@@ -25,3 +25,6 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `mentions-legales.html` : mentions légales et politique de confidentialité.
 - `paiements.html` : factures mensuelles du parent et paiement par Wave ou Orange Money.
 - `payment-config.js` : lien de paiement Wave Business et numéro marchand Orange Money affichés aux parents.
+- `suivi.html?cours=ID` : comptes rendus de séance (enseignant), progression et avis (parent).
+- `site.css` / `site.js` : en-tête, pied de page, menu mobile et bouton WhatsApp communs aux pages publiques.
+- `sitemap.xml` / `robots.txt` : référencement ; remplacer `kone-educ.vercel.app` si le site a un autre nom de domaine.
