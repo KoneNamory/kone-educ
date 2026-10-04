@@ -32,3 +32,4 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `.github/workflows/supabase-keepalive.yml` : interroge Supabase tous les 3 jours pour éviter la mise en pause du projet gratuit.
 - `app.css` / `app.js` : style et barre de navigation communs aux espaces connectés (liens selon le rôle, nom, déconnexion).
 - `conseils.html` et `conseils-*.html` : blog de conseils (pages statiques pour le référencement). Ajouter chaque nouvel article à `conseils.html` et à `sitemap.xml`.
+- `manifest.webmanifest`, `sw.js`, `offline.html`, `assets/icons/` : application installable sur téléphone et mode hors connexion. Après une modification de `sw.js`, changer sa constante `VERSION`.

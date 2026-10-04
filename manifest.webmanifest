@@ -1,0 +1,20 @@
+{
+  "name": "KONE.EDUC – Cours particuliers à domicile",
+  "short_name": "KONE.EDUC",
+  "description": "Cours particuliers à domicile et en ligne à Abidjan, avec suivi après chaque séance.",
+  "lang": "fr",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1559eb",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Réserver un cours", "url": "reservation.html" },
+    { "name": "Mon espace", "url": "connexion.html" }
+  ]
+}
