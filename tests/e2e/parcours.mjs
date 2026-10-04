@@ -48,6 +48,9 @@ await go('espace-parent.html');
 step('Espace parent : 2 demandes en attente',(await p.locator('#list .tag',{hasText:'En attente'}).count())===2);
 await p.locator('#list .row',{hasText:'Ibrahim'}).locator('.cancel').click();await p.waitForTimeout(500);
 let d=await db();step('Annulation de la 2e demande',d.course_requests.find(r=>r.student_name==='Ibrahim Koné')?.status==='cancelled');
+// 3 bis. Un compte Parent ne peut pas déposer de candidature ; la réservation est préremplie sans autocomplétion du nom de l'élève
+await go('candidature-enseignant.html');step('Compte Parent bloqué sur la candidature',(await p.textContent('.login-first')).includes('compte Parent')&&await p.locator('#teacher-form button').isDisabled());
+await go('reservation.html');await p.waitForTimeout(300);step('Réservation préremplie avec le compte Parent',(await p.inputValue('input[name=parentName]'))==='Mariam Koné'&&(await p.getAttribute('input[name=studentName]','autocomplete'))==='off');
 // 4. Inscription + candidature enseignant
 await logout();await go('candidature-enseignant.html');await p.waitForTimeout(300);step('Candidature sans connexion : invitation à créer un compte',(await p.locator('.login-first a[href="inscription.html?role=teacher"]').count())===1);
 await go('inscription.html?role=teacher');
@@ -63,6 +66,8 @@ const c2=p.locator('#teacher-form input[type=checkbox]:not([name])');if(await c2
 await p.setInputFiles('input[name=photo]',FILES.photo);for(const n of ['idDoc','diploma','cv'])await p.setInputFiles('input[name='+n+']',FILES.doc);
 await p.click('#teacher-form button');await p.waitForTimeout(800);
 d=await db();const tp=(d.teacher_profiles||[])[0];
+await go('reservation.html');await p.waitForTimeout(300);step('Compte Enseignant bloqué sur la réservation',(await p.textContent('.wrong-account')).includes('compte Enseignant')&&await p.locator('#booking-form button').first().isDisabled());
+await go('candidature-enseignant.html');
 step('Candidature enseignant enregistrée',!!tp,(await p.textContent('#confirmation')).trim());
 step('Zone d’intervention enregistrée',!!(tp&&tp.location),'location='+(tp&&tp.location));
 step('Niveaux enseignés enregistrés',!!(tp&&tp.levels),'levels='+(tp&&tp.levels));

@@ -186,9 +186,14 @@ create trigger protect_profile_role before update on public.profiles
   for each row execute function public.protect_profile_role();
 
 -- Un enseignant ne peut pas valider sa propre candidature
+-- Seul un compte de type Enseignant peut déposer ou modifier une candidature
 drop policy if exists "Teachers create own profile" on public.teacher_profiles;
 create policy "Teachers create own profile" on public.teacher_profiles for insert to authenticated
-  with check (auth.uid() = id and approved = false);
+  with check (auth.uid() = id and approved = false
+              and exists (select 1 from public.profiles where id = auth.uid() and role = 'teacher'));
+drop policy if exists "Teachers update own profile" on public.teacher_profiles;
+create policy "Teachers update own profile" on public.teacher_profiles for update to authenticated
+  using (auth.uid() = id and exists (select 1 from public.profiles where id = auth.uid() and role = 'teacher'));
 create or replace function public.protect_teacher_approval() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -205,7 +210,8 @@ create trigger protect_teacher_approval before update on public.teacher_profiles
 -- Une nouvelle demande de cours est toujours en attente et sans enseignant
 drop policy if exists "Allow authenticated request inserts" on public.course_requests;
 create policy "Allow authenticated request inserts" on public.course_requests for insert to authenticated
-  with check (auth.uid() = parent_id and teacher_id is null and status = 'pending');
+  with check (auth.uid() = parent_id and teacher_id is null and status = 'pending'
+              and exists (select 1 from public.profiles where id = auth.uid() and role = 'parent'));
 
 -- Notification automatique du destinataire à chaque nouveau message
 create or replace function public.notify_new_message() returns trigger
