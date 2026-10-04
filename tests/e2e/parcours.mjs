@@ -30,6 +30,7 @@ await go('inscription.html');
 await p.fill('#fullName','Mariam Koné');await p.fill('#phone','0700112233');await p.selectOption('#role','parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');
 await p.click('form button');await p.waitForTimeout(800);
 step('Inscription parent → espace parent',p.url().endsWith('espace-parent.html'),p.url().split('/').pop());
+step('Inscription directe, sans e-mail de confirmation',await p.evaluate(()=>localStorage.getItem('koneEducPendingProfile')===null&&JSON.parse(localStorage.getItem('__ke_db')).profiles.some(x=>x.full_name==='Mariam Koné'&&x.role==='parent')));
 // 2. Réservation (2 demandes)
 for(const [eleve,matiere] of [['Awa Koné','Mathématiques'],['Ibrahim Koné','Anglais']]){
   await go('reservation.html');

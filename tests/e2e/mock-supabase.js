@@ -82,7 +82,15 @@
       };
     }
   };
-  var rpc = async function (name) {
+  var rpc = async function (name, a) {
+    if (name === 'create_account') {
+      var d = load(); d.__users = d.__users || []; d.profiles = d.profiles || [];
+      if (d.__users.some(function (x) { return x.email === a.p_email; })) return { data: null, error: { message: 'Un compte existe déjà avec cette adresse e-mail. Connectez-vous.' } };
+      var id = 'u' + (d.__users.length + 1) + '-' + a.p_email.split('@')[0];
+      d.__users.push({ id: id, email: a.p_email, password: a.p_password });
+      d.profiles.push({ id: id, full_name: a.p_full_name, phone: a.p_phone, role: a.p_role }); save(d); log(['rpc', name, a.p_email]);
+      return { data: id, error: null };
+    }
     if (name !== 'public_teachers') return { data: null, error: { message: 'function not found' } };
     var db = load();
     var out = (db.teacher_profiles || []).filter(function (t) { return t.approved; }).map(function (t) {
