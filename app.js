@@ -22,6 +22,21 @@
       var name = prof.full_name || u.email || '';
       user.innerHTML = '<span class="ke-app-avatar" aria-hidden="true">' + esc(name.trim().charAt(0).toUpperCase() || '?') + '</span><span class="ke-app-name">' + esc(name) + '</span><button type="button" class="ke-app-out">Se déconnecter</button>';
       user.querySelector('button').onclick = function () { client.auth.signOut().then(function () { location.href = 'connexion.html'; }); };
+      // Cloche : nombre de notifications non lues (parents et enseignants)
+      var home = { parent: 'espace-parent.html', teacher: 'espace-enseignant.html' }[prof.role];
+      if (home) {
+        client.from('notifications').select('id').eq('recipient_id', u.id).eq('is_read', false).then(function (n) {
+          var count = (n.data || []).length;
+          if (!count) return;
+          var bell = document.createElement('a');
+          bell.className = 'ke-app-bell';
+          bell.href = home;
+          bell.setAttribute('aria-label', count + ' nouvelle(s) notification(s)');
+          bell.innerHTML = '🔔<span>' + (count > 9 ? '9+' : count) + '</span>';
+          user.insertBefore(bell, user.firstChild);
+          document.addEventListener('ke-notifications-read', function () { bell.remove(); });
+        });
+      }
     });
   });
 })();
