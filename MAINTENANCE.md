@@ -28,3 +28,5 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `suivi.html?cours=ID` : comptes rendus de séance (enseignant), progression et avis (parent).
 - `site.css` / `site.js` : en-tête, pied de page, menu mobile et bouton WhatsApp communs aux pages publiques.
 - `sitemap.xml` / `robots.txt` : référencement ; remplacer `kone-educ.vercel.app` si le site a un autre nom de domaine.
+- `mot-de-passe-oublie.html` / `nouveau-mot-de-passe.html` : réinitialisation du mot de passe par e-mail.
+- `.github/workflows/supabase-keepalive.yml` : interroge Supabase tous les 3 jours pour éviter la mise en pause du projet gratuit.
