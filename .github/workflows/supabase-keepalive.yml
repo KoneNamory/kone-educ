@@ -31,3 +31,8 @@ jobs:
             if echo "$BODY" | grep -q 'PGRST205\|does not exist'; then echo "❌ $T : table absente"; MISSING=1; else echo "✅ $T"; fi
           done
           if [ "$MISSING" = "1" ]; then echo "::warning::Des tables manquent : relancer supabase-schema.sql dans Supabase (SQL Editor)."; fi
+          # Colonnes ajoutées après coup : une erreur 42703 signifie que la colonne manque.
+          for TC in teacher_profiles.levels teacher_profiles.location; do
+            BODY=$(curl -s "$URL/rest/v1/${TC%%.*}?select=${TC#*.}&limit=0" -H "apikey: $KEY")
+            if echo "$BODY" | grep -q '42703'; then echo "❌ colonne $TC absente"; echo "::warning::Colonne $TC absente : relancer supabase-schema.sql."; else echo "✅ colonne $TC"; fi
+          done
