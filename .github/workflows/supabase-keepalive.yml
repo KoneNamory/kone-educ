@@ -21,3 +21,13 @@ jobs:
           echo "Réponse Supabase : $STATUS"
           cat response.txt; echo
           if [ "$STATUS" = "200" ] || grep -q '"code":"42501"' response.txt; then echo "Base active."; else exit 1; fi
+      - name: Vérifier que les tables existent
+        run: |
+          URL=$(grep -o "url: '[^']*'" supabase-config.js | cut -d"'" -f2)
+          KEY=$(grep -o "publishableKey: '[^']*'" supabase-config.js | cut -d"'" -f2)
+          MISSING=0
+          for T in profiles course_requests teacher_profiles notifications documents messages contact_messages invoices session_reports reviews; do
+            BODY=$(curl -s "$URL/rest/v1/$T?select=id&limit=0" -H "apikey: $KEY")
+            if echo "$BODY" | grep -q 'PGRST205\|does not exist'; then echo "❌ $T : table absente"; MISSING=1; else echo "✅ $T"; fi
+          done
+          if [ "$MISSING" = "1" ]; then echo "::warning::Des tables manquent : relancer supabase-schema.sql dans Supabase (SQL Editor)."; fi

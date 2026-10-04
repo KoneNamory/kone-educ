@@ -380,7 +380,7 @@ create policy "Review participants read reviews" on public.reviews for select to
 -- Moov Money comme moyen de paiement supplémentaire
 alter table public.invoices drop constraint if exists invoices_payment_method_check;
 alter table public.invoices add constraint invoices_payment_method_check
-  check (payment_method in ('wave','orange_money','moov_money'));
+  check (payment_method in ('wave','orange_money','moov_money')) not valid;
 
 -- L'administrateur voit le nom et le téléphone des parents et des enseignants pour les contacter
 drop policy if exists "Admins read all profiles" on public.profiles;
@@ -389,7 +389,7 @@ create policy "Admins read all profiles" on public.profiles for select to authen
 -- Cycle de vie d'une demande : en attente → enseignant attribué → terminé, ou annulé
 alter table public.course_requests drop constraint if exists course_requests_status_check;
 alter table public.course_requests add constraint course_requests_status_check
-  check (status in ('pending','assigned','completed','cancelled'));
+  check (status in ('pending','assigned','completed','cancelled')) not valid;
 
 -- Un parent peut seulement annuler sa propre demande tant qu'elle est en attente
 drop policy if exists "Parents cancel own pending requests" on public.course_requests;
@@ -433,3 +433,6 @@ $$;
 drop trigger if exists notify_course_status on public.course_requests;
 create trigger notify_course_status after update on public.course_requests
   for each row execute function public.notify_course_status();
+
+-- Recharger la liste des tables de l’API Supabase après les modifications
+notify pgrst, 'reload schema';
