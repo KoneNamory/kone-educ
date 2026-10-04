@@ -24,6 +24,15 @@ const say = (text, isError) => { notice.textContent = text; notice.classList.add
     teacherForm.parentNode.insertBefore(box, teacherForm);
     return;
   }
+  const { data: prof } = await teacherDb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  if (prof && prof.role !== 'teacher') {
+    const box = document.createElement('div');
+    box.className = 'login-first';
+    box.innerHTML = '<b>Vous êtes connecté avec un compte ' + (prof.role === 'parent' ? 'Parent' : 'Administrateur') + '.</b><p>Une candidature doit être déposée avec un compte Enseignant. Déconnectez-vous, puis créez un compte Enseignant.</p><a class="lf-btn" href="inscription.html?role=teacher">Créer un compte enseignant</a>';
+    teacherForm.parentNode.insertBefore(box, teacherForm);
+    teacherForm.querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = true; });
+    return;
+  }
   const { data } = await teacherDb.from('teacher_profiles').select('*').eq('id', user.id).maybeSingle();
   if (!data) return;
   Object.keys(FILES).forEach((name) => {

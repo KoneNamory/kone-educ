@@ -54,7 +54,7 @@
     .notice { display:none; margin-top:17px; padding:13px; color:#176b37; border-radius:9px; background:#e7f8ec; font-size:14px; font-weight:600; } .notice.show { display:block; }
     @media (max-width:800px) { .intro { grid-template-columns:1fr; gap:34px; } main { padding-top:42px; } .steps { margin:30px 0; } }
     @media (max-width:500px) { .shell { width:min(100% - 28px,1120px); }  .brand { font-size:20px; } .back { font-size:13px; } .form-card { padding:25px 20px; border-radius:17px; } .grid { grid-template-columns:1fr; } .full { grid-column:auto; } }
-  .form-card::after{z-index:0;pointer-events:none}.form-card>*{position:relative;z-index:1}</style>
+  .form-card::after{z-index:0;pointer-events:none}.form-card>*{position:relative;z-index:1}.wrong-account{margin:0 0 20px;padding:16px 18px;border-radius:14px;border:1px solid #f1c7c2;background:#fff4f2}.wrong-account p{margin:6px 0 10px;color:#566786;line-height:1.5}.wrong-account a{color:#1559eb;font-weight:800}</style>
 </head>
 <body>
   <header class="ke-header"><nav class="ke-nav" aria-label="Navigation principale"><a class="ke-brand" href="index.html"><img src="favicon.svg" alt="" width="34" height="34"><span>KONE.<b>EDUC</b></span></a><button class="ke-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button><div class="ke-menu"><div class="ke-links"><a href="index.html">Accueil</a><a href="services.html">Services</a><a href="enseignants.html">Enseignants</a><a href="tarifs.html">Tarifs</a><a href="a-propos.html">À propos</a><a href="conseils.html">Conseils</a><a href="contact.html">Contact</a></div><div class="ke-actions"><a class="ke-btn" href="connexion.html">Se connecter</a><a class="ke-btn fill" href="reservation.html">Réserver un cours</a></div></div></nav></header>
@@ -69,7 +69,7 @@
       </section>
       <section class="form-card" aria-labelledby="form-title"><h2 id="form-title">Réserver un enseignant</h2><p>Les champs marqués d’un <span aria-hidden="true">*</span> sont obligatoires.</p>
         <form id="booking-form">
-          <fieldset><legend>Pour l’élève</legend><div class="grid"><label>Nom et prénom <span>*</span><input name="studentName" required autocomplete="name" placeholder="Ex. Aya Koné"></label><label>Niveau scolaire <span>*</span><select name="level" required><option value="">Choisir un niveau</option><option>Primaire</option><option>Collège</option><option>Lycée</option><option>Université</option></select></label><label>Matière recherchée <span>*</span><select id="subject" name="subject" required><option value="">Choisir une matière</option><option>Mathématiques</option><option>Français</option><option>Anglais</option><option>Physique-Chimie</option><option>SVT</option><option value="other">Autre matière</option></select></label><label>Commune <span>*</span><select id="commune" required></select></label><label>Quartier <span>*</span><select id="quartier" required></select></label><label id="subject-other-field" class="conditional full">Précisez la matière recherchée <span>*</span><input id="subject-other" name="otherSubject" placeholder="Ex. Informatique, histoire-géographie, comptabilité"></label></div></fieldset>
+          <fieldset><legend>Pour l’élève</legend><div class="grid"><label>Nom et prénom <span>*</span><input name="studentName" required autocomplete="off" placeholder="Ex. Aya Koné"></label><label>Niveau scolaire <span>*</span><select name="level" required><option value="">Choisir un niveau</option><option>Primaire</option><option>Collège</option><option>Lycée</option><option>Université</option></select></label><label>Matière recherchée <span>*</span><select id="subject" name="subject" required><option value="">Choisir une matière</option><option>Mathématiques</option><option>Français</option><option>Anglais</option><option>Physique-Chimie</option><option>SVT</option><option value="other">Autre matière</option></select></label><label>Commune <span>*</span><select id="commune" required></select></label><label>Quartier <span>*</span><select id="quartier" required></select></label><label id="subject-other-field" class="conditional full">Précisez la matière recherchée <span>*</span><input id="subject-other" name="otherSubject" placeholder="Ex. Informatique, histoire-géographie, comptabilité"></label></div></fieldset>
           <fieldset><legend>Préférences de cours</legend><div class="grid"><div class="full"><label>Format souhaité <span>*</span></label><div class="choices"><label class="choice"><input type="radio" name="format" value="À domicile" required><span>À domicile</span></label><label class="choice"><input type="radio" name="format" value="En ligne"><span>En ligne</span></label><label class="choice"><input type="radio" name="format" value="Les deux"><span>Les deux</span></label></div></div><div class="full"><label>Jours souhaités <span>*</span></label><div class="choices"><label class="choice"><input type="checkbox" name="days" value="Lundi"><span>Lun.</span></label><label class="choice"><input type="checkbox" name="days" value="Mardi"><span>Mar.</span></label><label class="choice"><input type="checkbox" name="days" value="Mercredi"><span>Mer.</span></label><label class="choice"><input type="checkbox" name="days" value="Jeudi"><span>Jeu.</span></label><label class="choice"><input type="checkbox" name="days" value="Vendredi"><span>Ven.</span></label><label class="choice"><input type="checkbox" name="days" value="Samedi"><span>Sam.</span></label><label class="choice"><input type="checkbox" name="days" value="Dimanche"><span>Dim.</span></label></div></div><label>Précisions utiles<textarea name="details" placeholder="Objectifs, difficultés, fréquence souhaitée…"></textarea></label></div></fieldset>
           <fieldset><legend>Vos coordonnées</legend><div class="grid"><label>Nom du parent / tuteur <span>*</span><input name="parentName" required autocomplete="name" placeholder="Ex. Mariam Koné"></label><label>Téléphone <span>*</span><input name="phone" type="tel" required autocomplete="tel" placeholder="Ex. 07 00 00 00 00"></label><label class="full">Adresse e-mail <span>*</span><input name="email" type="email" required autocomplete="email" placeholder="vous@exemple.com"></label></div></fieldset>
           <label class="consent"><input type="checkbox" required><span>J’accepte que KONE.EDUC utilise mes informations pour traiter cette demande de cours.</span></label>
@@ -92,6 +92,26 @@
       if (!isOther) otherSubject.value = '';
     });
     const bookingClient = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+    // Les demandes de cours se font uniquement avec un compte Parent ; on préremplit ses coordonnées
+    (async function checkAccount() {
+      const { data: { user } } = await bookingClient.auth.getUser();
+      if (!user) return;
+      const { data: prof } = await bookingClient.from('profiles').select('full_name, phone, role').eq('id', user.id).maybeSingle();
+      const bookingForm = document.getElementById('booking-form');
+      if (prof && prof.role !== 'parent') {
+        const box = document.createElement('div');
+        box.className = 'wrong-account';
+        box.innerHTML = '<b>Vous êtes connecté avec un compte ' + (prof.role === 'teacher' ? 'Enseignant' : 'Administrateur') + '.</b><p>Les demandes de cours se font avec un compte Parent. Déconnectez-vous, puis connectez-vous ou créez un compte Parent.</p><a href="inscription.html">Créer un compte Parent</a>';
+        bookingForm.parentNode.insertBefore(box, bookingForm);
+        bookingForm.querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = true; });
+        return;
+      }
+      if (prof) {
+        if (prof.full_name && !bookingForm.parentName.value) bookingForm.parentName.value = prof.full_name;
+        if (prof.phone && !bookingForm.phone.value) bookingForm.phone.value = prof.phone;
+        if (user.email && !bookingForm.email.value) bookingForm.email.value = user.email;
+      }
+    })();
     document.getElementById('booking-form').addEventListener('submit', async function (event) {
       event.preventDefault();
       const confirmation = document.getElementById('confirmation');
