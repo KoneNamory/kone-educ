@@ -9,6 +9,11 @@ La clé publique est enregistrée dans `supabase-config.js`. Elle peut être uti
 
 ## Mise à jour du schéma
 
+Copier le code depuis la version texte brut sur GitHub (un aperçu de fichier peut ne copier que les lignes visibles) :
+https://raw.githubusercontent.com/KoneNamory/kone-educ/main/supabase-schema.sql
+
+Avant de cliquer sur **Run**, vérifier que la dernière ligne collée est `notify pgrst, 'reload schema';`. La tâche GitHub « Supabase keep-alive » (onglet Actions) indique ensuite si une table manque.
+
 Après chaque modification de `supabase-schema.sql`, relancez **tout** le fichier dans **SQL Editor**. Il peut être relancé sans risque : il ne supprime aucune donnée.
 
 ## Sécurité des rôles
