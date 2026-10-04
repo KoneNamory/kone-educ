@@ -36,3 +36,11 @@ jobs:
             BODY=$(curl -s "$URL/rest/v1/${TC%%.*}?select=${TC#*.}&limit=0" -H "apikey: $KEY")
             if echo "$BODY" | grep -q '42703'; then echo "❌ colonne $TC absente"; echo "::warning::Colonne $TC absente : relancer supabase-schema.sql."; else echo "✅ colonne $TC"; fi
           done
+      - name: Vérifier le sitemap et robots.txt en ligne
+        run: |
+          for U in sitemap.xml robots.txt; do
+            echo "== https://kone-educ.vercel.app/$U"
+            curl -s -o /dev/null -w 'HTTP %{http_code} · %{content_type}\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1)' "https://kone-educ.vercel.app/$U"
+          done
+          curl -s https://kone-educ.vercel.app/sitemap.xml | head -5
+          curl -s https://kone-educ.vercel.app/ | grep -o 'google-site-verification[^>]*' || echo "balise Google absente"
