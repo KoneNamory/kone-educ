@@ -43,3 +43,5 @@ python3 -m http.server 8765 --bind 127.0.0.1 &
 node tests/e2e/parcours.mjs
 ```
 - `assets/og-image.jpg` : image affichée lors d'un partage sur WhatsApp, Facebook, etc. Chaque page publique déclare son adresse officielle (`canonical`) et cette image.
+- Dossier enseignant : photo de profil dans l'espace de stockage public `avatars`, pièce d'identité, diplôme et CV dans l'espace privé `teacher-files` (accessible uniquement à l'enseignant et à l'administrateur, par liens temporaires).
+- `enseignants.html` : profils publics des enseignants validés via la fonction `public_teachers()` (prénom + initiale, sans téléphone ni documents).
