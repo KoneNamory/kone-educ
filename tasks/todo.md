@@ -43,7 +43,8 @@
 - [x] Sécuriser les rôles (pas d'auto-promotion administrateur ni d'auto-validation enseignant).
 - [x] Enregistrer les messages du formulaire de contact et les afficher dans l'espace Administration.
 - [x] Rédiger les mentions légales et la politique de confidentialité (`mentions-legales.html`).
-- [ ] Compléter les informations marquées « à compléter » dans `mentions-legales.html` (RCCM, adresse, responsable, durées de conservation).
+- [x] Mentions légales complétées (fondateurs, adresse, responsable de la publication, durées de conservation).
+- [ ] Ajouter le numéro RCCM dans `mentions-legales.html` après l'immatriculation.
 - [x] En-tête et pied de page communs, menu mobile, référencement (descriptions, données structurées, sitemap).
 - [x] Suivi pédagogique : compte rendu après chaque séance et courbe de progression (`suivi.html`).
 - [x] Avis des parents sur les enseignants, note moyenne dans l'espace Administration.
