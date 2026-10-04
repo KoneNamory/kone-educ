@@ -433,3 +433,6 @@ $$;
 drop trigger if exists notify_course_status on public.course_requests;
 create trigger notify_course_status after update on public.course_requests
   for each row execute function public.notify_course_status();
+
+-- Recharger la liste des tables de l’API Supabase après les modifications
+notify pgrst, 'reload schema';
