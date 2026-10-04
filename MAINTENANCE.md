@@ -31,3 +31,4 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `mot-de-passe-oublie.html` / `nouveau-mot-de-passe.html` : réinitialisation du mot de passe par e-mail.
 - `.github/workflows/supabase-keepalive.yml` : interroge Supabase tous les 3 jours pour éviter la mise en pause du projet gratuit.
 - `app.css` / `app.js` : style et barre de navigation communs aux espaces connectés (liens selon le rôle, nom, déconnexion).
+- `conseils.html` et `conseils-*.html` : blog de conseils (pages statiques pour le référencement). Ajouter chaque nouvel article à `conseils.html` et à `sitemap.xml`.

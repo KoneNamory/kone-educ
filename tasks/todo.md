@@ -52,6 +52,8 @@
 - [x] Déconnexion depuis les espaces, mot de passe oublié, statuts des demandes en français.
 - [x] Tâche GitHub qui garde le projet Supabase actif (`.github/workflows/supabase-keepalive.yml`).
 - [ ] Ajouter l'adresse du site dans Supabase → Authentication → URL Configuration (nécessaire pour le lien « mot de passe oublié »).
+- [x] Blog « Conseils » avec 4 articles (BEPC, BAC, devoirs, choisir un enseignant).
+- [ ] Publier un nouvel article de conseils chaque mois.
 - [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 
