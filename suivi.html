@@ -9,7 +9,7 @@
 label{display:block;margin-top:12px;font-weight:bold;font-size:14px}input,select,textarea{width:100%;margin-top:5px;padding:10px;border:1px solid var(--line);border-radius:7px;font:inherit}textarea{min-height:70px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.btn{margin-top:15px;padding:12px 16px;border:0;border-radius:8px;color:#fff;background:var(--blue);font-weight:bold;cursor:pointer}.btn:disabled{opacity:.6}
 .stars{display:flex;gap:4px;margin-top:6px}.stars button{width:44px;height:44px;border:0;background:none;font-size:30px;line-height:1;color:#c9d3e6;cursor:pointer;padding:0}.stars button.on{color:#f5a400}.status{min-height:20px;margin-top:10px;font-size:14px}
 @media(max-width:700px){main{padding:20px 16px}.tiles{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}}
-</style></head><body><main><a id="back" href="index.html">← Retour</a><h1>Suivi pédagogique</h1><p id="message">Chargement...</p>
+</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body><main><a id="back" href="index.html">← Retour</a><h1>Suivi pédagogique</h1><p id="message">Chargement...</p>
 <div id="content" hidden>
 <div class="tiles"><div class="tile"><b id="tCount">0</b><small>séances</small></div><div class="tile"><b id="tHours">0 h</b><small>de cours</small></div><div class="tile"><b id="tAvg">–</b><small>compréhension moyenne /5</small></div><div class="tile"><b id="tTrend">–</b><small>tendance récente</small></div></div>
 <section class="card"><h2>Compréhension séance après séance</h2><div class="chart" id="chart"></div><div class="tip" id="tip"></div></section>
@@ -30,4 +30,4 @@ async function initReview(){stars.innerHTML=[1,2,3,4,5].map(i=>'<button type="bu
 reviewBtn.onclick=async()=>{if(!rating){reviewStatus.style.color='#b42318';reviewStatus.textContent='Choisissez une note de 1 à 5 étoiles.';return}reviewBtn.disabled=true;const r=await db.from('reviews').upsert({course_request_id:courseId,parent_id:user.id,teacher_id:course.teacher_id,rating,comment:reviewComment.value.trim()||null},{onConflict:'course_request_id,parent_id'});reviewBtn.disabled=false;reviewStatus.style.color=r.error?'#b42318':'#11743a';reviewStatus.textContent=r.error?'Erreur : '+r.error.message:'Merci ! Votre avis a été enregistré.'};
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>reports.length&&drawChart(),150)});
 init();
-</script></body></html>
+</script><script src="app.js"></script></body></html>
