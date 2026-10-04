@@ -49,6 +49,9 @@
 - [x] Avis des parents sur les enseignants, note moyenne dans l'espace Administration.
 - [x] Numéro WhatsApp renseigné dans `site.js`.
 - [ ] Vérifier l'adresse du site dans `sitemap.xml` et `robots.txt`.
+- [x] Déconnexion depuis les espaces, mot de passe oublié, statuts des demandes en français.
+- [x] Tâche GitHub qui garde le projet Supabase actif (`.github/workflows/supabase-keepalive.yml`).
+- [ ] Ajouter l'adresse du site dans Supabase → Authentication → URL Configuration (nécessaire pour le lien « mot de passe oublié »).
 - [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 
