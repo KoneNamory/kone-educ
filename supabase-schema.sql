@@ -381,3 +381,7 @@ create policy "Review participants read reviews" on public.reviews for select to
 alter table public.invoices drop constraint if exists invoices_payment_method_check;
 alter table public.invoices add constraint invoices_payment_method_check
   check (payment_method in ('wave','orange_money','moov_money'));
+
+-- L'administrateur voit le nom et le téléphone des parents et des enseignants pour les contacter
+drop policy if exists "Admins read all profiles" on public.profiles;
+create policy "Admins read all profiles" on public.profiles for select to authenticated using (public.is_admin());
