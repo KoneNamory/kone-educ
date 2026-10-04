@@ -385,3 +385,51 @@ alter table public.invoices add constraint invoices_payment_method_check
 -- L'administrateur voit le nom et le téléphone des parents et des enseignants pour les contacter
 drop policy if exists "Admins read all profiles" on public.profiles;
 create policy "Admins read all profiles" on public.profiles for select to authenticated using (public.is_admin());
+
+-- Cycle de vie d'une demande : en attente → enseignant attribué → terminé, ou annulé
+alter table public.course_requests drop constraint if exists course_requests_status_check;
+alter table public.course_requests add constraint course_requests_status_check
+  check (status in ('pending','assigned','completed','cancelled'));
+
+-- Un parent peut seulement annuler sa propre demande tant qu'elle est en attente
+drop policy if exists "Parents cancel own pending requests" on public.course_requests;
+create policy "Parents cancel own pending requests" on public.course_requests for update to authenticated
+  using (parent_id = auth.uid() and status = 'pending')
+  with check (parent_id = auth.uid() and status = 'cancelled');
+create or replace function public.protect_course_request() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or public.is_admin() then return new; end if;
+  if old.status <> 'pending' or new.status <> 'cancelled'
+     or (to_jsonb(new) - 'status') <> (to_jsonb(old) - 'status') then
+    raise exception 'Seule l’annulation d’une demande en attente est possible';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_course_request on public.course_requests;
+create trigger protect_course_request before update on public.course_requests
+  for each row execute function public.protect_course_request();
+
+-- Notifications quand une demande est terminée ou annulée
+create or replace function public.notify_course_status() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare label text;
+begin
+  if new.status = old.status or new.status not in ('completed','cancelled') then return new; end if;
+  label := new.subject || ' pour ' || new.student_name;
+  if new.status = 'completed' then
+    insert into public.notifications (recipient_id, title, body)
+    select x, 'Accompagnement terminé', 'L’accompagnement de ' || label || ' est terminé. Merci pour votre confiance !'
+    from unnest(array[new.parent_id, new.teacher_id]) as x where x is not null;
+  else
+    insert into public.notifications (recipient_id, title, body)
+    select x, 'Demande annulée', 'La demande de cours de ' || label || ' a été annulée.'
+    from unnest(array[new.parent_id, new.teacher_id]) as x where x is not null;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_course_status on public.course_requests;
+create trigger notify_course_status after update on public.course_requests
+  for each row execute function public.notify_course_status();
