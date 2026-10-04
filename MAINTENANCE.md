@@ -42,3 +42,4 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 python3 -m http.server 8765 --bind 127.0.0.1 &
 node tests/e2e/parcours.mjs
 ```
+- `assets/og-image.jpg` : image affichée lors d'un partage sur WhatsApp, Facebook, etc. Chaque page publique déclare son adresse officielle (`canonical`) et cette image.

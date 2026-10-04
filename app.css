@@ -19,3 +19,4 @@ main > a:first-child,main > a#back{display:inline-block;font-size:14px}
 .ke-app-out{padding:8px 12px;border:1px solid #d7e1f2;border-radius:9px;background:#fff;color:#0f1b37;font:700 14px "DM Sans",Arial,sans-serif;cursor:pointer;width:auto;box-shadow:none}
 .ke-app-name{max-width:160px;overflow:hidden;text-overflow:ellipsis;font-weight:700}
 @media(max-width:760px){.ke-app-in{flex-wrap:wrap;height:auto;padding:10px 16px;gap:8px 12px}.ke-app-brand{flex:1}.ke-app-name{display:none}.ke-app-nav{order:3;flex-basis:100%;margin:0 -4px}main{padding:18px 16px 50px!important}}
+.ke-app-bell{position:relative;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#f1f5fc;font-size:18px;text-decoration:none}.ke-app-bell span{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:99px;background:#fa7518;color:#fff;font:800 11px/18px "DM Sans",Arial,sans-serif;text-align:center}
