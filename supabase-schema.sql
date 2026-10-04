@@ -501,5 +501,39 @@ language sql stable security definer set search_path = public as $$
 $$;
 grant execute on function public.public_teachers() to anon, authenticated;
 
+-- Inscription directe : le compte est créé déjà confirmé, sans e-mail de confirmation
+-- (le site se connecte ensuite avec l’e-mail et le mot de passe)
+create or replace function public.create_account(p_email text, p_password text, p_full_name text, p_phone text, p_role text)
+returns uuid language plpgsql security definer set search_path = '' as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_email text := lower(trim(p_email));
+begin
+  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Adresse e-mail invalide'; end if;
+  if length(coalesce(p_password, '')) < 6 then raise exception 'Le mot de passe doit contenir au moins 6 caractères'; end if;
+  if p_role not in ('parent', 'teacher') then raise exception 'Type de compte invalide'; end if;
+  if length(trim(coalesce(p_full_name, ''))) < 2 or length(p_full_name) > 120 then raise exception 'Nom invalide'; end if;
+  if length(trim(coalesce(p_phone, ''))) < 8 or length(p_phone) > 30 then raise exception 'Numéro de téléphone invalide'; end if;
+  if exists (select 1 from auth.users where lower(email) = v_email) then
+    raise exception 'Un compte existe déjà avec cette adresse e-mail. Connectez-vous.';
+  end if;
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, recovery_token, email_change, email_change_token_new, email_change_token_current,
+    phone_change, phone_change_token, reauthentication_token)
+  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated', v_email,
+    extensions.crypt(p_password, extensions.gen_salt('bf')), now(),
+    '{"provider":"email","providers":["email"]}', jsonb_build_object('full_name', trim(p_full_name)), now(), now(),
+    '', '', '', '', '', '', '', '');
+  insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), v_id, v_id::text,
+    jsonb_build_object('sub', v_id::text, 'email', v_email, 'email_verified', true), 'email', now(), now(), now());
+  insert into public.profiles (id, full_name, phone, role) values (v_id, trim(p_full_name), trim(p_phone), p_role);
+  return v_id;
+end;
+$$;
+revoke execute on function public.create_account(text, text, text, text, text) from public;
+grant execute on function public.create_account(text, text, text, text, text) to anon, authenticated;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';
