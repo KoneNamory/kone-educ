@@ -32,9 +32,16 @@ jobs:
           done
           if [ "$MISSING" = "1" ]; then echo "::warning::Des tables manquent : relancer supabase-schema.sql dans Supabase (SQL Editor)."; fi
           # Colonnes ajoutées après coup : une erreur 42703 signifie que la colonne manque.
-          for TC in teacher_profiles.levels teacher_profiles.location; do
+          for TC in teacher_profiles.levels teacher_profiles.location teacher_profiles.photo_url teacher_profiles.id_doc_path teacher_profiles.diploma_path teacher_profiles.cv_path; do
             BODY=$(curl -s "$URL/rest/v1/${TC%%.*}?select=${TC#*.}&limit=0" -H "apikey: $KEY")
             if echo "$BODY" | grep -q '42703'; then echo "❌ colonne $TC absente"; echo "::warning::Colonne $TC absente : relancer supabase-schema.sql."; else echo "✅ colonne $TC"; fi
+          done
+          # Fonction des profils publics et espaces de stockage
+          RPC=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/rest/v1/rpc/public_teachers" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}')
+          if [ "$RPC" = "200" ]; then echo "✅ fonction public_teachers"; else echo "❌ fonction public_teachers (HTTP $RPC)"; echo "::warning::Fonction public_teachers absente : relancer supabase-schema.sql."; fi
+          for BK in avatars teacher-files; do
+            BODY=$(curl -s "$URL/storage/v1/object/public/$BK/verification-inexistante.txt")
+            if echo "$BODY" | grep -qi 'bucket not found'; then echo "❌ espace de stockage $BK absent"; echo "::warning::Espace de stockage $BK absent : relancer supabase-schema.sql."; else echo "✅ espace de stockage $BK"; fi
           done
       - name: Vérifier le sitemap et robots.txt en ligne
         run: |
