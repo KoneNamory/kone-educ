@@ -68,5 +68,31 @@
     resetPasswordForEmail: async function () { return { error: null }; },
     updateUser: async function () { return { error: null }; }
   };
-  window.supabase = { createClient: function () { return { auth: auth, from: query, storage: { from: function () { return { upload: async function () { return { error: null }; }, download: async function () { return { data: new Blob(['x']), error: null }; } }; } } }; } };
+  var storage = {
+    from: function (bucket) {
+      return {
+        upload: async function (path, file) {
+          if (['avatars', 'teacher-files', 'documents'].indexOf(bucket) < 0) return { data: null, error: { message: 'Bucket not found' } };
+          var db = load(); db.__storage = db.__storage || []; db.__storage.push({ bucket: bucket, path: path, type: file && file.type, size: file && file.size }); save(db);
+          log(['upload', bucket, path]); return { data: { path: path }, error: null };
+        },
+        getPublicUrl: function (path) { return { data: { publicUrl: 'https://storage.test/' + bucket + '/' + path } }; },
+        createSignedUrl: async function (path) { log(['signedUrl', bucket, path]); return { data: { signedUrl: 'about:blank#' + bucket + '/' + path }, error: null }; },
+        download: async function () { return { data: new Blob(['x']), error: null }; }
+      };
+    }
+  };
+  var rpc = async function (name) {
+    if (name !== 'public_teachers') return { data: null, error: { message: 'function not found' } };
+    var db = load();
+    var out = (db.teacher_profiles || []).filter(function (t) { return t.approved; }).map(function (t) {
+      var p = (db.profiles || []).find(function (x) { return x.id === t.id; }) || {};
+      var parts = String(p.full_name || '').trim().split(/\s+/);
+      var rv = (db.reviews || []).filter(function (r) { return r.teacher_id === t.id; });
+      return { id: t.id, display_name: parts[0] + (parts[1] ? ' ' + parts[1].charAt(0).toUpperCase() + '.' : ''), subject: t.subject, degree: t.degree, experience: t.experience, levels: t.levels, location: t.location, bio: t.bio, photo_url: t.photo_url,
+        rating: rv.length ? Math.round(rv.reduce(function (a, r) { return a + r.rating; }, 0) / rv.length * 10) / 10 : null, reviews_count: rv.length };
+    });
+    return { data: out, error: null };
+  };
+  window.supabase = { createClient: function () { return { auth: auth, from: query, storage: storage, rpc: rpc }; } };
 })();

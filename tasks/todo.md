@@ -55,6 +55,8 @@
 - [ ] Ajouter l'adresse du site dans Supabase → Authentication → URL Configuration (nécessaire pour le lien « mot de passe oublié »).
 - [x] Blog « Conseils » avec 4 articles (BEPC, BAC, devoirs, choisir un enseignant).
 - [ ] Publier un nouvel article de conseils chaque mois.
+- [x] Dossier enseignant (photo, pièce d'identité, diplôme, CV), profils publics des enseignants validés, tableau d'activité de l'administrateur.
+- [ ] Notifications par WhatsApp et e-mail (nécessite des comptes WhatsApp Business et d'envoi d'e-mails).
 - [ ] Préparer les données de démonstration.
 - [ ] Déployer le site.
 

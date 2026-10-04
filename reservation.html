@@ -83,6 +83,8 @@
     const otherSubjectField = document.getElementById('subject-other-field');
     const otherSubject = document.getElementById('subject-other');
     setupAbidjanLocation('commune','quartier');
+    const wanted = new URLSearchParams(location.search).get('matiere');
+    if (wanted) { const opt = Array.from(subject.options).find(o => (o.value || o.text) === wanted); if (opt) subject.value = opt.value; }
     subject.addEventListener('change', function () {
       const isOther = this.value === 'other';
       otherSubjectField.classList.toggle('show', isOther);

@@ -16,6 +16,7 @@ await ctx.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.abort());
 const p=await ctx.newPage();const errs=[];const issues=[];
 p.on('pageerror',e=>errs.push(p.url().split('/').pop()+': '+e.message));
 p.on('dialog',d=>d.accept());
+const FILES={photo:{name:'photo.png',mimeType:'image/png',buffer:Buffer.from('89504e470d0a1a0a','hex')},doc:{name:'piece.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')}};
 const go=async f=>{await p.goto(BASE+f,{waitUntil:'load'});await p.waitForTimeout(500)};
 const step=(n,ok,detail='')=>{console.log((ok?'✅':'❌')+' '+n+(detail?' — '+detail:''));if(!ok)issues.push(n)};
 const tick=async sel=>{const ok=await p.evaluate(s=>{const i=document.querySelector(s);if(!i)return 'absent';const l=i.closest('label')||document.querySelector('label[for="'+i.id+'"]');(l||i).click();return i.checked},sel);if(ok!==true)throw new Error('case non cochée: '+sel+' ('+ok+')')};
@@ -48,25 +49,31 @@ step('Espace parent : 2 demandes en attente',(await p.locator('#list .tag',{hasT
 await p.locator('#list .row',{hasText:'Ibrahim'}).locator('.cancel').click();await p.waitForTimeout(500);
 let d=await db();step('Annulation de la 2e demande',d.course_requests.find(r=>r.student_name==='Ibrahim Koné')?.status==='cancelled');
 // 4. Inscription + candidature enseignant
-await logout();await go('candidature-enseignant.html');await p.fill('input[name=name]','X');await p.fill('input[name=phone]','01');await p.fill('input[name=email]','x@x.ci');await p.fill('input[name=location]','Y');for(const s of ['degree','subject','experience','format']){const o=await p.$$eval('select[name='+s+'] option',o=>o.map(x=>x.value).filter(v=>v&&v!=='other'));await p.selectOption('select[name='+s+']',o[0])}await p.fill('textarea[name=bio]','x');await tick('input[name=days][value=Lundi]');const c0=p.locator('#teacher-form input[type=checkbox]:not([name])');if(await c0.count())await tick('#teacher-form input[type=checkbox]:not([name])');await p.click('#teacher-form button');await p.waitForTimeout(700);step('Candidature sans connexion → page de connexion',p.url().includes('connexion.html?redirect=candidature-enseignant.html'),p.url().split('/').pop());
-await go('inscription.html');
-await p.fill('#fullName','Yao Kouassi');await p.fill('#phone','0500112233');await p.selectOption('#role','teacher');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');
+await logout();await go('candidature-enseignant.html');await p.waitForTimeout(300);step('Candidature sans connexion : invitation à créer un compte',(await p.locator('.login-first a[href="inscription.html?role=teacher"]').count())===1);
+await go('inscription.html?role=teacher');
+step('Rôle Enseignant présélectionné',(await p.inputValue('#role'))==='teacher');await p.fill('#fullName','Yao Kouassi');await p.fill('#phone','0500112233');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');
 await p.click('form button');await p.waitForTimeout(800);
-step('Inscription enseignant → espace enseignant',p.url().endsWith('espace-enseignant.html'),p.url().split('/').pop());
+step('Inscription enseignant → candidature',p.url().endsWith('candidature-enseignant.html'),p.url().split('/').pop());
 await go('candidature-enseignant.html');
 await p.fill('input[name=name]','Yao Kouassi');await p.fill('input[name=phone]','0500112233');await p.fill('input[name=email]','yao@test.ci');await p.fill('input[name=location]','Cocody, Bingerville');
 for(const s of ['degree','subject','experience','format']){const o=await p.$$eval('select[name='+s+'] option',o=>o.map(x=>x.value).filter(v=>v&&v!=='other'));await p.selectOption('select[name='+s+']',o[0])}
 await tick('input[name=levels][value=Collège]');await tick('input[name=levels][value=Lycée]');
 await p.fill('textarea[name=bio]','Professeur de mathématiques depuis 5 ans.');await tick('input[name=days][value=Mercredi]');
 const c2=p.locator('#teacher-form input[type=checkbox]:not([name])');if(await c2.count())await tick('#teacher-form input[type=checkbox]:not([name])');
+await p.setInputFiles('input[name=photo]',FILES.photo);for(const n of ['idDoc','diploma','cv'])await p.setInputFiles('input[name='+n+']',FILES.doc);
 await p.click('#teacher-form button');await p.waitForTimeout(800);
 d=await db();const tp=(d.teacher_profiles||[])[0];
 step('Candidature enseignant enregistrée',!!tp,(await p.textContent('#confirmation')).trim());
 step('Zone d’intervention enregistrée',!!(tp&&tp.location),'location='+(tp&&tp.location));
 step('Niveaux enseignés enregistrés',!!(tp&&tp.levels),'levels='+(tp&&tp.levels));
+step('Documents de l’enseignant envoyés',!!(tp&&tp.photo_url&&tp.id_doc_path&&tp.diploma_path&&tp.cv_path),[tp&&tp.photo_url,tp&&tp.id_doc_path].join(' | '));
+step('Pièce d’identité dans l’espace privé',(d.__storage||[]).some(f=>f.bucket==='teacher-files'&&f.path.startsWith(tp.id+'/idDoc-')));
+await go('espace-enseignant.html');step('Espace enseignant : dossier complet',(await p.textContent('#profile')).includes('Dossier complet'));
 // 5. Administrateur
 await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('form button');await p.waitForTimeout(800);
 step('Connexion admin → administration',p.url().endsWith('espace-admin.html'));
+step('Admin : dossier complet et documents',(await p.textContent('#teachers')).includes('Dossier complet')&&(await p.locator('#teachers .doc').count())===3);
+await p.locator('#teachers .doc').first().click();await p.waitForTimeout(400);step('Admin : ouverture d’un document privé',JSON.parse(await p.evaluate(()=>localStorage.getItem('__ke_log'))).some(o=>o[0]==='signedUrl'&&o[1]==='teacher-files'));
 await p.click('#teachers button:has-text("Valider")');await p.waitForTimeout(500);
 d=await db();step('Validation de l’enseignant',d.teacher_profiles[0].approved===true);
 const reqId=d.course_requests.find(r=>r.student_name==='Awa Koné').id;
@@ -84,7 +91,9 @@ d=await db();step('Déclaration du paiement par le parent',d.invoices[0].status=
 // 7. Admin confirme
 await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('form button');await p.waitForTimeout(800);
 await p.click('text=Confirmer le paiement');await p.waitForTimeout(500);
+await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('__ke_db'));db.invoices[0].paid_at=new Date().toISOString();localStorage.setItem('__ke_db',JSON.stringify(db))});
 d=await db();step('Confirmation du paiement par l’admin',d.invoices[0].status==='paid');
+await go('espace-admin.html');step('Activité : encaissé ce mois',(await p.textContent('#aMonth')).replace(/\s/g,'').includes('40000'),await p.textContent('#aMonth'));step('Activité : graphiques affichés',(await p.locator('.chart svg').count())===2);
 // 8. Enseignant : compte rendu + message
 await logout();await go('connexion.html');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('form button');await p.waitForTimeout(800);
 step('Espace enseignant : cours attribué visible',(await p.locator('#courses .row',{hasText:'Awa Koné'}).count())===1);
@@ -100,6 +109,8 @@ d=await db();step('Avis du parent',(d.reviews||[]).length===1&&d.reviews[0].rati
 await go('messagerie.html?cours='+reqId);step('Parent voit le message',(await p.textContent('#thread')).includes('bien travaillé'));
 await p.fill('#body','Merci beaucoup !');await p.click('#send');await p.waitForTimeout(500);
 d=await db();step('Réponse du parent',(d.messages||[]).length===2);
+// 9 bis. Profil public de l’enseignant
+await logout();await go('enseignants.html');await p.waitForTimeout(400);const pub=await p.textContent('#teachers-grid');step('Profil public de l’enseignant validé',pub.includes('Yao K.')&&pub.includes('5/5')&&!pub.includes('0500112233'),pub.slice(0,80).replace(/\s+/g,' '));
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

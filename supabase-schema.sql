@@ -437,5 +437,63 @@ create trigger notify_course_status after update on public.course_requests
 -- Niveaux enseignés indiqués dans la candidature (Primaire, Collège, Lycée, Université)
 alter table public.teacher_profiles add column if not exists levels text;
 
+-- Dossier de l'enseignant : photo de profil (publique) et documents justificatifs (privés)
+alter table public.teacher_profiles add column if not exists photo_url text;
+alter table public.teacher_profiles add column if not exists id_doc_path text;
+alter table public.teacher_profiles add column if not exists diploma_path text;
+alter table public.teacher_profiles add column if not exists cv_path text;
+
+-- Espaces de stockage : « avatars » est public (photos de profil), « teacher-files » est privé (pièce d'identité, diplôme, CV)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 3145728, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('teacher-files', 'teacher-files', false, 5242880, array['image/jpeg','image/png','image/webp','application/pdf'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+-- Chaque utilisateur dépose ses fichiers uniquement dans son propre dossier (nommé par son identifiant)
+drop policy if exists "Users upload own avatar" on storage.objects;
+drop policy if exists "Users update own avatar" on storage.objects;
+drop policy if exists "Users delete own avatar" on storage.objects;
+drop policy if exists "Teachers upload own files" on storage.objects;
+drop policy if exists "Teachers read own files" on storage.objects;
+drop policy if exists "Teachers update own files" on storage.objects;
+drop policy if exists "Admins read teacher files" on storage.objects;
+create policy "Users upload own avatar" on storage.objects for insert to authenticated
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Users update own avatar" on storage.objects for update to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Users delete own avatar" on storage.objects for delete to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Teachers upload own files" on storage.objects for insert to authenticated
+  with check (bucket_id = 'teacher-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Teachers read own files" on storage.objects for select to authenticated
+  using (bucket_id = 'teacher-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Teachers update own files" on storage.objects for update to authenticated
+  using (bucket_id = 'teacher-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Admins read teacher files" on storage.objects for select to authenticated
+  using (bucket_id = 'teacher-files' and public.is_admin());
+
+-- Profils publics : uniquement les enseignants validés, avec des informations non sensibles
+-- (prénom et initiale du nom, matière, diplôme, niveaux, zone, présentation, photo, note moyenne)
+create or replace function public.public_teachers()
+returns table (id uuid, display_name text, subject text, degree text, experience text, levels text,
+               location text, bio text, photo_url text, rating numeric, reviews_count bigint)
+language sql stable security definer set search_path = public as $$
+  select tp.id,
+         split_part(n.nm, ' ', 1) ||
+           case when position(' ' in n.nm) > 0 then ' ' || upper(left(split_part(n.nm, ' ', 2), 1)) || '.' else '' end,
+         tp.subject, tp.degree, tp.experience, tp.levels, tp.location, tp.bio, tp.photo_url,
+         round(avg(r.rating)::numeric, 1), count(r.id)
+  from public.teacher_profiles tp
+  join public.profiles p on p.id = tp.id
+  cross join lateral (select regexp_replace(trim(p.full_name), '\s+', ' ', 'g') as nm) n
+  left join public.reviews r on r.teacher_id = tp.id
+  where tp.approved
+  group by tp.id, n.nm
+  order by count(r.id) desc, n.nm;
+$$;
+grant execute on function public.public_teachers() to anon, authenticated;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';
