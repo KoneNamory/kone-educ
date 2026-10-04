@@ -10,11 +10,14 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Interroger la base Supabase
         run: |
           URL=$(grep -o "url: '[^']*'" supabase-config.js | cut -d"'" -f2)
           KEY=$(grep -o "publishableKey: '[^']*'" supabase-config.js | cut -d"'" -f2)
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL/rest/v1/profiles?select=id&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          # La clé publique s'envoie dans l'en-tête apikey. La requête suffit à garder la base active :
+          # un refus « permission denied » (code 42501) prouve que la base a bien répondu.
+          STATUS=$(curl -s -o response.txt -w '%{http_code}' "$URL/rest/v1/profiles?select=id&limit=1" -H "apikey: $KEY")
           echo "Réponse Supabase : $STATUS"
-          test "$STATUS" = "200"
+          cat response.txt; echo
+          if [ "$STATUS" = "200" ] || grep -q '"code":"42501"' response.txt; then echo "Base active."; else exit 1; fi
