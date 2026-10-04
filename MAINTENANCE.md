@@ -33,3 +33,12 @@ Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une 
 - `app.css` / `app.js` : style et barre de navigation communs aux espaces connectés (liens selon le rôle, nom, déconnexion).
 - `conseils.html` et `conseils-*.html` : blog de conseils (pages statiques pour le référencement). Ajouter chaque nouvel article à `conseils.html` et à `sitemap.xml`.
 - `manifest.webmanifest`, `sw.js`, `offline.html`, `assets/icons/` : application installable sur téléphone et mode hors connexion. Après une modification de `sw.js`, changer sa constante `VERSION`.
+
+## Test de bout en bout
+
+`tests/e2e/parcours.mjs` rejoue le parcours complet (inscription, réservation, candidature, validation, attribution, facture, paiement, compte rendu, messagerie, avis, contact) sur les vraies pages, avec un faux Supabase qui refuse toute colonne absente de `supabase-schema.sql`. Nécessite Node.js et Playwright :
+
+```
+python3 -m http.server 8765 --bind 127.0.0.1 &
+node tests/e2e/parcours.mjs
+```
