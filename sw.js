@@ -1,7 +1,7 @@
 // Service worker KONE.EDUC : installation de l'application et chargement rapide.
 // Changer VERSION à chaque modification de ce fichier pour forcer la mise à jour.
-const VERSION = 'kone-educ-v4';
-const CORE = ['./', 'index.html', 'offline.html', 'site.css', 'site.js', 'app.css', 'app.js', 'favicon.svg', 'assets/hero-tutor.webp', 'assets/icons/icon-192.png'];
+const VERSION = 'kone-educ-v5';
+const CORE = ['./', 'index.html', 'offline.html', 'site.css', 'site.js', 'app.css', 'app.js', 'assets/logo/kone-educ-embleme.jpg', 'assets/icons/favicon-48.png', 'assets/hero-tutor.webp', 'assets/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
