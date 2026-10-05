@@ -1,1 +1,71 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Parent | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="favicon.svg" type="image/svg+xml"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>:root{--blue:#1559eb;--ink:#102149;--paper:#f5f9ff;--line:#dbe5f5}body{margin:0;background:var(--paper);font:16px Arial;color:var(--ink)}main{max-width:1000px;margin:auto;padding:30px}.card{background:#fff;padding:22px;margin:15px 0;border-radius:14px}.row{padding:15px;border-top:1px solid var(--line)}.notice{border-left:4px solid var(--blue);background:#eef4ff;margin:12px 0;padding:12px 14px;border-radius:7px}.tag{float:right;padding:5px 8px;border-radius:12px;color:#a65d00;background:#fff0dc;font-size:11px;font-weight:bold}.btn{display:inline-block;margin-top:15px;padding:12px;border-radius:8px;color:#fff;background:var(--blue);text-decoration:none;font-weight:bold}a{color:var(--blue);font-weight:bold;text-decoration:none}small{color:#60709a}.cancel{margin:4px 0 0;padding:7px 11px;border:1px solid #f1c7c2;border-radius:8px;background:#fff;color:#b42318;font:bold 13px Arial;cursor:pointer}.notice.read{border-left-color:#c9d3e6;background:#f6f8fc}.new{display:inline-block;padding:2px 7px;border-radius:99px;background:#fa7518;color:#fff;font-size:11px;font-weight:bold}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body><main><button type="button" onclick="db.auth.signOut().then(()=>location.href='connexion.html')" style="float:right;padding:8px 12px;border:1px solid #dbe5f5;border-radius:8px;background:#fff;color:#102149;font:bold 14px Arial;cursor:pointer">Se déconnecter</button><a href="index.html">← Accueil</a><h1>Mon espace Parent</h1><p id="message">Chargement de vos demandes...</p><p><a class="btn" href="paiements.html" style="margin-top:0">💳 Mes paiements</a></p><section class="card"><h2>Mes notifications</h2><div id="notifications">Chargement...</div></section><section class="card"><h2>Mes demandes de cours</h2><div id="list"></div><a class="btn" href="reservation.html">Nouvelle demande de cours</a></section></main><script>const statusFr={pending:'En attente',assigned:'Enseignant attribué',completed:'Terminé',cancelled:'Annulé'};const db=supabase.createClient(KONE_EDUC_SUPABASE.url,KONE_EDUC_SUPABASE.publishableKey),safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));async function load(){const{data:{user}}=await db.auth.getUser();if(!user){message.textContent='Connectez-vous pour voir vos demandes.';return}const[r,n]=await Promise.all([db.from('course_requests').select('*').eq('parent_id',user.id).order('created_at',{ascending:false}),db.from('notifications').select('*').eq('recipient_id',user.id).order('created_at',{ascending:false})]);if(r.error){message.textContent='Erreur : '+r.error.message;return}message.textContent=r.data.length+' demande(s) enregistrée(s).';list.innerHTML=r.data.map(x=>'<div class="row"><span class="tag">'+safe(statusFr[x.status]||x.status)+'</span><b>'+safe(x.student_name)+' · '+safe(x.subject)+'</b><br><small>'+safe(x.school_level)+' · '+safe(x.location)+' · '+safe(x.format)+'</small><p>'+safe(x.availability)+'</p>'+(x.status==='pending'?'<button type="button" class="cancel" onclick="cancelRequest('+x.id+')">Annuler la demande</button>':'')+(x.teacher_id&&x.status!=='cancelled'?'<a href="suivi.html?cours='+x.id+'">📈 Suivi des séances</a> · <a href="messagerie.html?cours='+x.id+'">💬 Écrire à l\'enseignant</a>':'')+'</div>').join('')||'Aucune demande pour le moment.';notifications.innerHTML=n.error?'Les notifications seront disponibles après la configuration.':n.data.slice(0,10).map(x=>'<div class="notice'+(x.is_read?' read':'')+'">'+(x.is_read?'':'<span class="new">Nouveau</span> ')+'<b>'+safe(x.title)+'</b> <small>· '+new Date(x.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+'</small><br><small>'+safe(x.body)+'</small></div>').join('')||'Aucune notification pour le moment.';if(!n.error&&n.data.some(x=>!x.is_read))db.from('notifications').update({is_read:true}).eq('recipient_id',user.id).eq('is_read',false).then(()=>document.dispatchEvent(new Event('ke-notifications-read')))}async function cancelRequest(id){if(!confirm('Annuler cette demande de cours ?'))return;const r=await db.from('course_requests').update({status:'cancelled'}).eq('id',id);if(r.error){alert('Annulation impossible : '+r.error.message);return}load()}load()</script><script src="app.js"></script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Parent | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="favicon.svg" type="image/svg+xml"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Espace parent</p><h1 id="hello">Bonjour 👋</h1><p id="message">Chargement de vos demandes…</p></div><div class="d-hero-cta"><a class="d-btn light" href="reservation.html">+ Nouvelle demande de cours</a></div></section>
+<div class="d-kpis" id="kpis"></div>
+<div class="d-grid">
+<div class="d-col">
+<section class="card d-card"><div class="d-head"><h2>Mes demandes de cours</h2><span class="d-count" id="count">0</span></div><div id="list">Chargement…</div></section>
+</div>
+<aside class="d-col">
+<section class="card d-card"><div class="d-head"><h2>Notifications</h2></div><div id="notifications">Chargement…</div></section>
+<section class="card d-card"><div class="d-head"><h2>Paiements</h2><span id="payPill"></span></div><p class="d-sub" id="payText">Chargement…</p><div class="d-actions"><a class="d-btn sm" href="paiements.html">💳 Mes paiements</a></div></section>
+<section class="card d-card d-help"><h2>Besoin d’aide ?</h2><p>Une question sur un cours ou un paiement ? Notre équipe vous répond du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
+</aside>
+</div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const day = d => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const fcfa = n => Number(n).toLocaleString('fr-FR') + ' FCFA';
+const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
+const STATUS = { pending: ['En attente', 'wait'], assigned: ['Enseignant attribué', 'ok'], completed: ['Terminé', 'off'], cancelled: ['Annulé', 'bad'] };
+
+async function load() {
+  const { data: { user } } = await db.auth.getUser();
+  if (!user) { message.innerHTML = '<a href="connexion.html" style="color:#fff">Connectez-vous</a> pour voir vos demandes.'; return; }
+  const [me, r, n, inv, pub] = await Promise.all([
+    db.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    db.from('course_requests').select('*').eq('parent_id', user.id).order('created_at', { ascending: false }),
+    db.from('notifications').select('*').eq('recipient_id', user.id).order('created_at', { ascending: false }),
+    db.from('invoices').select('amount, status').eq('parent_id', user.id),
+    db.rpc('public_teachers')
+  ]);
+  const name = (me.data && me.data.full_name || '').trim();
+  hello.textContent = 'Bonjour' + (name ? ' ' + name.split(/\s+/)[0] : '') + ' 👋';
+  if (r.error) { message.textContent = 'Erreur : ' + r.error.message; return; }
+  const teachers = {}; (pub.data || []).forEach(t => { teachers[t.id] = t; });
+  const open = r.data.filter(x => x.status === 'pending' || x.status === 'assigned');
+  const assigned = r.data.filter(x => x.status === 'assigned');
+  const due = inv.error ? [] : inv.data.filter(i => i.status === 'unpaid');
+  const unread = n.error ? 0 : n.data.filter(x => !x.is_read).length;
+
+  message.textContent = !r.data.length ? 'Bienvenue ! Décrivez le besoin de votre enfant : nous trouvons l’enseignant idéal près de chez vous.'
+    : r.data.length + ' demande(s) enregistrée(s)' + (assigned.length ? ' · ' + assigned.length + ' accompagnement(s) en cours.' : '. Nous recherchons le meilleur enseignant pour vous.');
+  kpis.innerHTML = kpi('📚', open.length, 'Demande(s) en cours') + kpi('👩‍🏫', assigned.length, 'Enseignant(s) attribué(s)') + kpi('💳', due.length, 'Facture(s) à payer') + kpi('🔔', unread, 'Notification(s) non lue(s)');
+  payPill.innerHTML = inv.error ? '' : due.length ? '<span class="d-pill wait">À payer</span>' : '<span class="d-pill ok">✓ À jour</span>';
+  payText.textContent = inv.error ? 'Vos factures mensuelles apparaîtront ici.' : due.length ? due.length + ' facture(s) à régler · ' + fcfa(due.reduce((s, i) => s + i.amount, 0)) + ' par Wave, Orange Money ou Moov Money.' : 'Vous êtes à jour de vos paiements. Merci !';
+
+  count.textContent = r.data.length;
+  list.innerHTML = r.data.map(x => {
+    const st = STATUS[x.status] || [x.status, 'off'];
+    const t = x.teacher_id && teachers[x.teacher_id];
+    const teacher = x.status === 'pending' ? '<p class="d-sub">🔎 Nous sélectionnons un enseignant qualifié près de chez vous.</p>'
+      : t ? '<p class="d-sub">Enseignant : <b>' + safe(t.display_name) + '</b> · ' + safe(t.subject) + '</p>' : '';
+    return '<div class="d-item row"><span class="d-av">' + safe(String(x.student_name || '?').charAt(0).toUpperCase()) + '</span><div class="d-item-main"><div class="d-item-top"><div><b>' + safe(x.student_name) + ' · ' + safe(x.subject) + '</b><p class="d-sub">Demande du ' + day(x.created_at) + '</p></div><span class="d-pill tag ' + st[1] + '">' + safe(st[0]) + '</span></div>'
+      + '<div class="d-meta"><span>' + safe(x.school_level) + '</span><span>📍 ' + safe(x.location) + '</span><span>' + safe(x.format) + '</span><span>🗓 ' + safe(x.availability) + '</span></div>' + teacher
+      + '<div class="d-actions">' + (x.teacher_id && x.status !== 'cancelled' ? '<a class="d-link" href="suivi.html?cours=' + x.id + '">📈 Suivi des séances</a><a class="d-link" href="messagerie.html?cours=' + x.id + '">💬 Écrire à l’enseignant</a>' : '')
+      + (x.status === 'pending' ? '<button type="button" class="cancel" onclick="cancelRequest(' + x.id + ')">Annuler la demande</button>' : '') + '</div></div></div>';
+  }).join('') || '<div class="d-empty"><span class="big">🎒</span><p>Aucune demande pour le moment.</p><a class="d-btn" href="reservation.html">Faire ma première demande</a></div>';
+
+  notifications.innerHTML = n.error ? 'Les notifications seront disponibles prochainement.' : n.data.slice(0, 8).map(x => '<div class="d-note' + (x.is_read ? ' read' : '') + '"><span class="dot"></span><b>' + safe(x.title) + '</b><small>' + safe(x.body) + ' · ' + day(x.created_at) + '</small></div>').join('') || '<p class="d-sub">Aucune notification pour le moment.</p>';
+  if (unread) db.from('notifications').update({ is_read: true }).eq('recipient_id', user.id).eq('is_read', false).then(() => document.dispatchEvent(new Event('ke-notifications-read')));
+}
+
+async function cancelRequest(id) {
+  if (!confirm('Annuler cette demande de cours ?')) return;
+  const r = await db.from('course_requests').update({ status: 'cancelled' }).eq('id', id);
+  if (r.error) { alert('Annulation impossible : ' + r.error.message); return; }
+  load();
+}
+load();
+</script><script src="app.js"></script></body></html>

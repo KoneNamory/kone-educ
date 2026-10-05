@@ -1,1 +1,98 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Enseignant | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="favicon.svg" type="image/svg+xml"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0;background:#f5f9ff;font:16px Arial;color:#102149}main{max-width:900px;margin:auto;padding:30px}.card{background:#fff;padding:22px;margin:15px 0;border-radius:14px}.row{padding:14px 0;border-top:1px solid #dbe5f5}.row:first-child{border-top:0}.notice{border-left:4px solid #1559eb;background:#eef4ff;margin:12px 0;padding:12px 14px;border-radius:7px}label{display:block;margin-top:12px;font-weight:bold}input,select{width:100%;padding:10px;box-sizing:border-box;border:1px solid #dbe5f5;border-radius:7px}.btn{margin-top:17px;padding:11px;border:0;border-radius:7px;background:#1559eb;color:#fff;font-weight:bold}.tag{padding:5px 8px;border-radius:12px;background:#fff0dc;font-size:12px}a{color:#1559eb;font-weight:bold;text-decoration:none}small{color:#60709a}.notice.read{border-left-color:#c9d3e6;background:#f6f8fc}.new{display:inline-block;padding:2px 7px;border-radius:99px;background:#fa7518;color:#fff;font-size:11px;font-weight:bold}.steps{display:grid;gap:10px;margin:4px 0 6px}.step{padding:12px 14px;border:1px solid #dbe5f5;border-radius:10px}.step b{display:block}.step.now{border-color:#1559eb;background:#eef4ff}.go{display:inline-block;margin-top:8px;padding:12px 16px;border-radius:8px;background:#1559eb;color:#fff;font-weight:bold;text-decoration:none}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body><main><button type="button" onclick="db.auth.signOut().then(()=>location.href='connexion.html')" style="float:right;padding:8px 12px;border:1px solid #dbe5f5;border-radius:8px;background:#fff;color:#102149;font:bold 14px Arial;cursor:pointer">Se déconnecter</button><a href="index.html">← Accueil</a><h1>Mon espace Enseignant</h1><p id="message">Chargement de votre profil...</p><section class="card"><h2>Mon profil</h2><p id="profile"></p></section><section class="card"><h2>Mes notifications</h2><div id="notifications">Chargement...</div></section><section class="card"><h2>Mes cours attribués</h2><div id="courses">Chargement...</div></section><section class="card" id="availabilityCard"><h2>Mes disponibilités</h2><form id="form"><label>Créneaux habituels<input id="availability" required></label><label>Format de cours<select id="format"><option>À domicile</option><option>En ligne</option><option>À domicile et en ligne</option></select></label><button class="btn">Enregistrer</button></form></section></main><script>const db=supabase.createClient(KONE_EDUC_SUPABASE.url,KONE_EDUC_SUPABASE.publishableKey);let user;const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));async function load(){const x=await db.auth.getUser();user=x.data.user;if(!user){message.textContent='Connectez-vous avec votre compte Enseignant.';return}const[r,requests,n]=await Promise.all([db.from('teacher_profiles').select('*').eq('id',user.id).maybeSingle(),db.from('course_requests').select('*').eq('teacher_id',user.id).order('created_at',{ascending:false}),db.from('notifications').select('*').eq('recipient_id',user.id).order('created_at',{ascending:false})]);if(r.error){message.textContent='Erreur : '+r.error.message;return}if(!r.data){message.textContent='Bienvenue ! Complétez votre dossier pour postuler et recevoir des cours.';availabilityCard.hidden=true;courses.textContent='Les cours vous seront proposés une fois votre dossier validé.';profile.innerHTML='<div class="steps"><div class="step now"><b>1. Compléter mon dossier</b><small>Diplôme, matière, disponibilités, zone et vos documents : photo de profil, pièce d’identité, dernier diplôme et CV (JPG, PNG ou PDF, 5 Mo maximum).</small></div><div class="step"><b>2. Validation par KONE.EDUC</b><small>Notre équipe étudie votre dossier et vous contacte.</small></div><div class="step"><b>3. Recevoir des cours</b><small>Les familles proches de chez vous vous sont proposées.</small></div></div><a class="go" href="candidature-enseignant.html">Compléter mon dossier</a>';notifications.textContent='Aucune notification pour le moment.';return}availabilityCard.hidden=false;message.textContent='Profil chargé.';const miss=[['photo_url','photo'],['id_doc_path','pièce d’identité'],['diploma_path','diplôme'],['cv_path','CV']].filter(d=>!r.data[d[0]]).map(d=>d[1]);profile.innerHTML=(r.data.photo_url?'<img src="'+safe(r.data.photo_url)+'" alt="" style="float:left;width:64px;height:64px;margin-right:14px;border-radius:50%;object-fit:cover">':'')+'<b>'+safe(r.data.subject)+'</b> · '+safe(r.data.degree)+'<br><span class="tag">'+(r.data.approved?'Validé':'En attente de validation')+'</span><br><small>'+(miss.length?'⚠ Dossier incomplet : '+miss.join(', ')+'. <a href="candidature-enseignant.html">Compléter mon dossier</a>':'✓ Dossier complet · <a href="candidature-enseignant.html">Mettre à jour</a>')+'</small><div style="clear:both"></div>';availability.value=r.data.availability||'';format.value=r.data.format||'À domicile';courses.innerHTML=requests.error?'Impossible de charger les cours.':requests.data.map(c=>'<div class="row"><b>'+safe(c.student_name)+' · '+safe(c.subject)+'</b>'+(c.status==='completed'?' <span class="tag">Terminé</span>':c.status==='cancelled'?' <span class="tag">Annulé</span>':'')+'<br><small>'+safe(c.school_level)+' · '+safe(c.location)+' · '+safe(c.format)+'<br>'+safe(c.availability)+'</small>'+(c.status==='cancelled'?'':'<br><a href="suivi.html?cours='+c.id+'">📝 Compte rendu de séance</a> · <a href="messagerie.html?cours='+c.id+'">💬 Écrire au parent</a>')+'</div>').join('')||'Aucun cours ne vous est encore attribué.';notifications.innerHTML=n.error?'Les notifications seront disponibles après la configuration.':n.data.slice(0,10).map(x=>'<div class="notice'+(x.is_read?' read':'')+'">'+(x.is_read?'':'<span class="new">Nouveau</span> ')+'<b>'+safe(x.title)+'</b> <small>· '+new Date(x.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+'</small><br><small>'+safe(x.body)+'</small></div>').join('')||'Aucune notification pour le moment.';if(!n.error&&n.data.some(x=>!x.is_read))db.from('notifications').update({is_read:true}).eq('recipient_id',user.id).eq('is_read',false).then(()=>document.dispatchEvent(new Event('ke-notifications-read')))}form.onsubmit=async e=>{e.preventDefault();const r=await db.from('teacher_profiles').update({availability:availability.value,format:format.value}).eq('id',user.id);message.textContent=r.error?'Erreur : '+r.error.message:'Disponibilités mises à jour.'};load()</script><script src="app.js"></script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Enseignant | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="favicon.svg" type="image/svg+xml"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Espace enseignant</p><h1 id="hello">Bonjour 👋</h1><p id="message">Chargement de votre profil…</p></div><div class="d-hero-cta" id="heroCta"></div></section>
+<div class="d-kpis" id="kpis"></div>
+<div class="d-grid">
+<div class="d-col">
+<section class="card d-card"><div class="d-head"><h2>Mon dossier</h2><span id="statusPill"></span></div><div id="profile"></div></section>
+<section class="card d-card"><div class="d-head"><h2>Mes cours</h2><span class="d-count" id="coursesCount">0</span></div><div id="courses">Chargement…</div></section>
+</div>
+<aside class="d-col">
+<section class="card d-card"><div class="d-head"><h2>Notifications</h2></div><div id="notifications">Chargement…</div></section>
+<section class="card d-card" id="availabilityCard" hidden><div class="d-head"><h2>Mes disponibilités</h2></div><form id="form"><label>Créneaux habituels<input id="availability" required placeholder="Ex. Mercredi après-midi, samedi matin"></label><label>Format de cours<select id="format"><option>À domicile</option><option>En ligne</option><option>À domicile et en ligne</option></select></label><button class="d-btn">Enregistrer</button><p class="d-flash" id="flash" role="status"></p></form></section>
+<section class="card d-card d-help"><h2>Besoin d’aide ?</h2><p>Notre équipe vous accompagne pour votre dossier et vos cours, du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
+</aside>
+</div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+let user;
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const day = d => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
+const DOCS = [['photo_url', 'Photo de profil'], ['id_doc_path', 'Pièce d’identité'], ['diploma_path', 'Dernier diplôme'], ['cv_path', 'CV']];
+
+function steps(current) {
+  return '<div class="d-steps">' + [['Dossier', 'Informations et documents'], ['Validation', 'Étude par KONE.EDUC'], ['Cours', 'Familles proposées']]
+    .map((x, i) => '<div class="d-step ' + (i < current ? 'done' : i === current ? 'now' : '') + '"><b>' + x[0] + '</b>' + x[1] + '</div>').join('') + '</div>';
+}
+
+async function load() {
+  user = (await db.auth.getUser()).data.user;
+  if (!user) { message.innerHTML = '<a href="connexion.html" style="color:#fff">Connectez-vous</a> avec votre compte Enseignant.'; return; }
+  const [me, r, requests, n, reports] = await Promise.all([
+    db.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    db.from('teacher_profiles').select('*').eq('id', user.id).maybeSingle(),
+    db.from('course_requests').select('*').eq('teacher_id', user.id).order('created_at', { ascending: false }),
+    db.from('notifications').select('*').eq('recipient_id', user.id).order('created_at', { ascending: false }),
+    db.from('session_reports').select('id').eq('teacher_id', user.id)
+  ]);
+  const name = (me.data && me.data.full_name || '').trim();
+  hello.textContent = 'Bonjour' + (name ? ' ' + name.split(/\s+/)[0] : '') + ' 👋';
+  if (r.error) { message.textContent = 'Erreur : ' + r.error.message; return; }
+  const t = r.data;
+  const unread = n.error ? 0 : n.data.filter(x => !x.is_read).length;
+  const active = requests.error ? [] : requests.data.filter(c => c.status === 'assigned');
+  const done = (t && t.subject && t.degree ? 1 : 0) + DOCS.filter(d => t && t[d[0]]).length;
+  const pct = Math.round(done / (DOCS.length + 1) * 100);
+  const missing = t ? DOCS.filter(d => !t[d[0]]).map(d => d[1].toLowerCase()) : [];
+
+  // En-tête et indicateurs
+  if (!t) message.textContent = 'Bienvenue ! Complétez votre dossier pour postuler et recevoir des cours.';
+  else if (!t.approved) message.textContent = missing.length ? 'Votre dossier est presque prêt : ajoutez les documents manquants pour qu’il soit étudié.' : 'Votre dossier est en cours d’étude par notre équipe. Nous vous contactons très vite.';
+  else message.textContent = active.length ? 'Vous suivez ' + active.length + ' élève(s). Pensez au compte rendu après chaque séance.' : 'Votre profil est validé. Les familles proches de chez vous vous seront proposées.';
+  heroCta.innerHTML = !t || missing.length ? '<a class="d-btn light" href="candidature-enseignant.html#teacher-form">Compléter mon dossier →</a>' : '<a class="d-btn light" href="enseignants.html">Voir mon profil public</a>';
+  kpis.innerHTML = kpi('📁', pct + ' %', 'Dossier complété') + kpi('🎓', active.length, 'Élève(s) suivi(s)') + kpi('📝', reports.error ? 0 : reports.data.length, 'Compte(s) rendu(s)') + kpi('🔔', unread, 'Notification(s) non lue(s)');
+  statusPill.innerHTML = !t ? '<span class="d-pill off">À compléter</span>' : t.approved ? '<span class="d-pill ok">✓ Profil validé</span>' : '<span class="d-pill wait">En attente de validation</span>';
+
+  // Dossier
+  if (!t) {
+    availabilityCard.hidden = true;
+    profile.innerHTML = steps(0) + '<p class="d-sub">Pour postuler, renseignez votre diplôme, votre matière, vos disponibilités et votre zone, puis ajoutez vos documents (JPG, PNG ou PDF, 5 Mo maximum).</p>'
+      + '<div class="d-checks">' + DOCS.map(d => '<div class="d-check"><i>○</i>' + d[1] + '</div>').join('') + '</div>'
+      + '<a class="d-btn" href="candidature-enseignant.html">Compléter mon dossier</a>';
+  } else {
+    availabilityCard.hidden = false;
+    const photo = t.photo_url ? '<img class="d-av round" src="' + safe(t.photo_url) + '" alt="">' : '<span class="d-av round">' + safe((name || '?').charAt(0).toUpperCase()) + '</span>';
+    profile.innerHTML = steps(t.approved ? 3 : missing.length ? 0 : 1)
+      + '<div class="d-profile">' + photo + '<div><h3>' + safe(name || 'Mon profil') + '</h3><p class="d-sub">' + safe(t.subject) + ' · ' + safe(t.degree) + '</p>'
+      + '<div class="d-meta">' + [t.levels, t.location, t.format, t.experience].filter(Boolean).map(x => '<span>' + safe(x) + '</span>').join('') + '</div></div></div>'
+      + '<div class="d-progress" aria-label="Dossier complété à ' + pct + ' %"><i style="width:' + pct + '%"></i></div><p class="d-sub">' + (missing.length ? '⚠ Dossier incomplet : ' + safe(missing.join(', ')) + '.' : '✓ Dossier complet') + '</p>'
+      + '<div class="d-checks">' + DOCS.map(d => '<div class="d-check' + (t[d[0]] ? ' done' : '') + '"><i>' + (t[d[0]] ? '✓' : '○') + '</i>' + d[1] + '</div>').join('') + '</div>'
+      + '<a class="d-btn ' + (missing.length ? '' : 'ghost') + '" href="candidature-enseignant.html">' + (missing.length ? 'Compléter mon dossier' : 'Mettre à jour mon dossier') + '</a>';
+    availability.value = t.availability || '';
+    format.value = t.format || 'À domicile';
+  }
+
+  // Cours
+  const list = requests.error ? [] : requests.data;
+  coursesCount.textContent = list.length;
+  courses.innerHTML = requests.error ? 'Impossible de charger les cours.' : list.map(c => {
+    const pill = c.status === 'completed' ? '<span class="d-pill off">Terminé</span>' : c.status === 'cancelled' ? '<span class="d-pill bad">Annulé</span>' : '<span class="d-pill ok">En cours</span>';
+    return '<div class="d-item row"><span class="d-av">' + safe(String(c.subject || '?').charAt(0)) + '</span><div class="d-item-main"><div class="d-item-top"><div><b>' + safe(c.student_name) + ' · ' + safe(c.subject) + '</b><p class="d-sub">' + safe(c.availability) + '</p></div>' + pill + '</div>'
+      + '<div class="d-meta"><span>' + safe(c.school_level) + '</span><span>📍 ' + safe(c.location) + '</span><span>' + safe(c.format) + '</span></div>'
+      + (c.status === 'cancelled' ? '' : '<div class="d-actions"><a class="d-link" href="suivi.html?cours=' + c.id + '">📝 Compte rendu de séance</a><a class="d-link" href="messagerie.html?cours=' + c.id + '">💬 Écrire au parent</a></div>') + '</div></div>';
+  }).join('') || '<div class="d-empty"><span class="big">📚</span><p>' + (t && t.approved ? 'Aucun cours pour le moment. Nous vous proposerons des familles près de chez vous.' : 'Les cours vous seront proposés une fois votre dossier validé.') + '</p></div>';
+
+  // Notifications
+  notifications.innerHTML = n.error ? 'Les notifications seront disponibles prochainement.' : n.data.slice(0, 8).map(x => '<div class="d-note' + (x.is_read ? ' read' : '') + '"><span class="dot"></span><b>' + safe(x.title) + '</b><small>' + safe(x.body) + ' · ' + day(x.created_at) + '</small></div>').join('') || '<p class="d-sub">Aucune notification pour le moment.</p>';
+  if (unread) db.from('notifications').update({ is_read: true }).eq('recipient_id', user.id).eq('is_read', false).then(() => document.dispatchEvent(new Event('ke-notifications-read')));
+}
+
+form.onsubmit = async e => {
+  e.preventDefault();
+  const r = await db.from('teacher_profiles').update({ availability: availability.value, format: format.value }).eq('id', user.id);
+  flash.style.color = r.error ? '#b42318' : '';
+  flash.textContent = r.error ? 'Erreur : ' + r.error.message : '✓ Disponibilités enregistrées.';
+};
+load();
+</script><script src="app.js"></script></body></html>
