@@ -703,5 +703,170 @@ $$;
 revoke execute on function public.admin_set_profile(uuid, text) from public;
 grant execute on function public.admin_set_profile(uuid, text) to authenticated;
 
+-- ============================================================
+-- Notifications par e-mail gratuites (Brevo : 300 e-mails/jour sans frais)
+-- Chaque notification du site est aussi envoyée par e-mail dès qu'une clé Brevo est enregistrée.
+-- ============================================================
+do $$ begin
+  create extension if not exists pg_net with schema extensions;
+exception when others then raise notice 'pg_net indisponible : e-mails désactivés (%).', sqlerrm;
+end $$;
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+create table if not exists private.settings (key text primary key, value text not null);
+
+-- Enregistrement des réglages par un administrateur (la clé n'est jamais relisible depuis le site)
+create or replace function public.admin_save_email_settings(p_api_key text, p_sender text)
+returns void language plpgsql security definer set search_path = public, private as $$
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  if coalesce(trim(p_sender), '') !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Adresse d’expéditeur invalide'; end if;
+  if coalesce(trim(p_api_key), '') <> '' then
+    insert into private.settings values ('brevo_api_key', trim(p_api_key)) on conflict (key) do update set value = excluded.value;
+  end if;
+  insert into private.settings values ('email_from', lower(trim(p_sender))) on conflict (key) do update set value = excluded.value;
+end;
+$$;
+revoke execute on function public.admin_save_email_settings(text, text) from public;
+grant execute on function public.admin_save_email_settings(text, text) to authenticated;
+
+create or replace function public.admin_email_status()
+returns table (enabled boolean, sender text) language sql stable security definer set search_path = public, private as $$
+  select exists (select 1 from private.settings where key = 'brevo_api_key'),
+         (select value from private.settings where key = 'email_from')
+  where public.is_admin();
+$$;
+revoke execute on function public.admin_email_status() from public;
+grant execute on function public.admin_email_status() to authenticated;
+
+-- Envoi de l'e-mail à chaque nouvelle notification (ne bloque jamais la notification en cas d'erreur)
+create or replace function public.email_notification() returns trigger
+language plpgsql security definer set search_path = public, private, extensions as $$
+declare v_key text; v_from text; v_to text; v_name text; v_html text;
+  esc text := '';
+begin
+  select value into v_key from private.settings where key = 'brevo_api_key';
+  if v_key is null then return new; end if;
+  select value into v_from from private.settings where key = 'email_from';
+  select u.email, p.full_name into v_to, v_name from auth.users u left join public.profiles p on p.id = u.id where u.id = new.recipient_id;
+  if v_to is null or v_from is null then return new; end if;
+  v_html := '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#0f1b37">'
+    || '<p style="font-size:22px;font-weight:800;color:#1559eb;margin:0 0 18px">KONE.<span style="color:#fa7518">EDUC</span></p>'
+    || '<p>Bonjour ' || replace(replace(coalesce(v_name, ''), '<', '&lt;'), '>', '&gt;') || ',</p>'
+    || '<h2 style="font-size:19px;margin:18px 0 8px">' || replace(replace(new.title, '<', '&lt;'), '>', '&gt;') || '</h2>'
+    || '<p style="font-size:15px;line-height:1.6">' || replace(replace(new.body, '<', '&lt;'), '>', '&gt;') || '</p>'
+    || '<p style="margin:24px 0"><a href="https://kone-educ.vercel.app/connexion.html" style="background:#1559eb;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Ouvrir mon espace</a></p>'
+    || '<p style="color:#5b6884;font-size:13px">Une question ? WhatsApp : 01 61 70 13 61<br>KONE.EDUC — L’excellence à domicile</p></div>';
+  perform net.http_post(
+    url := 'https://api.brevo.com/v3/smtp/email',
+    headers := jsonb_build_object('api-key', v_key, 'Content-Type', 'application/json', 'accept', 'application/json'),
+    body := jsonb_build_object(
+      'sender', jsonb_build_object('name', 'KONE.EDUC', 'email', v_from),
+      'to', jsonb_build_array(jsonb_build_object('email', v_to, 'name', coalesce(v_name, v_to))),
+      'subject', new.title || ' — KONE.EDUC',
+      'htmlContent', v_html));
+  return new;
+exception when others then
+  return new;
+end;
+$$;
+drop trigger if exists email_notification on public.notifications;
+create trigger email_notification after insert on public.notifications
+  for each row execute function public.email_notification();
+
+-- ============================================================
+-- Notifications cliquables : chaque notification mène à la bonne page
+-- ============================================================
+alter table public.notifications add column if not exists link text;
+
+create or replace function public.notification_link() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_role text;
+begin
+  if new.link is not null then return new; end if;
+  select role into v_role from public.profiles where id = new.recipient_id;
+  new.link := case
+    when new.title in ('Nouvelle facture', 'Paiement confirmé', 'Rappel de paiement') then 'paiements.html'
+    when new.title = 'Paiement à vérifier' then 'espace-admin.html#billing'
+    when new.title in ('Nouvelle offre de cours', 'Offre pourvue') then 'offres.html'
+    when new.title in ('Nouvel inscrit') then 'espace-admin.html#users'
+    when new.title in ('Nouvelle demande de cours', 'Nouvelle candidature enseignant') then 'espace-admin.html'
+    when v_role = 'teacher' then 'espace-enseignant.html'
+    when v_role = 'admin' then 'espace-admin.html'
+    else 'espace-parent.html' end;
+  return new;
+end;
+$$;
+drop trigger if exists notification_link on public.notifications;
+create trigger notification_link before insert on public.notifications
+  for each row execute function public.notification_link();
+
+-- Message : mène directement à la conversation
+create or replace function public.notify_new_message() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body, link)
+  select new.recipient_id, 'Nouveau message',
+         'Nouveau message concernant le cours de ' || cr.subject || ' pour ' || cr.student_name || ' : « ' || left(new.body, 120) || case when length(new.body) > 120 then '…' else '' end || ' »',
+         'messagerie.html?cours=' || cr.id
+  from public.course_requests cr where cr.id = new.course_request_id;
+  return new;
+end;
+$$;
+
+-- Compte rendu : mène au suivi des séances
+create or replace function public.notify_session_report() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body, link)
+  select cr.parent_id, 'Nouveau compte rendu',
+         'Séance de ' || cr.subject || ' du ' || to_char(new.session_date, 'DD/MM/YYYY') || ' pour ' || cr.student_name || ' : ' || new.topics,
+         'suivi.html?cours=' || cr.id
+  from public.course_requests cr where cr.id = new.course_request_id and cr.parent_id is not null;
+  return new;
+end;
+$$;
+
+-- Administrateurs prévenus : nouvel inscrit, nouvelle demande, nouvelle candidature
+create or replace function public.notify_admins_new_profile() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.role = 'admin' then return new; end if;
+  insert into public.notifications (recipient_id, title, body)
+  select a.id, 'Nouvel inscrit', coalesce(new.full_name, 'Un utilisateur') || ' vient de créer un compte ' || case new.role when 'teacher' then 'Enseignant' else 'Parent' end || coalesce(' · ' || new.phone, '') || '.'
+  from public.profiles a where a.role = 'admin';
+  return new;
+end;
+$$;
+drop trigger if exists notify_admins_new_profile on public.profiles;
+create trigger notify_admins_new_profile after insert on public.profiles
+  for each row execute function public.notify_admins_new_profile();
+
+create or replace function public.notify_admins_new_request() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select a.id, 'Nouvelle demande de cours', new.subject || ' · ' || new.school_level || ' · ' || new.location || ' pour ' || new.student_name || '. Attribuez un enseignant.'
+  from public.profiles a where a.role = 'admin';
+  return new;
+end;
+$$;
+drop trigger if exists notify_admins_new_request on public.course_requests;
+create trigger notify_admins_new_request after insert on public.course_requests
+  for each row execute function public.notify_admins_new_request();
+
+create or replace function public.notify_admins_new_candidate() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select a.id, 'Nouvelle candidature enseignant', coalesce(p.full_name, 'Un enseignant') || ' · ' || coalesce(new.subject, 'matière ?') || ' · ' || coalesce(new.degree, '') || '. Dossier à étudier.'
+  from public.profiles a left join public.profiles p on p.id = new.id where a.role = 'admin';
+  return new;
+end;
+$$;
+drop trigger if exists notify_admins_new_candidate on public.teacher_profiles;
+create trigger notify_admins_new_candidate after insert on public.teacher_profiles
+  for each row execute function public.notify_admins_new_candidate();
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

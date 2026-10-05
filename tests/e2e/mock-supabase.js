@@ -91,6 +91,7 @@
       d.profiles.push({ id: id, full_name: a.p_full_name, phone: a.p_phone, role: a.p_role }); save(d); log(['rpc', name, a.p_email]);
       return { data: id, error: null };
     }
+    if (name === 'admin_email_status') return { data: [{ enabled: false, sender: null }], error: null };
     if (name === 'admin_users') {
       var st3 = load();
       return { data: (st3.__users || []).map(function (u) { var pr = (st3.profiles || []).find(function (x) { return x.id === u.id; }) || {};
