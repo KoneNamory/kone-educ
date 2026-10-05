@@ -124,8 +124,13 @@ teacherForm.addEventListener('submit', async function (event) {
   const button = this.querySelector('button[type="submit"]');
   button.disabled = true;
   try {
-    const profileUpdate = await teacherDb.from('profiles').update({ full_name: form.get('name'), phone: form.get('phone') }).eq('id', user.id);
-    if (profileUpdate.error) throw profileUpdate.error;
+    // Profil du compte : mis à jour, ou recréé en Enseignant s'il a disparu
+    const { data: existing } = await teacherDb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    const profileSave = existing
+      ? await teacherDb.from('profiles').update({ full_name: form.get('name'), phone: form.get('phone') }).eq('id', user.id)
+      : await teacherDb.from('profiles').insert({ id: user.id, full_name: form.get('name'), phone: form.get('phone'), role: 'teacher' });
+    if (profileSave.error) throw new Error('enregistrement de votre profil refusé (' + profileSave.error.message + ')');
+    if (existing && existing.role !== 'teacher') throw new Error('ce compte est enregistré comme ' + (existing.role === 'parent' ? 'Parent' : existing.role) + ' : utilisez un compte Enseignant');
 
     const row = { id: user.id, degree, subject, experience: form.get('experience'), availability: days.join(', '), location: form.get('location'), levels: levels.join(', '), format: form.get('format'), bio: form.get('bio') };
     // Envoi des documents : la photo dans « avatars » (public), le reste dans « teacher-files » (privé)
@@ -136,13 +141,14 @@ teacherForm.addEventListener('submit', async function (event) {
       const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
       const path = user.id + '/' + name + '-' + Date.now() + '.' + ext;
       const bucket = name === 'photo' ? 'avatars' : 'teacher-files';
-      const upload = await teacherDb.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: true });
-      if (upload.error) throw upload.error;
+      // Nom de fichier unique : pas de remplacement (qui exigerait des droits de lecture en plus)
+      const upload = await teacherDb.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
+      if (upload.error) throw new Error('envoi de ' + FILES[name].label + ' refusé (' + upload.error.message + ')');
       row[FILES[name].column] = name === 'photo' ? teacherDb.storage.from('avatars').getPublicUrl(path).data.publicUrl : path;
     }
 
     const { error } = await teacherDb.from('teacher_profiles').upsert(row, { onConflict: 'id' });
-    if (error) throw error;
+    if (error) throw new Error('enregistrement de la candidature refusé (' + error.message + ')');
     teacherForm.querySelectorAll('input[type="file"]').forEach(i => { i.value = ''; });
     const left = KE_DOSSIER.missing(await loadDossier()).length;
     say(left ? 'Dossier enregistré. Il reste ' + left + ' élément(s) à compléter (voir en haut du formulaire).' : 'Candidature enregistrée ! Votre dossier est complet : nous l’étudions et vous contactons très vite.');

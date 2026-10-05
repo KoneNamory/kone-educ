@@ -42,7 +42,7 @@ for(const [eleve,matiere] of [['Awa Koné','Mathématiques'],['Ibrahim Koné','A
   await p.fill('input[name=parentName]','Mariam Koné');await p.fill('input[name=phone]','0700112233');await p.fill('input[name=email]','mariam@test.ci');
   const consent=p.locator('#booking-form input[type=checkbox]:not([name])');if(await consent.count())await tick('#booking-form input[type=checkbox]:not([name])');
   await p.click('#booking-form button[type=submit], #booking-form button');await p.waitForTimeout(700);
-  step('Demande de cours ('+eleve+')',(await p.textContent('#confirmation')).includes('succès'),(await p.textContent('#confirmation')).trim());
+  step('Demande de cours ('+eleve+') : écran de remerciement',(await p.textContent('#confirmation')).includes('succès')&&await p.locator('#booking-success').isVisible()&&(await p.textContent('#booking-success')).includes('Merci')&&(await p.textContent('#booking-success')).includes(eleve)&&await p.locator('#booking-form').isHidden());
 }
 // 3. Espace parent : demandes visibles + annulation de la 2e
 await go('espace-parent.html');
@@ -104,6 +104,7 @@ await p.click('.o-card button:has-text("Postuler")');await p.fill('.o-apply text
 d=await db();step('Candidature à une offre',(d.course_applications||[]).length===1&&d.course_applications[0].course_request_id===reqId&&(await p.textContent('#offers')).includes('En cours d’étude'));
 await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 step('Admin : candidature visible sur la demande',(await p.locator('#requests .apps',{hasText:'Yao Kouassi'}).count())===1&&(await p.textContent('#requests .apps')).includes('Disponible le mercredi'));
+step('Admin : liste des enseignants visible et classée',await p.locator('#teacher-'+reqId).isVisible()&&(await p.textContent('#teacher-'+reqId)).includes('Yao Kouassi')&&(await p.textContent('#teacher-'+reqId)).includes('Recommandé')&&(await p.textContent('#teacher-'+reqId)).includes('Même matière')&&(await p.textContent('#teacher-'+reqId)).includes('A postulé'));
 await p.click('#requests .apps button:has-text("Choisir")');await p.waitForTimeout(600);
 d=await db();step('Attribution de l’enseignant (candidature choisie)',d.course_requests.find(r=>r.id===reqId).teacher_id===d.teacher_profiles[0].id);
 step('Pas d’attribution possible sur une demande annulée',(await p.locator('#teacher-'+d.course_requests.find(r=>r.student_name==='Ibrahim Koné').id).count())===0);
