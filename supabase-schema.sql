@@ -26,6 +26,8 @@ alter table public.course_requests enable row level security;
 
 grant usage on schema public to authenticated;
 grant select on public.profiles to authenticated;
+-- Droit explicite de créer son propre profil (la règle ci-dessous limite aux rôles Parent et Enseignant)
+grant insert on public.profiles to authenticated;
 grant insert, select on public.course_requests to authenticated;
 grant usage, select on sequence public.course_requests_id_seq to authenticated;
 
