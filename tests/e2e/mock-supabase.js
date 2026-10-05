@@ -91,6 +91,21 @@
       d.profiles.push({ id: id, full_name: a.p_full_name, phone: a.p_phone, role: a.p_role }); save(d); log(['rpc', name, a.p_email]);
       return { data: id, error: null };
     }
+    if (name === 'admin_users') {
+      var st3 = load();
+      return { data: (st3.__users || []).map(function (u) { var pr = (st3.profiles || []).find(function (x) { return x.id === u.id; }) || {};
+        return { id: u.id, email: u.email, full_name: pr.full_name || null, phone: pr.phone || null, role: pr.role || 'none', created_at: new Date().toISOString(), last_sign_in_at: null }; }), error: null };
+    }
+    if (name === 'generate_month_invoices') {
+      var st2 = load(), m = String(a.p_month).slice(0, 7) + '-01', n = 0;
+      st2.invoices = st2.invoices || [];
+      (st2.course_requests || []).forEach(function (r) {
+        if (r.status !== 'assigned' || !r.parent_id || !(r.monthly_fee > 0)) return;
+        if (st2.invoices.some(function (i) { return i.course_request_id === r.id && i.month === m; })) return;
+        st2.invoices.push({ id: st2.invoices.length + 1, course_request_id: r.id, parent_id: r.parent_id, month: m, amount: r.monthly_fee, due_date: m.slice(0, 8) + '10', status: 'unpaid', created_at: new Date().toISOString() }); n++;
+      });
+      save(st2); return { data: n, error: null };
+    }
     if (name === 'teacher_offers') {
       var me = JSON.parse(localStorage.getItem('__ke_user') || 'null'), st = load();
       var tp = me && (st.teacher_profiles || []).find(function (t) { return t.id === me.id && t.approved; });

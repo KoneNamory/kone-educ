@@ -286,6 +286,7 @@ begin
   end if;
   if new.course_request_id <> old.course_request_id or new.parent_id <> old.parent_id
      or new.month <> old.month or new.amount <> old.amount or new.paid_at is distinct from old.paid_at
+     or new.due_date is distinct from old.due_date
      or new.status <> 'pending' or new.payment_method is null or coalesce(trim(new.payment_reference),'') = '' then
     raise exception 'Seuls le moyen de paiement et la référence de transaction peuvent être indiqués';
   end if;
@@ -388,7 +389,7 @@ create policy "Review participants read reviews" on public.reviews for select to
 -- Moov Money comme moyen de paiement supplémentaire
 alter table public.invoices drop constraint if exists invoices_payment_method_check;
 alter table public.invoices add constraint invoices_payment_method_check
-  check (payment_method in ('wave','orange_money','moov_money')) not valid;
+  check (payment_method in ('wave','orange_money','mtn_money','moov_money')) not valid;
 
 -- L'administrateur voit le nom et le téléphone des parents et des enseignants pour les contacter
 -- L'administrateur peut corriger un profil (ex. compte enseignant enregistré par erreur comme parent)
@@ -631,6 +632,76 @@ $$;
 drop trigger if exists close_applications on public.course_requests;
 create trigger close_applications after update on public.course_requests
   for each row execute function public.close_applications();
+
+-- ============================================================
+-- Facturation mensuelle : tarif par cours, génération du mois, échéance, Moov Money
+-- ============================================================
+alter table public.course_requests add column if not exists monthly_fee integer check (monthly_fee is null or monthly_fee > 0);
+alter table public.invoices add column if not exists due_date date;
+-- Moov Money est proposé aux parents : il doit être accepté comme moyen de paiement
+alter table public.invoices drop constraint if exists invoices_payment_method_check;
+alter table public.invoices add constraint invoices_payment_method_check
+  check (payment_method in ('wave','orange_money','mtn_money','moov_money')) not valid;
+
+-- Factures du mois pour tous les cours en cours ayant un tarif mensuel (sans doublon)
+create or replace function public.generate_month_invoices(p_month date)
+returns integer language plpgsql security definer set search_path = public as $$
+declare v_month date := date_trunc('month', p_month)::date; v_count integer;
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  insert into public.invoices (course_request_id, parent_id, month, amount, due_date)
+  select r.id, r.parent_id, v_month, r.monthly_fee, v_month + 9
+  from public.course_requests r
+  where r.status = 'assigned' and r.parent_id is not null and r.monthly_fee > 0
+  on conflict (course_request_id, month) do nothing;
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+revoke execute on function public.generate_month_invoices(date) from public;
+grant execute on function public.generate_month_invoices(date) to authenticated;
+
+-- Échéance par défaut : le 10 du mois facturé
+create or replace function public.invoice_defaults() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  new.month := date_trunc('month', new.month)::date;
+  if new.due_date is null then new.due_date := new.month + 9; end if;
+  return new;
+end;
+$$;
+drop trigger if exists invoice_defaults on public.invoices;
+create trigger invoice_defaults before insert on public.invoices
+  for each row execute function public.invoice_defaults();
+
+-- ============================================================
+-- Suivi des inscrits (administrateurs) : e-mail, date d'inscription, dernière connexion
+-- ============================================================
+create or replace function public.admin_users()
+returns table (id uuid, email text, full_name text, phone text, role text, created_at timestamptz, last_sign_in_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select u.id, u.email::text, p.full_name, p.phone, coalesce(p.role, 'none'), u.created_at, u.last_sign_in_at
+  from auth.users u left join public.profiles p on p.id = u.id
+  where public.is_admin()
+  order by u.created_at desc;
+$$;
+revoke execute on function public.admin_users() from public;
+grant execute on function public.admin_users() to authenticated;
+
+-- L'administrateur rétablit le profil d'un compte qui n'en a pas (rôle Parent ou Enseignant)
+create or replace function public.admin_set_profile(p_id uuid, p_role text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  if p_role not in ('parent','teacher') then raise exception 'Type de compte invalide'; end if;
+  insert into public.profiles (id, full_name, role)
+  select u.id, coalesce(nullif(u.raw_user_meta_data->>'full_name',''), split_part(u.email, '@', 1)), p_role
+  from auth.users u where u.id = p_id
+  on conflict (id) do update set role = excluded.role;
+end;
+$$;
+revoke execute on function public.admin_set_profile(uuid, text) from public;
+grant execute on function public.admin_set_profile(uuid, text) to authenticated;
 
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

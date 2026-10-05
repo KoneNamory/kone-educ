@@ -91,6 +91,10 @@ await go('espace-enseignant.html');step('Espace enseignant : dossier complet',(a
 // 5. Administrateur
 await logout();await go('connexion.html');await p.fill('#email',' Admin@Kone.ci ');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 step('Connexion admin → administration (e-mail avec espaces et majuscules accepté)',p.url().endsWith('espace-admin.html'));
+step('Inscrits : compteurs parents et enseignants',(await p.textContent('#userKpis')).replace(/\s+/g,' ').includes('Parents1')||(await p.textContent('#userKpis')).replace(/\s+/g,'').includes('Parents1'),(await p.textContent('#userKpis')).replace(/\s+/g,' '));
+await p.click('#userList .u-row:has-text("Yao Kouassi")');await p.waitForTimeout(300);
+step('Inscrits : fiche complète de l’enseignant',await p.locator('#userDialog').isVisible()&&(await p.textContent('#userDetail')).includes('yao@test.ci')&&(await p.textContent('#userDetail')).includes('Dossier complet à 100')&&(await p.textContent('#userDetail')).includes('Cocody, Bingerville'));
+await p.evaluate(()=>userDialog.close());
 step('Admin : dossier complet et documents',(await p.textContent('#teachers')).includes('Dossier complet')&&(await p.locator('#teachers .doc').count())===3);
 await p.locator('#teachers .doc').first().click();await p.waitForTimeout(400);step('Admin : ouverture d’un document privé',JSON.parse(await p.evaluate(()=>localStorage.getItem('__ke_log'))).some(o=>o[0]==='signedUrl'&&o[1]==='teacher-files'));
 await p.click('#teachers button:has-text("Valider")');await p.waitForTimeout(500);
@@ -110,17 +114,23 @@ d=await db();step('Attribution de l’enseignant (candidature choisie)',d.course
 step('Pas d’attribution possible sur une demande annulée',(await p.locator('#teacher-'+d.course_requests.find(r=>r.student_name==='Ibrahim Koné').id).count())===0);
 step('Zone et niveaux affichés à l’admin',(await p.textContent('#teachers')).includes('Zone : Cocody'));
 step('Coordonnées du parent visibles',(await p.locator('#requests .who',{hasText:'Mariam Koné'}).count())>0);
-await p.selectOption('#invCourse',String(reqId));await p.fill('#invAmount','40000');await p.click('#invoiceForm button');await p.waitForTimeout(600);
-d=await db();step('Création de la facture',(d.invoices||[]).length===1);
+await p.evaluate(()=>{document.getElementById('feesBox').open=true});await p.fill('#fee-'+reqId,'40000');await p.click('#fee-'+reqId+' ~ button');await p.waitForTimeout(500);
+d=await db();step('Tarif mensuel du cours enregistré',d.course_requests.find(r=>r.id===reqId).monthly_fee===40000);
+await p.click('#genBtn');await p.waitForTimeout(700);
+d=await db();step('Factures du mois générées en un clic (échéance le 10)',(d.invoices||[]).length===1&&d.invoices[0].amount===40000&&/-10$/.test(d.invoices[0].due_date||''));
+step('Facturation : à encaisser affiché',(await p.textContent('#billKpis')).replace(/\s/g,'').includes('40000'),(await p.textContent('#billKpis')).replace(/\s+/g,' '));
+await p.click('#genBtn',{force:true}).catch(()=>{});await p.waitForTimeout(300);d=await db();step('Pas de facture en double',(d.invoices||[]).length===1);
 // 6. Parent : paiement
 await logout();await go('connexion.html');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
-await go('paiements.html');await p.selectOption('select[name=method]','wave');await p.fill('input[name=reference]','T_ABC123');await p.click('#list form .btn');await p.waitForTimeout(500);
-d=await db();step('Déclaration du paiement par le parent',d.invoices[0].status==='pending'&&d.invoices[0].payment_reference==='T_ABC123');
+d=await db();await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('Facture imprimable pour le parent',(await p.textContent('#sheet')).includes('KE-')&&(await p.textContent('#sheet')).includes('Facture')&&(await p.textContent('#sheet')).replace(/\s/g,'').includes('40000FCFA'));
+await go('paiements.html');await p.selectOption('select[name=method]','moov_money');await p.fill('input[name=reference]','T_ABC123');await p.click('#list form .btn');await p.waitForTimeout(500);
+d=await db();step('Déclaration du paiement par le parent (Moov Money)',d.invoices[0].status==='pending'&&d.invoices[0].payment_method==='moov_money'&&d.invoices[0].payment_reference==='T_ABC123');
 // 7. Admin confirme
 await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await p.click('text=Confirmer le paiement');await p.waitForTimeout(500);
 await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('__ke_db'));db.invoices[0].paid_at=new Date().toISOString();localStorage.setItem('__ke_db',JSON.stringify(db))});
 d=await db();step('Confirmation du paiement par l’admin',d.invoices[0].status==='paid');
+await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('Reçu après paiement',(await p.textContent('#sheet')).includes('Reçu')&&(await p.textContent('#sheet')).includes('PAYÉE'));
 await go('espace-admin.html');step('Activité : encaissé ce mois',(await p.textContent('#aMonth')).replace(/\s/g,'').includes('40000'),await p.textContent('#aMonth'));step('Activité : graphiques affichés',(await p.locator('.chart svg').count())===2);
 // 8. Enseignant : compte rendu + message
 await logout();await go('connexion.html');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
