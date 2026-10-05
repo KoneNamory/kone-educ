@@ -51,6 +51,7 @@ await p.locator('#list .row',{hasText:'Ibrahim'}).locator('.cancel').click();awa
 let d=await db();step('Annulation de la 2e demande',d.course_requests.find(r=>r.student_name==='Ibrahim Koné')?.status==='cancelled');
 // 3 bis. Un compte Parent ne peut pas déposer de candidature ; la réservation est préremplie sans autocomplétion du nom de l'élève
 await go('candidature-enseignant.html');step('Compte Parent bloqué sur la candidature',(await p.textContent('.login-first')).includes('compte Parent')&&await p.locator('#teacher-form button').isDisabled());
+await go('offres.html');await p.waitForTimeout(300);step('Offres : page réservée aux enseignants (parent bloqué)',(await p.textContent('#content')).includes('réservée aux enseignants')&&(await p.locator('.o-card').count())===0);
 await go('reservation.html');await p.waitForTimeout(300);step('Réservation préremplie avec le compte Parent',(await p.inputValue('input[name=parentName]'))==='Mariam Koné'&&(await p.getAttribute('input[name=studentName]','autocomplete'))==='off');
 // 4. Inscription + candidature enseignant
 await logout();await go('candidature-enseignant.html');await p.waitForTimeout(300);step('Candidature sans connexion : invitation à créer un compte',(await p.locator('.login-first a[href="inscription.html?role=teacher"]').count())===1);
@@ -75,6 +76,7 @@ step('Zone d’intervention enregistrée',!!(tp&&tp.location),'location='+(tp&&t
 step('Niveaux enseignés enregistrés',!!(tp&&tp.levels),'levels='+(tp&&tp.levels));
 step('Documents de l’enseignant envoyés',!!(tp&&tp.photo_url&&tp.id_doc_path&&tp.diploma_path&&tp.cv_path),[tp&&tp.photo_url,tp&&tp.id_doc_path].join(' | '));
 step('Pièce d’identité dans l’espace privé',(d.__storage||[]).some(f=>f.bucket==='teacher-files'&&f.path.startsWith(tp.id+'/idDoc-')));
+await go('offres.html');await p.waitForTimeout(300);step('Offres : enseignant non validé bloqué',(await p.textContent('#content')).includes('en cours de validation')&&(await p.locator('.o-card').count())===0);
 await go('espace-enseignant.html');step('Espace enseignant : dossier complet',(await p.textContent('#profile')).includes('Dossier complet'));
 // 5. Administrateur
 await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('form button');await p.waitForTimeout(800);
@@ -84,8 +86,16 @@ await p.locator('#teachers .doc').first().click();await p.waitForTimeout(400);st
 await p.click('#teachers button:has-text("Valider")');await p.waitForTimeout(500);
 d=await db();step('Validation de l’enseignant',d.teacher_profiles[0].approved===true);
 const reqId=d.course_requests.find(r=>r.student_name==='Awa Koné').id;
-await p.selectOption('#teacher-'+reqId,d.teacher_profiles[0].id);await p.click('#teacher-'+reqId+' ~ button:has-text("Attribuer")');await p.waitForTimeout(600);
-d=await db();step('Attribution de l’enseignant',d.course_requests.find(r=>r.id===reqId).teacher_id===d.teacher_profiles[0].id);
+// 5 bis. Offres de cours : l'enseignant validé postule, l'admin choisit sa candidature
+await logout();await go('connexion.html');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('form button');await p.waitForTimeout(800);
+await go('offres.html');await p.waitForTimeout(300);
+step('Offres : demande en attente visible, sans le nom de l’élève',(await p.locator('.o-card',{hasText:'Cocody'}).count())===1&&!(await p.textContent('#content')).includes('Awa Koné')&&(await p.textContent('#content')).includes('Votre matière'));
+await p.click('.o-card button:has-text("Postuler")');await p.fill('.o-apply textarea','Disponible le mercredi et le samedi.');await p.click('.o-apply button:has-text("Envoyer")');await p.waitForTimeout(500);
+d=await db();step('Candidature à une offre',(d.course_applications||[]).length===1&&d.course_applications[0].course_request_id===reqId&&(await p.textContent('#offers')).includes('En cours d’étude'));
+await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('form button');await p.waitForTimeout(800);
+step('Admin : candidature visible sur la demande',(await p.locator('#requests .apps',{hasText:'Yao Kouassi'}).count())===1&&(await p.textContent('#requests .apps')).includes('Disponible le mercredi'));
+await p.click('#requests .apps button:has-text("Choisir")');await p.waitForTimeout(600);
+d=await db();step('Attribution de l’enseignant (candidature choisie)',d.course_requests.find(r=>r.id===reqId).teacher_id===d.teacher_profiles[0].id);
 step('Pas d’attribution possible sur une demande annulée',(await p.locator('#teacher-'+d.course_requests.find(r=>r.student_name==='Ibrahim Koné').id).count())===0);
 step('Zone et niveaux affichés à l’admin',(await p.textContent('#teachers')).includes('Zone : Cocody'));
 step('Coordonnées du parent visibles',(await p.locator('#requests .who',{hasText:'Mariam Koné'}).count())>0);

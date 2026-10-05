@@ -3,7 +3,7 @@
   var client = typeof db !== 'undefined' ? db : supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
   var LINKS = {
     parent: [['espace-parent.html', 'Mon espace'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['reservation.html', 'Nouvelle demande']],
-    teacher: [['espace-enseignant.html', 'Mon espace'], ['ressources.html', 'Ressources']],
+    teacher: [['espace-enseignant.html', 'Mon espace'], ['offres.html', 'Offres de cours'], ['ressources.html', 'Ressources']],
     admin: [['espace-admin.html', 'Administration'], ['gestion-documents.html', 'Documents'], ['ressources.html', 'Ressources']]
   };
   var page = location.pathname.split('/').pop() || 'index.html';
