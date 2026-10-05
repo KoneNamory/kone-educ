@@ -43,7 +43,7 @@ async function load() {
     : r.data.length + ' demande(s) enregistrée(s)' + (assigned.length ? ' · ' + assigned.length + ' accompagnement(s) en cours.' : '. Nous recherchons le meilleur enseignant pour vous.');
   kpis.innerHTML = kpi('📚', open.length, 'Demande(s) en cours') + kpi('👩‍🏫', assigned.length, 'Enseignant(s) attribué(s)') + kpi('💳', due.length, 'Facture(s) à payer') + kpi('🔔', unread, 'Notification(s) non lue(s)');
   payPill.innerHTML = inv.error ? '' : due.length ? '<span class="d-pill wait">À payer</span>' : '<span class="d-pill ok">✓ À jour</span>';
-  payText.textContent = inv.error ? 'Vos factures mensuelles apparaîtront ici.' : due.length ? due.length + ' facture(s) à régler · ' + fcfa(due.reduce((s, i) => s + i.amount, 0)) + ' par Wave, Orange Money ou Moov Money.' : 'Vous êtes à jour de vos paiements. Merci !';
+  payText.textContent = inv.error ? 'Vos factures mensuelles apparaîtront ici.' : due.length ? due.length + ' facture(s) à régler · ' + fcfa(due.reduce((s, i) => s + i.amount, 0)) + ' par Wave, Orange Money, MTN MoMo ou Moov Money.' : 'Vous êtes à jour de vos paiements. Merci !';
 
   count.textContent = r.data.length;
   list.innerHTML = r.data.map(x => {

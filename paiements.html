@@ -1,16 +1,71 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mes paiements | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="payment-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-:root{--blue:#1559eb;--ink:#102149;--paper:#f5f9ff;--line:#dbe5f5;--wave:#1dc8f2;--orange:#ff7900}*{box-sizing:border-box}body{margin:0;background:var(--paper);font:16px Arial;color:var(--ink)}main{max-width:900px;margin:auto;padding:30px}a{color:var(--blue);font-weight:bold;text-decoration:none}small{color:#60709a}.card{background:#fff;padding:22px;margin:15px 0;border-radius:14px}.invoice{padding:18px 0;border-top:1px solid var(--line)}.invoice:first-child{border-top:0}.head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.amount{font-size:22px;font-weight:bold}.tag{display:inline-block;padding:5px 9px;border-radius:12px;font-size:12px;font-weight:bold;color:#a65d00;background:#fff0dc}.tag.pending{color:#1559eb;background:#eef4ff}.tag.paid{color:#11743a;background:#e7f8ec}.pay{margin-top:14px;padding:16px;border-radius:10px;background:var(--paper)}.methods{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0}.method{padding:14px;border-radius:10px;background:#fff;border:2px solid var(--line)}.method h4{margin:0 0 6px}.method.wave h4{color:#0b8db0}.method.orange_money h4{color:#d95f00}.method.moov_money h4{color:#0058a3}.btn{display:inline-block;margin-top:8px;padding:10px 14px;border:0;border-radius:8px;color:#fff;background:var(--blue);font-weight:bold;cursor:pointer}.btn.wave{background:var(--wave);color:#06323d}label{display:block;margin-top:10px;font-weight:bold;font-size:14px}input,select{width:100%;margin-top:5px;padding:10px;border:1px solid var(--line);border-radius:7px;font:inherit}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:760px){.methods{grid-template-columns:1fr}}@media(max-width:600px){main{padding:20px 16px}.row{grid-template-columns:1fr}}
-</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body><main><a href="espace-parent.html">← Mon espace Parent</a><h1>Mes paiements</h1><p id="message">Chargement de vos factures...</p><section class="card" id="box" hidden><div id="list"></div></section></main>
+<style>body{margin:0}
+.p-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 14px}
+.p-method{padding:12px;border:1px solid #e3ebf8;border-radius:12px;background:#fff;font-size:14px}
+.p-method h4{margin:0 0 4px;font-size:15px}.p-method.wave h4{color:#0b8db0}.p-method.orange_money h4{color:#d95f00}.p-method.moov_money h4{color:#0058a3}
+.p-pay{margin-top:12px;padding:16px;border-radius:14px;background:#f4f8ff}
+.p-pay form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.p-pay label{font-size:13px;font-weight:700}.p-pay select,.p-pay input{width:100%;margin-top:5px;padding:10px;border:1px solid #d7e1f2;border-radius:9px;font:inherit}
+.p-pay .btn{margin:0;padding:11px 16px;border:0;border-radius:10px;background:#1559eb;color:#fff;font-weight:800;cursor:pointer}
+.p-no{color:#7a86a0;font-size:12px;font-weight:800;letter-spacing:.3px}
+.p-amount{font:800 22px Manrope,"DM Sans",sans-serif;white-space:nowrap}
+@media(max-width:760px){.p-methods{grid-template-columns:1fr}.p-pay form{grid-template-columns:1fr}}
+</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Espace parent</p><h1>Mes paiements</h1><p id="message">Chargement de vos factures…</p></div><div class="d-hero-cta"><a class="d-btn light" href="espace-parent.html">← Mon espace</a></div></section>
+<div class="d-kpis" id="kpis"></div>
+<section class="card d-card" id="box" hidden><div class="d-head"><h2>Mes factures</h2><span class="d-count" id="count">0</span></div><div id="list"></div></section>
+<section class="card d-card d-help" style="margin-top:18px"><h2>Une question sur une facture ?</h2><p>Notre équipe vous répond du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
+</main>
 <script>
-const db=supabase.createClient(KONE_EDUC_SUPABASE.url,KONE_EDUC_SUPABASE.publishableKey),pay=window.KONE_EDUC_PAYMENT||{};let user;
-const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fcfa=n=>Number(n).toLocaleString('fr-FR')+' FCFA',month=d=>new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
-const statusLabel={unpaid:['À payer',''],pending:['Paiement en vérification','pending'],paid:['Payée','paid']},methodLabel={wave:'Wave',orange_money:'Orange Money',moov_money:'Moov Money'};
-function instructions(i){const methods=pay.methods||[];return'<div class="pay"><b>1. Payez '+fcfa(i.amount)+'</b><div class="methods">'+methods.map(m=>'<div class="method '+m.id+'"><h4>'+safe(m.label)+'</h4>'+safe(m.how)+' <b>'+safe(m.number)+'</b> ('+safe(pay.name)+').</div>').join('')+'</div><b>2. Indiquez votre paiement</b><form data-id="'+i.id+'"><div class="row"><label>Moyen utilisé<select name="method" required>'+methods.map(m=>'<option value="'+m.id+'">'+safe(m.label)+'</option>').join('')+'</select></label><label>Référence de la transaction<input name="reference" required maxlength="100" placeholder="Référence reçue par SMS"></label></div><button class="btn">J’ai payé</button></form></div>'}
-async function load(){const x=await db.auth.getUser();user=x.data.user;if(!user){message.innerHTML='<a href="connexion.html">Connectez-vous</a> pour voir vos factures.';return}const r=await db.from('invoices').select('*, course_requests(subject, student_name)').eq('parent_id',user.id).order('month',{ascending:false});if(r.error){message.textContent='Les paiements seront disponibles prochainement.';return}const due=r.data.filter(i=>i.status==='unpaid');message.textContent=due.length?due.length+' facture(s) à payer · total '+fcfa(due.reduce((s,i)=>s+i.amount,0)):'Vous êtes à jour de vos paiements. Merci !';box.hidden=false;list.innerHTML=r.data.map(i=>{const[l,c]=statusLabel[i.status];const course=i.course_requests?safe(i.course_requests.subject)+' · '+safe(i.course_requests.student_name):'Cours';return'<div class="invoice"><div class="head"><div><b>'+course+'</b><br><small>Mois de '+month(i.month)+'</small></div><div style="text-align:right"><div class="amount">'+fcfa(i.amount)+'</div><span class="tag '+c+'">'+l+'</span></div></div>'+(i.status==='unpaid'?instructions(i):i.status==='pending'?'<p><small>Déclaré via '+safe(methodLabel[i.payment_method])+' · réf. '+safe(i.payment_reference)+'. Nous confirmons votre paiement sous peu.</small></p>':'<p><small>Payée le '+new Date(i.paid_at).toLocaleDateString('fr-FR')+(i.payment_method?' via '+safe(methodLabel[i.payment_method]):'')+'.</small></p>')+'</div>'}).join('')||'<p>Aucune facture pour le moment.</p>'}
-list.addEventListener('submit',async e=>{e.preventDefault();const f=e.target,b=f.querySelector('button');b.disabled=true;const r=await db.from('invoices').update({status:'pending',payment_method:f.method.value,payment_reference:f.reference.value.trim()}).eq('id',f.dataset.id);if(r.error){b.disabled=false;message.textContent='Erreur : '+r.error.message;return}load()});
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey), pay = window.KONE_EDUC_PAYMENT || {};
+let user;
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fcfa = n => Number(n).toLocaleString('fr-FR') + ' FCFA';
+const monthFr = d => new Date(d.slice(0, 7) + '-01T00:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+const dayFr = d => new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+const invNo = i => 'KE-' + i.month.slice(0, 4) + i.month.slice(5, 7) + '-' + String(i.id).padStart(4, '0');
+const isLate = i => i.status === 'unpaid' && i.due_date && i.due_date < new Date().toISOString().slice(0, 10);
+const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
+const methodLabel = { wave: 'Wave', orange_money: 'Orange Money', moov_money: 'Moov Money', mtn_money: 'MTN MoMo' };
+
+function payBox(i) {
+  const methods = pay.methods || [];
+  return '<div class="p-pay"><b>1. Payez ' + fcfa(i.amount) + '</b> par le moyen de votre choix :<div class="p-methods">'
+    + methods.map(m => '<div class="p-method ' + m.id + '"><h4>' + safe(m.label) + '</h4>' + safe(m.how) + ' <b>' + safe(m.number) + '</b>' + (pay.name ? ' (' + safe(pay.name) + ')' : '') + '.</div>').join('')
+    + '</div><b>2. Indiquez votre paiement</b><form data-id="' + i.id + '" style="margin-top:8px"><label>Moyen utilisé<select name="method" required>' + methods.map(m => '<option value="' + m.id + '">' + safe(m.label) + '</option>').join('') + '</select></label>'
+    + '<label>Référence de la transaction<input name="reference" required maxlength="100" placeholder="Référence reçue par SMS"></label><button class="btn">J’ai payé</button></form></div>';
+}
+
+async function load() {
+  user = (await db.auth.getUser()).data.user;
+  if (!user) { message.innerHTML = '<a href="connexion.html?redirect=paiements.html" style="color:#fff">Connectez-vous</a> pour voir vos factures.'; return; }
+  const r = await db.from('invoices').select('*, course_requests(subject, student_name)').eq('parent_id', user.id).order('month', { ascending: false });
+  if (r.error) { message.textContent = 'Les paiements seront disponibles prochainement.'; return; }
+  const due = r.data.filter(i => i.status === 'unpaid'), late = due.filter(isLate), pend = r.data.filter(i => i.status === 'pending');
+  const year = new Date().getFullYear(), paidYear = r.data.filter(i => i.status === 'paid' && String(i.paid_at || i.month).slice(0, 4) == year);
+  const total = l => fcfa(l.reduce((s, i) => s + i.amount, 0));
+  message.textContent = late.length ? late.length + ' facture(s) en retard : merci de les régler dès que possible.' : due.length ? due.length + ' facture(s) à régler · ' + total(due) + '.' : 'Vous êtes à jour de vos paiements. Merci pour votre confiance !';
+  kpis.innerHTML = kpi('💳', total(due), 'À régler') + kpi('⏰', late.length, 'Facture(s) en retard') + kpi('🔎', pend.length, 'Paiement(s) en vérification') + kpi('✅', total(paidYear), 'Payé en ' + year);
+  box.hidden = false; count.textContent = r.data.length;
+  list.innerHTML = r.data.map(i => {
+    const course = i.course_requests ? safe(i.course_requests.subject) + ' · ' + safe(i.course_requests.student_name) : 'Cours';
+    const pill = i.status === 'paid' ? '<span class="d-pill ok">✓ Payée</span>' : i.status === 'pending' ? '<span class="d-pill info">En vérification</span>' : isLate(i) ? '<span class="d-pill bad">En retard</span>' : '<span class="d-pill wait">À régler</span>';
+    const info = i.status === 'unpaid' ? payBox(i)
+      : i.status === 'pending' ? '<p class="d-sub">Déclaré via ' + safe(methodLabel[i.payment_method] || i.payment_method) + ' · réf. ' + safe(i.payment_reference) + '. Nous confirmons votre paiement très vite.</p>'
+      : '<p class="d-sub">Payée le ' + new Date(i.paid_at).toLocaleDateString('fr-FR') + (i.payment_method ? ' via ' + safe(methodLabel[i.payment_method]) : '') + '. Merci !</p>';
+    return '<div class="d-item row"><span class="d-av">🧾</span><div class="d-item-main"><div class="d-item-top"><div><span class="p-no">' + invNo(i) + '</span><br><b>' + course + '</b><p class="d-sub">Mois de ' + monthFr(i.month) + (i.due_date && i.status !== 'paid' ? ' · échéance le ' + dayFr(i.due_date) : '') + '</p></div><div style="text-align:right"><div class="p-amount">' + fcfa(i.amount) + '</div>' + pill + '</div></div>'
+      + info + '<div class="d-actions"><a class="d-link" href="facture.html?id=' + i.id + '">🧾 ' + (i.status === 'paid' ? 'Voir le reçu' : 'Voir la facture') + '</a></div></div></div>';
+  }).join('') || '<div class="d-empty"><span class="big">🧾</span><p>Aucune facture pour le moment. Elles apparaîtront ici chaque mois.</p></div>';
+}
+
+list.addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target, b = f.querySelector('button'); b.disabled = true;
+  const r = await db.from('invoices').update({ status: 'pending', payment_method: f.method.value, payment_reference: f.reference.value.trim() }).eq('id', f.dataset.id);
+  if (r.error) { b.disabled = false; message.textContent = 'Erreur : ' + r.error.message; return; }
+  load();
+});
 load();
 </script><script src="app.js"></script></body></html>
