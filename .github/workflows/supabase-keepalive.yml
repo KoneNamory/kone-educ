@@ -42,6 +42,9 @@ jobs:
           # Inscription directe : un appel volontairement invalide répond « Adresse e-mail invalide » si la fonction existe
           BODY=$(curl -s -X POST "$URL/rest/v1/rpc/create_account" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{"p_email":"verification","p_password":"","p_full_name":"","p_phone":"","p_role":""}')
           if echo "$BODY" | grep -q 'Adresse e-mail invalide'; then echo "✅ fonction create_account (inscription directe)"; else echo "❌ fonction create_account : $BODY"; echo "::warning::Fonction create_account absente : relancer supabase-schema.sql."; fi
+          # Service de connexion (Auth) : doit répondre 200
+          AUTH=$(curl -s -o /dev/null -w '%{http_code}' "$URL/auth/v1/health" -H "apikey: $KEY")
+          if [ "$AUTH" = "200" ]; then echo "✅ service de connexion (Auth)"; else echo "❌ service de connexion (HTTP $AUTH)"; echo "::warning::Service de connexion Supabase indisponible (HTTP $AUTH)."; fi
           # Seul l'espace public peut être vérifié sans connexion (un espace privé répond toujours « Bucket not found »)
           for BK in avatars; do
             BODY=$(curl -s "$URL/storage/v1/object/public/$BK/verification-inexistante.txt")
