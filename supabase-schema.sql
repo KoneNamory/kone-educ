@@ -391,6 +391,10 @@ alter table public.invoices add constraint invoices_payment_method_check
   check (payment_method in ('wave','orange_money','moov_money')) not valid;
 
 -- L'administrateur voit le nom et le téléphone des parents et des enseignants pour les contacter
+-- L'administrateur peut corriger un profil (ex. compte enseignant enregistré par erreur comme parent)
+drop policy if exists "Admins update profiles" on public.profiles;
+create policy "Admins update profiles" on public.profiles for update to authenticated
+  using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Admins read all profiles" on public.profiles;
 create policy "Admins read all profiles" on public.profiles for select to authenticated using (public.is_admin());
 
@@ -466,6 +470,7 @@ drop policy if exists "Users delete own avatar" on storage.objects;
 drop policy if exists "Teachers upload own files" on storage.objects;
 drop policy if exists "Teachers read own files" on storage.objects;
 drop policy if exists "Teachers update own files" on storage.objects;
+drop policy if exists "Users read own avatar" on storage.objects;
 drop policy if exists "Admins read teacher files" on storage.objects;
 create policy "Users upload own avatar" on storage.objects for insert to authenticated
   with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
@@ -479,6 +484,8 @@ create policy "Teachers read own files" on storage.objects for select to authent
   using (bucket_id = 'teacher-files' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Teachers update own files" on storage.objects for update to authenticated
   using (bucket_id = 'teacher-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Users read own avatar" on storage.objects for select to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Admins read teacher files" on storage.objects for select to authenticated
   using (bucket_id = 'teacher-files' and public.is_admin());
 
