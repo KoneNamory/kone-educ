@@ -868,5 +868,87 @@ drop trigger if exists notify_admins_new_candidate on public.teacher_profiles;
 create trigger notify_admins_new_candidate after insert on public.teacher_profiles
   for each row execute function public.notify_admins_new_candidate();
 
+-- ============================================================
+-- Journal des actions : qui a fait quoi, et quand (y compris les suppressions)
+-- ============================================================
+create table if not exists public.audit_log (
+  id bigint generated always as identity primary key,
+  at timestamptz not null default now(),
+  actor_id uuid,
+  actor_name text,
+  action text not null,
+  table_name text not null,
+  record_id text,
+  summary text,
+  changes jsonb
+);
+alter table public.audit_log enable row level security;
+grant select on public.audit_log to authenticated;
+drop policy if exists "Admins read audit log" on public.audit_log;
+create policy "Admins read audit log" on public.audit_log for select to authenticated using (public.is_admin());
+create index if not exists audit_log_at_idx on public.audit_log (at desc);
+
+create or replace function public.audit_changes() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_old jsonb; v_new jsonb; v_diff jsonb := '{}'::jsonb; k text; v_id text; v_actor uuid := auth.uid(); v_name text; v_sum text;
+begin
+  v_old := case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) end;
+  v_new := case when tg_op in ('UPDATE','INSERT') then to_jsonb(new) end;
+  v_id := coalesce(v_new->>'id', v_old->>'id');
+  if tg_op = 'UPDATE' then
+    for k in select jsonb_object_keys(v_new) loop
+      if k not in ('updated_at') and (v_new->k) is distinct from (v_old->k) then
+        v_diff := v_diff || jsonb_build_object(k, jsonb_build_object('avant', v_old->k, 'après', v_new->k));
+      end if;
+    end loop;
+    if v_diff = '{}'::jsonb then return new; end if;
+  elsif tg_op = 'DELETE' then v_diff := v_old;
+  else v_diff := v_new;
+  end if;
+  -- Les textes longs et les chemins de documents ne sont pas recopiés
+  v_diff := v_diff - 'bio' - 'details' - 'message' - 'comment';
+  select full_name into v_name from public.profiles where id = v_actor;
+  v_sum := coalesce(v_new->>'full_name', v_old->>'full_name', v_new->>'student_name', v_old->>'student_name', v_new->>'name', v_old->>'name');
+  if v_sum is null and tg_table_name in ('teacher_profiles', 'course_applications') then
+    select full_name into v_sum from public.profiles where id = coalesce(v_new->>'teacher_id', v_old->>'teacher_id', v_id)::uuid;
+  end if;
+  if tg_table_name = 'invoices' then
+    v_sum := coalesce(v_new->>'amount', v_old->>'amount') || ' FCFA · ' || to_char(coalesce(v_new->>'month', v_old->>'month')::date, 'MM/YYYY');
+  end if;
+  insert into public.audit_log (actor_id, actor_name, action, table_name, record_id, summary, changes)
+  values (v_actor, case when v_actor is null then 'Tableau de bord Supabase / système' else coalesce(v_name, 'Utilisateur') end,
+          tg_op, tg_table_name, v_id, v_sum, v_diff);
+  return coalesce(new, old);
+exception when others then
+  return coalesce(new, old);
+end;
+$$;
+
+do $$ declare t text; begin
+  foreach t in array array['profiles','teacher_profiles','course_requests','invoices','course_applications','session_reports','reviews','documents','contact_messages'] loop
+    execute format('drop trigger if exists audit_changes on public.%I', t);
+    execute format('create trigger audit_changes after insert or update or delete on public.%I for each row execute function public.audit_changes()', t);
+  end loop;
+end $$;
+
+-- Suppression d'un compte (y compris depuis le tableau de bord Supabase)
+create or replace function public.audit_user_delete() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_actor uuid := auth.uid(); v_name text;
+begin
+  select full_name into v_name from public.profiles where id = v_actor;
+  insert into public.audit_log (actor_id, actor_name, action, table_name, record_id, summary, changes)
+  values (v_actor, case when v_actor is null then 'Tableau de bord Supabase / système' else coalesce(v_name, 'Utilisateur') end,
+          'DELETE', 'comptes', old.id::text, old.email, jsonb_build_object('email', old.email, 'inscrit_le', old.created_at));
+  return old;
+exception when others then return old;
+end;
+$$;
+do $$ begin
+  drop trigger if exists audit_user_delete on auth.users;
+  create trigger audit_user_delete before delete on auth.users for each row execute function public.audit_user_delete();
+exception when others then raise notice 'Journal des suppressions de comptes indisponible (%).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

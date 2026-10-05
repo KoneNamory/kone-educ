@@ -1,0 +1,68 @@
+name: Sauvegarde de la base
+
+# Copie complète et chiffrée de la base Supabase, chaque dimanche (et à la demande).
+# Secrets à créer dans GitHub : SUPABASE_DB_URL (chaîne « Session pooler ») et BACKUP_PASSPHRASE.
+on:
+  schedule:
+    - cron: '17 2 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sauvegarde:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier la configuration
+        id: cfg
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then
+            echo "::warning::Sauvegarde non configurée : créez les secrets SUPABASE_DB_URL et BACKUP_PASSPHRASE (voir MAINTENANCE.md)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installer pg_dump 17
+        if: steps.cfg.outputs.ok == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 > /dev/null
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Sauvegarder et chiffrer
+        if: steps.cfg.outputs.ok == 'true'
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          D=$(date -u +%Y-%m-%d)
+          mkdir -p out
+          PGD=/usr/lib/postgresql/17/bin/pg_dump
+          # Tables du site (structure + données)
+          $PGD "$DB" --no-owner --no-privileges --schema=public -f out/site.sql
+          # Comptes de connexion (données seulement)
+          $PGD "$DB" --no-owner --no-privileges --data-only --table=auth.users --table=auth.identities -f out/comptes.sql
+          # Réglages privés (clé e-mail) et liste des fichiers stockés
+          $PGD "$DB" --no-owner --no-privileges --data-only --schema=private -f out/reglages.sql || true
+          $PGD "$DB" --no-owner --no-privileges --data-only --table=storage.objects -f out/fichiers.sql || true
+          echo "Tailles :"; du -h out/*
+          tar -czf "kone-educ-$D.tar.gz" -C out .
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 -o "kone-educ-$D.tar.gz.gpg" "kone-educ-$D.tar.gz"
+          rm -rf out "kone-educ-$D.tar.gz"
+          echo "FILE=kone-educ-$D.tar.gz.gpg" >> "$GITHUB_ENV"
+
+      - name: Conserver la sauvegarde (90 jours)
+        if: steps.cfg.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-${{ github.run_number }}
+          path: ${{ env.FILE }}
+          retention-days: 90

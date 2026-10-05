@@ -95,6 +95,9 @@ step('Inscrits : compteurs parents et enseignants',(await p.textContent('#userKp
 await p.click('#userList .u-row:has-text("Yao Kouassi")');await p.waitForTimeout(300);
 step('Inscrits : fiche complète de l’enseignant',await p.locator('#userDialog').isVisible()&&(await p.textContent('#userDetail')).includes('yao@test.ci')&&(await p.textContent('#userDetail')).includes('Dossier complet à 100')&&(await p.textContent('#userDetail')).includes('Cocody, Bingerville'));
 await p.evaluate(()=>userDialog.close());
+const [dl]=await Promise.all([p.waitForEvent('download'),p.click('#exportBtn')]);const saved=JSON.parse(fs.readFileSync(await dl.path(),'utf8'));
+step('Sauvegarde : export complet téléchargé',dl.suggestedFilename().startsWith('kone-educ-sauvegarde-')&&Array.isArray(saved.tables.profiles)&&saved.tables.profiles.length>=3&&Array.isArray(saved.tables.teacher_profiles),dl.suggestedFilename());
+step('Journal des actions affiché',(await p.locator('#auditList').count())===1&&!(await p.textContent('#auditList')).includes('Chargement'));
 step('Admin : dossier complet et documents',(await p.textContent('#teachers')).includes('Dossier complet')&&(await p.locator('#teachers .doc').count())===3);
 await p.locator('#teachers .doc').first().click();await p.waitForTimeout(400);step('Admin : ouverture d’un document privé',JSON.parse(await p.evaluate(()=>localStorage.getItem('__ke_log'))).some(o=>o[0]==='signedUrl'&&o[1]==='teacher-files'));
 await p.click('#teachers button:has-text("Valider")');await p.waitForTimeout(500);
