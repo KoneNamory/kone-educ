@@ -91,6 +91,19 @@
       d.profiles.push({ id: id, full_name: a.p_full_name, phone: a.p_phone, role: a.p_role }); save(d); log(['rpc', name, a.p_email]);
       return { data: id, error: null };
     }
+    if (name === 'teacher_offers') {
+      var me = JSON.parse(localStorage.getItem('__ke_user') || 'null'), st = load();
+      var tp = me && (st.teacher_profiles || []).find(function (t) { return t.id === me.id && t.approved; });
+      var pr = me && (st.profiles || []).find(function (x) { return x.id === me.id; });
+      if (!tp || !pr || pr.role !== 'teacher') return { data: [], error: null };
+      var apps = st.course_applications || [];
+      return { data: (st.course_requests || []).map(function (r) {
+        var mine = apps.find(function (a) { return a.course_request_id === r.id && a.teacher_id === me.id; });
+        if (!((r.status === 'pending' && !r.teacher_id) || mine)) return null;
+        return { id: r.id, subject: r.subject, school_level: r.school_level, location: r.location, format: r.format, availability: r.availability, created_at: r.created_at || new Date().toISOString(), request_status: r.status,
+          applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null };
+      }).filter(Boolean), error: null };
+    }
     if (name !== 'public_teachers') return { data: null, error: { message: 'function not found' } };
     var db = load();
     var out = (db.teacher_profiles || []).filter(function (t) { return t.approved; }).map(function (t) {

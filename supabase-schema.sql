@@ -535,5 +535,93 @@ $$;
 revoke execute on function public.create_account(text, text, text, text, text) from public;
 grant execute on function public.create_account(text, text, text, text, text) to anon, authenticated;
 
+-- ============================================================
+-- Offres de cours : les enseignants validés postulent aux demandes en attente
+-- ============================================================
+create table if not exists public.course_applications (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  teacher_id uuid not null references public.profiles(id) on delete cascade,
+  message text check (char_length(message) <= 500),
+  status text not null default 'pending' check (status in ('pending','accepted','rejected')),
+  created_at timestamptz not null default now(),
+  unique (course_request_id, teacher_id)
+);
+alter table public.course_applications enable row level security;
+grant select, insert, delete on public.course_applications to authenticated;
+grant usage, select on sequence public.course_applications_id_seq to authenticated;
+
+create or replace function public.is_approved_teacher() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.teacher_profiles tp join public.profiles p on p.id = tp.id
+                 where tp.id = auth.uid() and tp.approved and p.role = 'teacher');
+$$;
+create or replace function public.is_open_request(p_id bigint) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.course_requests where id = p_id and status = 'pending' and teacher_id is null);
+$$;
+
+drop policy if exists "Teachers apply to open requests" on public.course_applications;
+create policy "Teachers apply to open requests" on public.course_applications for insert to authenticated
+  with check (teacher_id = auth.uid() and status = 'pending' and public.is_approved_teacher() and public.is_open_request(course_request_id));
+drop policy if exists "Teachers and admins read applications" on public.course_applications;
+create policy "Teachers and admins read applications" on public.course_applications for select to authenticated
+  using (teacher_id = auth.uid() or public.is_admin());
+drop policy if exists "Teachers withdraw pending applications" on public.course_applications;
+create policy "Teachers withdraw pending applications" on public.course_applications for delete to authenticated
+  using (teacher_id = auth.uid() and status = 'pending');
+
+-- Offres visibles par un enseignant validé : demandes en attente (sans le nom de l'élève ni les précisions)
+-- et demandes auxquelles il a déjà postulé, avec l'état de sa candidature
+create or replace function public.teacher_offers()
+returns table (id bigint, subject text, school_level text, location text, format text, availability text,
+               created_at timestamptz, request_status text, applicants bigint, my_status text, my_message text)
+language sql stable security definer set search_path = public as $$
+  select r.id, r.subject, r.school_level, r.location, r.format, r.availability, r.created_at, r.status,
+         (select count(*) from public.course_applications a where a.course_request_id = r.id),
+         mine.status, mine.message
+  from public.course_requests r
+  left join public.course_applications mine on mine.course_request_id = r.id and mine.teacher_id = auth.uid()
+  where public.is_approved_teacher()
+    and ((r.status = 'pending' and r.teacher_id is null) or mine.id is not null)
+  order by r.created_at desc;
+$$;
+revoke execute on function public.teacher_offers() from public;
+grant execute on function public.teacher_offers() to authenticated;
+
+-- Nouvelle demande : les enseignants validés de la même matière sont prévenus
+create or replace function public.notify_new_offer() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select tp.id, 'Nouvelle offre de cours', new.subject || ' · ' || new.school_level || ' · ' || new.location || '. Postulez depuis « Offres de cours ».'
+  from public.teacher_profiles tp join public.profiles p on p.id = tp.id
+  where tp.approved and p.role = 'teacher' and lower(trim(tp.subject)) = lower(trim(new.subject));
+  return new;
+end;
+$$;
+drop trigger if exists notify_new_offer on public.course_requests;
+create trigger notify_new_offer after insert on public.course_requests
+  for each row execute function public.notify_new_offer();
+
+-- Attribution : la candidature choisie est retenue, les autres sont refusées (avec notification)
+create or replace function public.close_applications() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.teacher_id is null or new.teacher_id is not distinct from old.teacher_id then return new; end if;
+  with closed as (
+    update public.course_applications set status = case when teacher_id = new.teacher_id then 'accepted' else 'rejected' end
+    where course_request_id = new.id and status = 'pending'
+    returning teacher_id, status)
+  insert into public.notifications (recipient_id, title, body)
+  select c.teacher_id, 'Offre pourvue', 'L’offre ' || new.subject || ' · ' || new.school_level || ' a été attribuée à un autre enseignant. Merci pour votre candidature !'
+  from closed c where c.status = 'rejected';
+  return new;
+end;
+$$;
+drop trigger if exists close_applications on public.course_requests;
+create trigger close_applications after update on public.course_requests
+  for each row execute function public.close_applications();
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

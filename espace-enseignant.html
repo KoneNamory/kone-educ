@@ -49,8 +49,8 @@ async function load() {
   // En-tête et indicateurs
   if (!t) message.textContent = 'Bienvenue ! Complétez votre dossier pour postuler et recevoir des cours.';
   else if (!t.approved) message.textContent = missing.length ? 'Votre dossier est presque prêt : ajoutez les documents manquants pour qu’il soit étudié.' : 'Votre dossier est en cours d’étude par notre équipe. Nous vous contactons très vite.';
-  else message.textContent = active.length ? 'Vous suivez ' + active.length + ' élève(s). Pensez au compte rendu après chaque séance.' : 'Votre profil est validé. Les familles proches de chez vous vous seront proposées.';
-  heroCta.innerHTML = !t || missing.length ? '<a class="d-btn light" href="candidature-enseignant.html#teacher-form">Compléter mon dossier →</a>' : '<a class="d-btn light" href="enseignants.html">Voir mon profil public</a>';
+  else message.textContent = active.length ? 'Vous suivez ' + active.length + ' élève(s). Pensez au compte rendu après chaque séance.' : 'Votre profil est validé. Consultez les offres de cours et postulez à celles qui vous correspondent.';
+  heroCta.innerHTML = !t || missing.length ? '<a class="d-btn light" href="candidature-enseignant.html#teacher-form">Compléter mon dossier →</a>' : (t.approved ? '<a class="d-btn light" href="offres.html">📢 Voir les offres de cours</a>' : '<a class="d-btn light" href="enseignants.html">Voir mon profil public</a>');
   kpis.innerHTML = kpi('📁', pct + ' %', 'Dossier complété') + kpi('🎓', active.length, 'Élève(s) suivi(s)') + kpi('📝', reports.error ? 0 : reports.data.length, 'Compte(s) rendu(s)') + kpi('🔔', unread, 'Notification(s) non lue(s)');
   statusPill.innerHTML = !t ? '<span class="d-pill off">À compléter</span>' : t.approved ? '<span class="d-pill ok">✓ Profil validé</span>' : '<span class="d-pill wait">En attente de validation</span>';
 
@@ -81,7 +81,7 @@ async function load() {
     return '<div class="d-item row"><span class="d-av">' + safe(String(c.subject || '?').charAt(0)) + '</span><div class="d-item-main"><div class="d-item-top"><div><b>' + safe(c.student_name) + ' · ' + safe(c.subject) + '</b><p class="d-sub">' + safe(c.availability) + '</p></div>' + pill + '</div>'
       + '<div class="d-meta"><span>' + safe(c.school_level) + '</span><span>📍 ' + safe(c.location) + '</span><span>' + safe(c.format) + '</span></div>'
       + (c.status === 'cancelled' ? '' : '<div class="d-actions"><a class="d-link" href="suivi.html?cours=' + c.id + '">📝 Compte rendu de séance</a><a class="d-link" href="messagerie.html?cours=' + c.id + '">💬 Écrire au parent</a></div>') + '</div></div>';
-  }).join('') || '<div class="d-empty"><span class="big">📚</span><p>' + (t && t.approved ? 'Aucun cours pour le moment. Nous vous proposerons des familles près de chez vous.' : 'Les cours vous seront proposés une fois votre dossier validé.') + '</p></div>';
+  }).join('') || '<div class="d-empty"><span class="big">📚</span>' + (t && t.approved ? '<p>Aucun cours pour le moment. Postulez aux offres de cours pour être choisi par l’équipe.</p><a class="d-btn" href="offres.html">Voir les offres de cours</a>' : '<p>Les cours vous seront proposés une fois votre dossier validé.</p>') + '</div>';
 
   // Notifications
   notifications.innerHTML = n.error ? 'Les notifications seront disponibles prochainement.' : n.data.slice(0, 8).map(x => '<div class="d-note' + (x.is_read ? ' read' : '') + '"><span class="dot"></span><b>' + safe(x.title) + '</b><small>' + safe(x.body) + ' · ' + day(x.created_at) + '</small></div>').join('') || '<p class="d-sub">Aucune notification pour le moment.</p>';

@@ -1,0 +1,111 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offres de cours | KONE.EDUC</title><meta name="robots" content="noindex"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="favicon.svg" type="image/svg+xml"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"><style>
+.o-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
+.o-tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:#e9eff9}
+.o-tabs button{padding:9px 14px;border:0;border-radius:9px;background:none;color:#3c4b6b;font:800 14px "DM Sans",Arial,sans-serif;cursor:pointer;width:auto}
+.o-tabs button[aria-selected=true]{background:#fff;color:#1559eb;box-shadow:0 2px 8px rgba(21,61,140,.1)}
+.o-filters{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+.o-filters select{width:auto;padding:9px 12px;border:1px solid #d7e1f2;background:#fff;font:600 14px "DM Sans",Arial,sans-serif}
+.o-filters label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#3c4b6b}
+.o-filters input{width:auto}
+.o-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.o-card{display:flex;flex-direction:column;padding:20px;border:1px solid #e3ebf8;border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(21,61,140,.05)}
+.o-card.match{border-color:#b9cffc}
+.o-card h3{margin:0;font:800 18px Manrope,"DM Sans",sans-serif}
+.o-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.o-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:14px;flex-wrap:wrap}
+.o-foot small{color:#5b6884}
+.o-apply{margin-top:12px}
+.o-apply textarea{width:100%;min-height:80px;padding:10px;border:1px solid #d7e1f2;font:inherit;resize:vertical}
+.o-apply .d-actions{margin-top:8px}
+.o-lock{max-width:640px}
+@media(max-width:860px){.o-list{grid-template-columns:1fr}.o-filters{margin-left:0}}
+</style></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Espace enseignant</p><h1>Offres de cours</h1><p id="message">Chargement des offres…</p></div><div class="d-hero-cta"><a class="d-btn light" href="espace-enseignant.html">← Mon espace</a></div></section>
+<div id="content"></div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = v => String(v || '').trim().toLowerCase();
+const commune = loc => String(loc || '').split(/\s[–-]\s/)[0].trim();
+const ago = d => { const h = Math.round((Date.now() - new Date(d)) / 36e5); return h < 1 ? 'à l’instant' : h < 24 ? 'il y a ' + h + ' h' : 'il y a ' + Math.round(h / 24) + ' j'; };
+const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
+let user, mySubject = '', offers = [], tab = 'open', openForm = null;
+
+function lock(title, text, link, label) {
+  content.innerHTML = '<section class="card d-card o-lock" style="margin-top:18px"><h2>' + title + '</h2><p class="d-sub" style="margin:8px 0 16px">' + text + '</p>' + (link ? '<a class="d-btn" href="' + link + '">' + label + '</a>' : '') + '</section>';
+}
+
+async function init() {
+  user = (await db.auth.getUser()).data.user;
+  if (!user) { message.textContent = 'Page réservée aux enseignants KONE.EDUC.'; return lock('Connectez-vous', 'Les offres de cours sont réservées aux enseignants inscrits sur KONE.EDUC.', 'connexion.html?redirect=offres.html', 'Se connecter'); }
+  const [me, tp] = await Promise.all([
+    db.from('profiles').select('role').eq('id', user.id).maybeSingle(),
+    db.from('teacher_profiles').select('approved, subject').eq('id', user.id).maybeSingle()
+  ]);
+  if (!me.data || me.data.role !== 'teacher') { message.textContent = 'Page réservée aux enseignants KONE.EDUC.'; return lock('Page réservée aux enseignants', 'Cette page est accessible uniquement avec un compte Enseignant.', me.data && me.data.role === 'parent' ? 'espace-parent.html' : 'index.html', 'Retour à mon espace'); }
+  if (!tp.data) { message.textContent = 'Complétez votre dossier pour accéder aux offres.'; return lock('Dossier à compléter', 'Pour postuler aux offres de cours, déposez d’abord votre dossier : informations, photo de profil, pièce d’identité, dernier diplôme et CV.', 'candidature-enseignant.html', 'Compléter mon dossier'); }
+  if (!tp.data.approved) { message.textContent = 'Votre dossier est en cours de validation.'; return lock('Dossier en cours de validation', 'Vous pourrez consulter les offres et postuler dès que notre équipe aura validé votre dossier. Vérifiez que tous vos documents sont bien fournis.', 'espace-enseignant.html', 'Voir mon dossier'); }
+  mySubject = norm(tp.data.subject);
+  await load();
+}
+
+async function load() {
+  const r = await db.rpc('teacher_offers');
+  if (r.error) { message.textContent = 'Les offres seront disponibles prochainement.'; return lock('Offres indisponibles', 'Réessayez dans quelques instants.', '', ''); }
+  offers = r.data;
+  render();
+}
+
+function render() {
+  const open = offers.filter(o => o.request_status === 'pending' && !o.my_status);
+  const mine = offers.filter(o => o.my_status);
+  const match = open.filter(o => norm(o.subject) === mySubject);
+  message.textContent = open.length ? open.length + ' offre(s) ouverte(s)' + (match.length ? ', dont ' + match.length + ' dans votre matière.' : '.') : 'Aucune offre ouverte pour le moment. Vous serez prévenu dès qu’une famille cherche un enseignant dans votre matière.';
+  const g = id => document.getElementById(id);
+  const prev = { s: g('fSubject') ? g('fSubject').value : '', c: g('fCommune') ? g('fCommune').value : '', f: g('fFormat') ? g('fFormat').value : '', m: g('fMine') ? g('fMine').checked : false };
+  const opts = (list, val) => '<option value="">' + list[0] + '</option>' + list.slice(1).map(x => '<option' + (x === val ? ' selected' : '') + '>' + safe(x) + '</option>').join('');
+  const uniq = f => [...new Set(open.map(f).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  content.innerHTML = '<div class="d-kpis">' + kpi('📢', open.length, 'Offre(s) ouverte(s)') + kpi('🎯', match.length, 'Dans votre matière') + kpi('⏳', mine.filter(o => o.my_status === 'pending' && o.request_status === 'pending').length, 'Candidature(s) en cours') + kpi('🏆', mine.filter(o => o.my_status === 'accepted').length, 'Candidature(s) retenue(s)') + '</div>'
+    + '<div class="o-bar"><div class="o-tabs" role="tablist"><button role="tab" aria-selected="' + (tab === 'open') + '" onclick="tab=\'open\';render()">Offres ouvertes (' + open.length + ')</button><button role="tab" aria-selected="' + (tab === 'mine') + '" onclick="tab=\'mine\';render()">Mes candidatures (' + mine.length + ')</button></div>'
+    + (tab === 'open' ? '<div class="o-filters"><select id="fSubject" aria-label="Matière" onchange="render()">' + opts(['Toutes les matières'].concat(uniq(o => o.subject)), prev.s) + '</select><select id="fCommune" aria-label="Commune" onchange="render()">' + opts(['Toutes les communes'].concat(uniq(o => commune(o.location))), prev.c) + '</select><select id="fFormat" aria-label="Format" onchange="render()">' + opts(['Tous les formats'].concat(uniq(o => o.format)), prev.f) + '</select><label><input type="checkbox" id="fMine" onchange="render()"' + (prev.m ? ' checked' : '') + '> Ma matière</label></div>' : '') + '</div><div id="offers"></div>';
+  const list = tab === 'open'
+    ? open.filter(o => (!prev.s || o.subject === prev.s) && (!prev.c || commune(o.location) === prev.c) && (!prev.f || o.format === prev.f) && (!prev.m || norm(o.subject) === mySubject))
+        .sort((a, b) => (norm(b.subject) === mySubject) - (norm(a.subject) === mySubject))
+    : mine;
+  document.getElementById('offers').innerHTML = list.length ? '<div class="o-list">' + list.map(card).join('') + '</div>'
+    : '<section class="card d-card"><div class="d-empty"><span class="big">' + (tab === 'open' ? '📭' : '📝') + '</span><p>' + (tab === 'open' ? 'Aucune offre ne correspond à ces filtres.' : 'Vous n’avez pas encore postulé. Consultez les offres ouvertes.') + '</p></div></section>';
+}
+
+function card(o) {
+  const isMatch = norm(o.subject) === mySubject;
+  let pill = isMatch ? '<span class="d-pill info">🎯 Votre matière</span>' : '';
+  let action = '<button type="button" class="d-btn sm" onclick="openForm=' + o.id + ';render()">Postuler</button>';
+  if (o.my_status === 'accepted') { pill = '<span class="d-pill ok">🏆 Candidature retenue</span>'; action = '<a class="d-link" href="espace-enseignant.html">Voir dans mes cours →</a>'; }
+  else if (o.my_status === 'rejected') { pill = '<span class="d-pill off">Offre pourvue</span>'; action = ''; }
+  else if (o.my_status && o.request_status === 'cancelled') { pill = '<span class="d-pill bad">Demande annulée</span>'; action = ''; }
+  else if (o.my_status === 'pending') { pill = '<span class="d-pill wait">⏳ En cours d’étude</span>'; action = '<button type="button" class="cancel" onclick="withdraw(' + o.id + ')">Retirer ma candidature</button>'; }
+  const form = openForm === o.id && !o.my_status ? '<form class="o-apply" onsubmit="apply(event,' + o.id + ')"><label class="d-sub" for="msg-' + o.id + '">Message pour l’équipe KONE.EDUC (facultatif)</label><textarea id="msg-' + o.id + '" maxlength="500" placeholder="Ex. Disponible le mercredi après-midi, expérience avec des élèves de 3e…"></textarea><div class="d-actions"><button class="d-btn sm">Envoyer ma candidature</button><button type="button" class="d-link" onclick="openForm=null;render()">Annuler</button></div></form>' : '';
+  return '<article class="o-card' + (isMatch && !o.my_status ? ' match' : '') + '"><div class="o-top"><div><h3>' + safe(o.subject) + '</h3><p class="d-sub">' + safe(o.school_level) + '</p></div>' + pill + '</div>'
+    + '<div class="d-meta"><span>📍 ' + safe(o.location) + '</span><span>' + safe(o.format) + '</span><span>🗓 ' + safe(o.availability) + '</span></div>'
+    + (o.my_message ? '<p class="d-sub">Votre message : « ' + safe(o.my_message) + ' »</p>' : '') + form
+    + '<div class="o-foot"><small>Publiée ' + ago(o.created_at) + ' · ' + o.applicants + ' candidat(s)</small>' + (form ? '' : action) + '</div></article>';
+}
+
+async function apply(e, id) {
+  e.preventDefault();
+  const b = e.target.querySelector('button'); b.disabled = true;
+  const text = document.getElementById('msg-' + id).value.trim();
+  const r = await db.from('course_applications').insert({ course_request_id: id, teacher_id: user.id, message: text || null, status: 'pending' });
+  if (r.error) { b.disabled = false; alert('Candidature non envoyée : ' + (/row-level|policy/.test(r.error.message) ? 'cette offre n’est plus disponible.' : /duplicate|unique/.test(r.error.message) ? 'vous avez déjà postulé à cette offre.' : r.error.message)); return load(); }
+  openForm = null; tab = 'mine'; await load();
+}
+
+async function withdraw(id) {
+  if (!confirm('Retirer votre candidature à cette offre ?')) return;
+  const r = await db.from('course_applications').delete().eq('course_request_id', id).eq('teacher_id', user.id).eq('status', 'pending');
+  if (r.error) { alert(r.error.message); return; }
+  load();
+}
+init();
+</script><script src="app.js"></script></body></html>
