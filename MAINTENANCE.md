@@ -12,6 +12,19 @@ Ils restent disponibles sans connexion Internet. Les pages HTML se consultent en
 - Le dossier `backups/` contient des copies ZIP datées du projet.
 - Le suivi Git conserve l'historique des modifications locales : il permet de revenir à une version antérieure si nécessaire.
 
+### Sauvegarde de la base de données
+- **À la demande** : espace admin → « Sécurité et sauvegarde » → « Exporter toutes les données » (fichier JSON).
+- **Automatique chaque dimanche** : workflow GitHub « Sauvegarde de la base » (`.github/workflows/sauvegarde-base.yml`).
+  Fichier chiffré conservé 90 jours dans GitHub → Actions → exécution → « Artifacts ».
+  - Secrets requis (GitHub → Settings → Secrets and variables → Actions) :
+    - `SUPABASE_DB_URL` : Supabase → **Connect** → chaîne **Session pooler** (port 5432), avec le mot de passe de la base.
+    - `BACKUP_PASSPHRASE` : mot de passe de chiffrement, à noter en lieu sûr (sans lui, la sauvegarde est illisible).
+  - Déchiffrer : `gpg -d kone-educ-AAAA-MM-JJ.tar.gz.gpg > sauvegarde.tar.gz && tar -xzf sauvegarde.tar.gz`
+  - Restaurer dans un projet Supabase vide : exécuter `site.sql`, puis `comptes.sql` et `reglages.sql`
+    (avec `psql "$SUPABASE_DB_URL" -f fichier.sql`). Les fichiers déposés (photos, documents) restent dans Supabase Storage.
+- **Journal des actions** : table `audit_log`, visible dans l'espace admin (créations, modifications, suppressions,
+  y compris celles faites depuis le tableau de bord Supabase).
+
 ## Règle de travail
 
 Avant chaque ajout important, créer une nouvelle sauvegarde et enregistrer une nouvelle version Git. Conserver également une copie du ZIP sur une clé USB, Google Drive ou OneDrive dès qu'une connexion est disponible.

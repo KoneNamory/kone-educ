@@ -17,6 +17,7 @@
       eq: function (k, v) { filters.push([k, v]); return q; },
       order: function (k, o) { orders.push([k, !o || o.ascending !== false]); return q; },
       limit: function () { return q; },
+      range: function () { return q; },
       insert: function (v) { op = 'insert'; payload = v; return q; },
       update: function (v) { op = 'update'; payload = v; return q; },
       upsert: function (v, o) { op = 'upsert'; payload = v; opts = o || {}; return q; },
