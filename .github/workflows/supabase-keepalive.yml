@@ -46,8 +46,9 @@ jobs:
           AUTH=$(curl -s -o /dev/null -w '%{http_code}' "$URL/auth/v1/health" -H "apikey: $KEY")
           if [ "$AUTH" = "200" ]; then echo "✅ service de connexion (Auth)"; else echo "❌ service de connexion (HTTP $AUTH)"; echo "::warning::Service de connexion Supabase indisponible (HTTP $AUTH)."; fi
           # Fonctions réservées : présentes si elles répondent autre chose que « introuvable » (PGRST202 / 404)
-          for FN in admin_users generate_month_invoices admin_set_profile teacher_offers; do
-            CODE=$(curl -s -o /tmp/fn.json -w '%{http_code}' -X POST "$URL/rest/v1/rpc/$FN" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}')
+          for SPEC in 'admin_users|{}' 'teacher_offers|{}' 'generate_month_invoices|{"p_month":"2000-01-01"}' 'admin_set_profile|{"p_id":"00000000-0000-0000-0000-000000000000","p_role":"parent"}'; do
+            FN=${SPEC%%|*}; ARGS=${SPEC#*|}
+            CODE=$(curl -s -o /tmp/fn.json -w '%{http_code}' -X POST "$URL/rest/v1/rpc/$FN" -H "apikey: $KEY" -H "Content-Type: application/json" -d "$ARGS")
             if [ "$CODE" = "404" ] || grep -q 'PGRST202' /tmp/fn.json; then echo "❌ fonction $FN absente"; echo "::warning::Fonction $FN absente : relancer supabase-schema.sql."; else echo "✅ fonction $FN (HTTP $CODE)"; fi
           done
           # Seul l'espace public peut être vérifié sans connexion (un espace privé répond toujours « Bucket not found »)
