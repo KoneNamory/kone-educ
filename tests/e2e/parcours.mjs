@@ -111,6 +111,8 @@ step('Admin : candidature visible sur la demande',(await p.locator('#requests .a
 step('Admin : liste des enseignants visible et classée',await p.locator('#teacher-'+reqId).isVisible()&&(await p.textContent('#teacher-'+reqId)).includes('Yao Kouassi')&&(await p.textContent('#teacher-'+reqId)).includes('Recommandé')&&(await p.textContent('#teacher-'+reqId)).includes('Même matière')&&(await p.textContent('#teacher-'+reqId)).includes('A postulé'));
 await p.click('#requests .apps button:has-text("Choisir")');await p.waitForTimeout(600);
 d=await db();step('Attribution de l’enseignant (candidature choisie)',d.course_requests.find(r=>r.id===reqId).teacher_id===d.teacher_profiles[0].id);
+step('Attribution : messages WhatsApp prêts pour le parent et l’enseignant',await p.locator('#waDialog').isVisible()&&(await p.locator('#waList a[href*="wa.me"]').count())===2&&(await p.textContent('#waList')).includes('Mariam Koné'));await p.evaluate(()=>waDialog.close());
+step('Facture ponctuelle : cours listés avec le parent',(await p.textContent('#invCourse')).includes('Parent : Mariam Koné'));
 step('Pas d’attribution possible sur une demande annulée',(await p.locator('#teacher-'+d.course_requests.find(r=>r.student_name==='Ibrahim Koné').id).count())===0);
 step('Zone et niveaux affichés à l’admin',(await p.textContent('#teachers')).includes('Zone : Cocody'));
 step('Coordonnées du parent visibles',(await p.locator('#requests .who',{hasText:'Mariam Koné'}).count())>0);
@@ -134,6 +136,10 @@ await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('
 await go('espace-admin.html');step('Activité : encaissé ce mois',(await p.textContent('#aMonth')).replace(/\s/g,'').includes('40000'),await p.textContent('#aMonth'));step('Activité : graphiques affichés',(await p.locator('.chart svg').count())===2);
 // 8. Enseignant : compte rendu + message
 await logout();await go('connexion.html');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await go('ressources.html');await p.waitForTimeout(500);step('Cloche : notification non lue visible',(await p.locator('.ke-bell span:not([hidden])').count())===1,await p.textContent('.ke-bell'));
+await p.click('.ke-bell');await p.waitForTimeout(200);step('Cloche : panneau avec la notification',(await p.textContent('.ke-panel')).includes('Nouveau cours attribué'));
+await p.click('.ke-n:has-text("Nouveau cours attribué")');await p.waitForTimeout(800);d=await db();
+step('Notification ouverte : marquée lue et page du cours',p.url().endsWith('espace-enseignant.html')&&d.notifications.filter(n=>n.title==='Nouveau cours attribué').every(n=>n.is_read));
 step('Espace enseignant : cours attribué visible',(await p.locator('#courses .row',{hasText:'Awa Koné'}).count())===1);
 await go('suivi.html?cours='+reqId);await p.selectOption('select[name=understanding]','4');await p.fill('input[name=topics]','Théorème de Pythagore');await p.fill('input[name=homework]','Ex. 4 p.112');await p.click('#reportForm button');await p.waitForTimeout(500);
 d=await db();step('Compte rendu de séance',(d.session_reports||[]).length===1);
