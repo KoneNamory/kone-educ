@@ -13,13 +13,13 @@
 </aside>
 </div>
 </main>
-<script>
+<script src="dossier.js"></script><script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 let user;
 const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const day = d => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
-const DOCS = [['photo_url', 'Photo de profil'], ['id_doc_path', 'Pièce d’identité'], ['diploma_path', 'Dernier diplôme'], ['cv_path', 'CV']];
+const DOCS = KE_DOSSIER.docs;
 
 function steps(current) {
   return '<div class="d-steps">' + [['Dossier', 'Informations et documents'], ['Validation', 'Étude par KONE.EDUC'], ['Cours', 'Familles proposées']]
@@ -42,13 +42,13 @@ async function load() {
   const t = r.data;
   const unread = n.error ? 0 : n.data.filter(x => !x.is_read).length;
   const active = requests.error ? [] : requests.data.filter(c => c.status === 'assigned');
-  const done = (t && t.subject && t.degree ? 1 : 0) + DOCS.filter(d => t && t[d[0]]).length;
-  const pct = Math.round(done / (DOCS.length + 1) * 100);
-  const missing = t ? DOCS.filter(d => !t[d[0]]).map(d => d[1].toLowerCase()) : [];
+  const pct = t ? KE_DOSSIER.percent(t) : 0;
+  const missing = t ? KE_DOSSIER.missing(t).map(d => d[1].toLowerCase()) : [];
+  const infoOk = t && !KE_DOSSIER.fields.some(d => !String(t[d[0]] || '').trim());
 
   // En-tête et indicateurs
   if (!t) message.textContent = 'Bienvenue ! Complétez votre dossier pour postuler et recevoir des cours.';
-  else if (!t.approved) message.textContent = missing.length ? 'Votre dossier est presque prêt : ajoutez les documents manquants pour qu’il soit étudié.' : 'Votre dossier est en cours d’étude par notre équipe. Nous vous contactons très vite.';
+  else if (!t.approved) message.textContent = missing.length ? 'Votre dossier est presque prêt : complétez les éléments manquants pour qu’il soit étudié.' : 'Votre dossier est en cours d’étude par notre équipe. Nous vous contactons très vite.';
   else message.textContent = active.length ? 'Vous suivez ' + active.length + ' élève(s). Pensez au compte rendu après chaque séance.' : 'Votre profil est validé. Consultez les offres de cours et postulez à celles qui vous correspondent.';
   heroCta.innerHTML = !t || missing.length ? '<a class="d-btn light" href="candidature-enseignant.html#teacher-form">Compléter mon dossier →</a>' : (t.approved ? '<a class="d-btn light" href="offres.html">📢 Voir les offres de cours</a>' : '<a class="d-btn light" href="enseignants.html">Voir mon profil public</a>');
   kpis.innerHTML = kpi('📁', pct + ' %', 'Dossier complété') + kpi('🎓', active.length, 'Élève(s) suivi(s)') + kpi('📝', reports.error ? 0 : reports.data.length, 'Compte(s) rendu(s)') + kpi('🔔', unread, 'Notification(s) non lue(s)');
@@ -67,7 +67,7 @@ async function load() {
       + '<div class="d-profile">' + photo + '<div><h3>' + safe(name || 'Mon profil') + '</h3><p class="d-sub">' + safe(t.subject) + ' · ' + safe(t.degree) + '</p>'
       + '<div class="d-meta">' + [t.levels, t.location, t.format, t.experience].filter(Boolean).map(x => '<span>' + safe(x) + '</span>').join('') + '</div></div></div>'
       + '<div class="d-progress" aria-label="Dossier complété à ' + pct + ' %"><i style="width:' + pct + '%"></i></div><p class="d-sub">' + (missing.length ? '⚠ Dossier incomplet : ' + safe(missing.join(', ')) + '.' : '✓ Dossier complet') + '</p>'
-      + '<div class="d-checks">' + DOCS.map(d => '<div class="d-check' + (t[d[0]] ? ' done' : '') + '"><i>' + (t[d[0]] ? '✓' : '○') + '</i>' + d[1] + '</div>').join('') + '</div>'
+      + '<div class="d-checks"><div class="d-check' + (infoOk ? ' done' : '') + '"><i>' + (infoOk ? '✓' : '○') + '</i>Informations du profil</div>' + DOCS.map(d => '<div class="d-check' + (t[d[0]] ? ' done' : '') + '"><i>' + (t[d[0]] ? '✓' : '○') + '</i>' + d[1] + '</div>').join('') + '</div>'
       + '<a class="d-btn ' + (missing.length ? '' : 'ghost') + '" href="candidature-enseignant.html">' + (missing.length ? 'Compléter mon dossier' : 'Mettre à jour mon dossier') + '</a>';
     availability.value = t.availability || '';
     format.value = t.format || 'À domicile';
