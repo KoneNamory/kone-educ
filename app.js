@@ -10,7 +10,7 @@
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var bar = document.createElement('header');
   bar.className = 'ke-app';
-  bar.innerHTML = '<div class="ke-app-in"><a class="ke-app-brand" href="index.html"><img src="favicon.svg" alt="" width="30" height="30"><span>KONE.<b>EDUC</b></span></a><nav class="ke-app-nav" aria-label="Navigation de l’espace"></nav><div class="ke-app-user"></div></div>';
+  bar.innerHTML = '<div class="ke-app-in"><a class="ke-app-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="38" height="38"><span>KONE.<b>EDUC</b></span></a><nav class="ke-app-nav" aria-label="Navigation de l’espace"></nav><div class="ke-app-user"></div></div>';
   document.body.insertBefore(bar, document.body.firstChild);
   var nav = bar.querySelector('.ke-app-nav'), user = bar.querySelector('.ke-app-user');
   client.auth.getUser().then(function (r) {

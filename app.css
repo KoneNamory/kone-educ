@@ -12,7 +12,7 @@ main > button[onclick*="signOut"]{display:none}
 main > a:first-child,main > a#back{display:inline-block;font-size:14px}
 .ke-app{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid #e3ebf8;font-family:"DM Sans",Arial,sans-serif}
 .ke-app-in{max-width:1080px;margin:auto;padding:0 24px;height:66px;display:flex;align-items:center;gap:22px}
-.ke-app-brand{display:flex;align-items:center;gap:8px;font:800 21px Manrope,"DM Sans",sans-serif;letter-spacing:-1px;color:#1559eb;text-decoration:none}.ke-app-brand b{color:#fa7518}.ke-app-brand img{width:30px;height:30px}
+.ke-app-brand{display:flex;align-items:center;gap:8px;font:800 21px Manrope,"DM Sans",sans-serif;letter-spacing:-1px;color:#1559eb;text-decoration:none}.ke-app-brand b{color:#fa7518}.ke-app-brand img{width:38px;height:38px;object-fit:contain}
 .ke-app-nav{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}.ke-app-nav::-webkit-scrollbar{display:none}
 .ke-app-nav a{padding:9px 12px;border-radius:9px;color:#3c4b6b;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}.ke-app-nav a:hover{background:#f1f5fc}.ke-app-nav a[aria-current=page]{color:#1559eb;background:#eaf1ff}
 .ke-app-user{display:flex;align-items:center;gap:10px;font-size:14px;white-space:nowrap}.ke-app-avatar{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;color:#fff;background:#1559eb;font-weight:800}
