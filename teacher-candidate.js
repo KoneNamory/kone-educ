@@ -13,8 +13,49 @@ const teacherForm = document.getElementById('teacher-form');
 const notice = document.getElementById('confirmation');
 const say = (text, isError) => { notice.textContent = text; notice.classList.add('show'); notice.style.color = isError ? '#b42318' : ''; };
 
-// Documents déjà fournis : ils deviennent facultatifs (à renvoyer seulement pour les remplacer)
-(async function markExistingFiles() {
+// Où se trouve chaque élément du dossier dans le formulaire (pour le préremplir et le signaler s'il manque)
+const SPOT = {
+  degree: '#degree', subject: '#subject', experience: 'select[name="experience"]', location: 'input[name="location"]',
+  levels: 'input[name="levels"]', availability: 'input[name="days"]', format: 'select[name="format"]', bio: 'textarea[name="bio"]',
+  photo_url: 'input[name="photo"]', id_doc_path: 'input[name="idDoc"]', diploma_path: 'input[name="diploma"]', cv_path: 'input[name="cv"]'
+};
+const spotBox = key => { const el = teacherForm.querySelector(SPOT[key]); return el && (el.closest('.full') || el.closest('label')); };
+const statusBox = document.createElement('div');
+statusBox.id = 'dossier-status';
+statusBox.className = 'dossier-status';
+
+// Sélectionne une option connue, sinon « Autre » avec la précision
+function pick(select, value, otherInput) {
+  if (!value) return;
+  const known = Array.from(select.options).some(o => o.value === value || o.text === value);
+  select.value = known ? value : 'other';
+  select.dispatchEvent(new Event('change'));
+  if (!known && otherInput) otherInput.value = value;
+}
+
+function showStatus(t) {
+  const missing = KE_DOSSIER.missing(t);
+  teacherForm.querySelectorAll('.is-missing').forEach(el => el.classList.remove('is-missing'));
+  missing.forEach(d => { const box = spotBox(d[0]); if (box) box.classList.add('is-missing'); });
+  const pct = KE_DOSSIER.percent(t);
+  statusBox.innerHTML = missing.length
+    ? '<div class="ds-head"><b>Votre dossier est complet à ' + pct + ' %</b><span>' + missing.length + ' élément(s) à compléter</span></div><div class="ds-bar"><i style="width:' + pct + '%"></i></div>'
+      + '<p>Vos réponses déjà enregistrées sont préremplies. Complétez seulement ce qui manque (encadré en orange), puis envoyez :</p>'
+      + '<div class="ds-list">' + missing.map(d => '<button type="button" data-key="' + d[0] + '">' + d[1] + '</button>').join('') + '</div>'
+    : '<div class="ds-head"><b>✓ Votre dossier est complet</b><span>100 %</span></div><div class="ds-bar"><i style="width:100%"></i></div><p>Vous pouvez mettre à jour vos informations ou remplacer un document à tout moment.</p>';
+  teacherForm.querySelector('button[type="submit"]').textContent = missing.length ? 'Compléter mon dossier →' : 'Mettre à jour mon dossier →';
+}
+
+statusBox.addEventListener('click', e => {
+  const key = e.target.dataset && e.target.dataset.key;
+  const el = key && teacherForm.querySelector(SPOT[key]);
+  if (!el) return;
+  (el.closest('.full') || el.closest('label') || el).scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => el.focus({ preventScroll: true }), 300);
+});
+
+// Un enseignant qui revient retrouve ses réponses et voit ce qui manque
+async function loadDossier() {
   const { data: { user } } = await teacherDb.auth.getUser();
   if (!user) {
     // Prévenir avant la saisie : sans compte, la candidature (et ses fichiers) ne peut pas être enregistrée
@@ -24,7 +65,7 @@ const say = (text, isError) => { notice.textContent = text; notice.classList.add
     teacherForm.parentNode.insertBefore(box, teacherForm);
     return;
   }
-  const { data: prof } = await teacherDb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  const { data: prof } = await teacherDb.from('profiles').select('role, full_name, phone').eq('id', user.id).maybeSingle();
   if (prof && prof.role !== 'teacher') {
     const box = document.createElement('div');
     box.className = 'login-first';
@@ -33,14 +74,33 @@ const say = (text, isError) => { notice.textContent = text; notice.classList.add
     teacherForm.querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = true; });
     return;
   }
+  const f = teacherForm.elements;
+  if (prof) { if (!f.name.value) f.name.value = prof.full_name || ''; if (!f.phone.value) f.phone.value = prof.phone || ''; }
+  if (!f.email.value) f.email.value = user.email || '';
   const { data } = await teacherDb.from('teacher_profiles').select('*').eq('id', user.id).maybeSingle();
-  if (!data) return;
-  Object.keys(FILES).forEach((name) => {
-    if (!data[FILES[name].column]) return;
-    teacherForm.querySelector('input[name="' + name + '"]').required = false;
-    teacherForm.querySelector('.have[data-for="' + name + '"]').textContent = '✓ Déjà fourni — choisissez un fichier seulement pour le remplacer.';
-  });
-})();
+  if (!statusBox.isConnected) teacherForm.parentNode.insertBefore(statusBox, teacherForm);
+  if (data) {
+    pick(f.degree, data.degree, f.otherDegree);
+    pick(f.subject, data.subject, f.otherSubject);
+    if (data.experience) f.experience.value = data.experience;
+    if (data.format) f.format.value = data.format;
+    if (data.location) f.location.value = data.location;
+    if (data.bio) f.bio.value = data.bio;
+    const split = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+    split(data.levels).forEach(v => { const c = teacherForm.querySelector('input[name="levels"][value="' + v + '"]'); if (c) c.checked = true; });
+    split(data.availability).forEach(v => { const c = teacherForm.querySelector('input[name="days"][value="' + v + '"]'); if (c) c.checked = true; });
+    // Documents déjà fournis : facultatifs (à renvoyer seulement pour les remplacer)
+    Object.keys(FILES).forEach((name) => {
+      const input = teacherForm.querySelector('input[name="' + name + '"]'), note = teacherForm.querySelector('.have[data-for="' + name + '"]');
+      const given = !!data[FILES[name].column];
+      input.required = !given;
+      note.textContent = given ? '✓ Déjà fourni — choisissez un fichier seulement pour le remplacer.' : '';
+    });
+  }
+  showStatus(data);
+  return data;
+}
+loadDossier();
 
 teacherForm.addEventListener('submit', async function (event) {
   event.preventDefault();
@@ -83,7 +143,9 @@ teacherForm.addEventListener('submit', async function (event) {
 
     const { error } = await teacherDb.from('teacher_profiles').upsert(row, { onConflict: 'id' });
     if (error) throw error;
-    say('Candidature et documents enregistrés avec succès ! Nous étudions votre dossier.');
+    teacherForm.querySelectorAll('input[type="file"]').forEach(i => { i.value = ''; });
+    const left = KE_DOSSIER.missing(await loadDossier()).length;
+    say(left ? 'Dossier enregistré. Il reste ' + left + ' élément(s) à compléter (voir en haut du formulaire).' : 'Candidature enregistrée ! Votre dossier est complet : nous l’étudions et vous contactons très vite.');
   } catch (error) {
     say('Erreur : ' + (error.message || error), true);
   } finally {

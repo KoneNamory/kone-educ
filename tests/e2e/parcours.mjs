@@ -76,6 +76,16 @@ step('Zone d’intervention enregistrée',!!(tp&&tp.location),'location='+(tp&&t
 step('Niveaux enseignés enregistrés',!!(tp&&tp.levels),'levels='+(tp&&tp.levels));
 step('Documents de l’enseignant envoyés',!!(tp&&tp.photo_url&&tp.id_doc_path&&tp.diploma_path&&tp.cv_path),[tp&&tp.photo_url,tp&&tp.id_doc_path].join(' | '));
 step('Pièce d’identité dans l’espace privé',(d.__storage||[]).some(f=>f.bucket==='teacher-files'&&f.path.startsWith(tp.id+'/idDoc-')));
+// Dossier incomplet (ancien dossier sans CV ni présentation) : réponses préremplies, éléments manquants signalés
+await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('__ke_db'));delete db.teacher_profiles[0].cv_path;db.teacher_profiles[0].bio='';localStorage.setItem('__ke_db',JSON.stringify(db))});
+await go('candidature-enseignant.html');await p.waitForTimeout(400);
+const st=await p.textContent('#dossier-status');
+step('Dossier incomplet : éléments manquants listés',st.includes('CV')&&st.includes('Présentation')&&!st.includes('Photo de profil'),st.replace(/\s+/g,' ').slice(0,120));
+step('Dossier incomplet : réponses préremplies',(await p.inputValue('input[name=location]'))==='Cocody, Bingerville'&&await p.isChecked('input[name=days][value=Mercredi]')&&await p.isChecked('input[name=levels][value=Lycée]')&&!(await p.getAttribute('input[name=photo]','required')!==null)&&(await p.getAttribute('input[name=cv]','required'))!==null);
+await p.fill('textarea[name=bio]','Professeur de mathématiques depuis 5 ans.');await p.setInputFiles('input[name=cv]',FILES.doc);
+if(await c2.count())await tick('#teacher-form input[type=checkbox]:not([name])');
+await p.click('#teacher-form button');await p.waitForTimeout(800);
+d=await db();step('Dossier complété sans tout ressaisir',!!(d.teacher_profiles[0].cv_path&&d.teacher_profiles[0].bio&&d.teacher_profiles[0].photo_url)&&(await p.textContent('#dossier-status')).includes('complet'),(await p.textContent('#confirmation')).trim());
 await go('offres.html');await p.waitForTimeout(300);step('Offres : enseignant non validé bloqué',(await p.textContent('#content')).includes('en cours de validation')&&(await p.locator('.o-card').count())===0);
 await go('espace-enseignant.html');step('Espace enseignant : dossier complet',(await p.textContent('#profile')).includes('Dossier complet'));
 // 5. Administrateur
