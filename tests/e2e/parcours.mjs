@@ -58,6 +58,7 @@ await go('inscription.html?role=teacher');
 step('Rôle Enseignant présélectionné',(await p.inputValue('#role'))==='teacher');await p.fill('#fullName','Yao Kouassi');await p.fill('#phone','0500112233');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');
 await p.click('form button');await p.waitForTimeout(800);
 step('Inscription enseignant → candidature',p.url().endsWith('candidature-enseignant.html'),p.url().split('/').pop());
+await go('espace-enseignant.html');step('Espace enseignant sans dossier : invitation à le compléter, sans erreur',!(await p.textContent('#message')).includes('Erreur')&&(await p.locator('#profile a[href="candidature-enseignant.html"]').count())===1&&await p.locator('#availabilityCard').isHidden(),(await p.textContent('#message')));
 await go('candidature-enseignant.html');
 await p.fill('input[name=name]','Yao Kouassi');await p.fill('input[name=phone]','0500112233');await p.fill('input[name=email]','yao@test.ci');await p.fill('input[name=location]','Cocody, Bingerville');
 for(const s of ['degree','subject','experience','format']){const o=await p.$$eval('select[name='+s+'] option',o=>o.map(x=>x.value).filter(v=>v&&v!=='other'));await p.selectOption('select[name='+s+']',o[0])}
