@@ -7,7 +7,7 @@
 <section class="card d-card"><div class="d-head"><h2>Mes cours</h2><span class="d-count" id="coursesCount">0</span></div><div id="courses">Chargement…</div></section>
 </div>
 <aside class="d-col">
-<section class="card d-card"><div class="d-head"><h2>Notifications</h2></div><div id="notifications">Chargement…</div></section>
+<section class="card d-card" id="nextCard"><div class="d-head"><h2>📅 Prochains cours</h2><a class="d-link" href="planning.html">Planning →</a></div><div id="nextList"><p class="d-sub">Chargement…</p></div></section><section class="card d-card"><div class="d-head"><h2>Notifications</h2></div><div id="notifications">Chargement…</div></section>
 <section class="card d-card" id="availabilityCard" hidden><div class="d-head"><h2>Mes disponibilités</h2></div><form id="form"><label>Créneaux habituels<input id="availability" required placeholder="Ex. Mercredi après-midi, samedi matin"></label><label>Format de cours<select id="format"><option>À domicile</option><option>En ligne</option><option>À domicile et en ligne</option></select></label><button class="d-btn">Enregistrer</button><p class="d-flash" id="flash" role="status"></p></form></section>
 <section class="card d-card d-help"><h2>Besoin d’aide ?</h2><p>Notre équipe vous accompagne pour votre dossier et vos cours, du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
 </aside>
@@ -94,5 +94,11 @@ form.onsubmit = async e => {
   flash.style.color = r.error ? '#b42318' : '';
   flash.textContent = r.error ? 'Erreur : ' + r.error.message : '✓ Disponibilités enregistrées.';
 };
+// Prochains cours (planning)
+db.from('sessions').select('*, course_requests(subject, student_name)').eq('status', 'planned').gte('starts_at', new Date(Date.now() - 3 * 36e5).toISOString()).order('starts_at').limit(3).then(r => {
+  const el = document.getElementById('nextList'); if (!el) return;
+  if (r.error) { document.getElementById('nextCard').hidden = true; return; }
+  el.innerHTML = r.data.map(x => { const d = new Date(x.starts_at), c = x.course_requests || {}; return '<div class="d-note"><b>' + d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b><small>' + String(c.subject || '').replace(/[<>&]/g, '') + ' · ' + String(c.student_name || '').replace(/[<>&]/g, '') + (x.change_request ? ' · 🔁 changement demandé' : '') + '</small></div>'; }).join('') || '<p class="d-sub">Aucun cours planifié pour le moment.</p>';
+});
 load();
 </script><script src="app.js"></script></body></html>

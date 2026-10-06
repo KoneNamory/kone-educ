@@ -1,0 +1,157 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Planning des cours | KONE.EDUC</title><meta name="robots" content="noindex"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"><style>
+.pl-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 14px}
+.pl-tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:#e9eff9}
+.pl-tabs button{padding:9px 14px;border:0;border-radius:9px;background:none;color:#3c4b6b;font:800 14px "DM Sans",Arial,sans-serif;cursor:pointer;width:auto}
+.pl-tabs button[aria-selected=true]{background:#fff;color:#1559eb;box-shadow:0 2px 8px rgba(21,61,140,.1)}
+.pl-day{margin:18px 0 8px;font:800 15px Manrope,"DM Sans",sans-serif;color:#3c4b6b;text-transform:capitalize}
+.pl-day.today{color:#1559eb}
+.pl-s{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;margin-bottom:8px;border:1px solid #e3ebf8;border-left:5px solid #1559eb;border-radius:14px;background:#fff}
+.pl-s.done{border-left-color:#11743a}.pl-s.absent{border-left-color:#b42318}.pl-s.cancelled{border-left-color:#9aa6c0;opacity:.75}
+.pl-time{flex:none;width:92px;font:800 17px Manrope,sans-serif}.pl-time small{display:block;font:600 12px "DM Sans",sans-serif;color:#7a86a0}
+.pl-main{flex:1;min-width:0}.pl-main b{font-size:15px}
+.pl-req{margin:8px 0 0;padding:8px 10px;border-radius:10px;background:#fff1dc;color:#9a5a00;font-size:13px;font-weight:700}
+.pl-move{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.pl-move[hidden]{display:none}.pl-move input{padding:8px;border:1px solid #d7e1f2;border-radius:9px;font:inherit}
+.pl-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pl-form label{display:block;font-size:13px;font-weight:700}
+.pl-form select,.pl-form input{width:100%;margin-top:5px;padding:10px;border:1px solid #d7e1f2;border-radius:9px;font:inherit}
+.pl-form .full{grid-column:1/-1}
+.pl-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pl-days label{display:flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid #d7e1f2;border-radius:99px;font-weight:700;cursor:pointer}
+.pl-days input{width:auto;margin:0}
+.pl-preview{color:#5b6884;font-size:14px;margin:4px 0 0}
+@media(max-width:640px){.pl-form{grid-template-columns:1fr}.pl-s{flex-direction:column;gap:6px}.pl-time{width:auto}}
+</style></head><body><main>
+<section class="d-hero"><div><p class="eyebrow" id="eyebrow">Planning</p><h1>Planning des cours</h1><p id="message">Chargement du planning…</p></div><div class="d-hero-cta"><a class="d-btn light" id="back" href="index.html">← Mon espace</a></div></section>
+<div class="d-kpis" id="kpis"></div>
+<section class="card d-card" id="planCard" hidden style="margin-bottom:18px"><details id="planBox"><summary style="cursor:pointer;font:800 18px Manrope,sans-serif">➕ Planifier des séances</summary>
+<form id="planForm" class="pl-form" style="margin-top:14px">
+<label class="full">Cours<select id="plCourse" required></select></label>
+<div class="full"><label>Jours de cours</label><div class="pl-days" id="plDays"></div></div>
+<label>Heure de début<input id="plTime" type="time" value="15:00" required></label>
+<label>Durée<select id="plDur"><option value="60">1 h</option><option value="90">1 h 30</option><option value="120" selected>2 h</option><option value="180">3 h</option></select></label>
+<label>À partir du<input id="plStart" type="date" required></label>
+<label>Pendant<select id="plWeeks"><option value="1">1 semaine</option><option value="2">2 semaines</option><option value="4" selected>4 semaines</option><option value="8">8 semaines</option><option value="12">12 semaines</option></select></label>
+<p class="pl-preview full" id="plPreview"></p>
+<div class="full"><button class="d-btn">Ajouter au planning</button></div>
+</form></details></section>
+<div class="pl-bar"><div class="pl-tabs" role="tablist"><button role="tab" data-v="next" aria-selected="true">À venir</button><button role="tab" data-v="past" aria-selected="false">Passées</button><button role="tab" data-v="all" aria-selected="false">Toutes</button></div></div>
+<div id="list"></div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+const hm = d => d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const dayKey = d => d.toISOString().slice(0, 10);
+const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
+const STATUS = { planned: ['Prévue', 'info'], done: ['Faite', 'ok'], absent: ['Absent', 'bad'], cancelled: ['Annulée', 'off'] };
+let user, role, courses = {}, sessions = [], teachers = {}, view = 'next';
+
+async function init() {
+  user = (await db.auth.getUser()).data.user;
+  if (!user) { message.innerHTML = '<a href="connexion.html?redirect=planning.html" style="color:#fff">Connectez-vous</a> pour voir votre planning.'; return; }
+  role = ((await db.from('profiles').select('role').eq('id', user.id).maybeSingle()).data || {}).role;
+  back.href = { parent: 'espace-parent.html', teacher: 'espace-enseignant.html', admin: 'espace-admin.html' }[role] || 'index.html';
+  eyebrow.textContent = { parent: 'Espace parent', teacher: 'Espace enseignant', admin: 'Administration' }[role] || 'Planning';
+  plDays.innerHTML = [1, 2, 3, 4, 5, 6, 0].map(d => '<label><input type="checkbox" value="' + d + '">' + DAYS[d].slice(0, 3) + '.</label>').join('');
+  plStart.value = new Date().toISOString().slice(0, 10);
+  await load();
+}
+
+async function load() {
+  const [c, s, pub] = await Promise.all([
+    db.from('course_requests').select('*').order('created_at', { ascending: false }),
+    db.from('sessions').select('*').order('starts_at'),
+    db.rpc('public_teachers')
+  ]);
+  if (s.error) { message.textContent = 'Le planning sera disponible après la mise à jour du schéma Supabase.'; return; }
+  courses = {}; (c.data || []).forEach(x => { courses[x.id] = x; });
+  teachers = {}; (pub.data || []).forEach(t => { teachers[t.id] = t; });
+  sessions = s.data;
+  const mine = Object.values(courses).filter(x => x.status === 'assigned' && (role === 'admin' || x.teacher_id === user.id));
+  planCard.hidden = !(role === 'teacher' || role === 'admin') || !mine.length;
+  plCourse.innerHTML = mine.map(x => '<option value="' + x.id + '">' + safe(x.student_name) + ' · ' + safe(x.subject) + ' · ' + safe(x.location) + '</option>').join('');
+  if (!sessions.length && mine.length) planBox.open = true;
+  render();
+}
+
+function render() {
+  const now = new Date(), weekEnd = new Date(now.getTime() + 7 * 864e5), monthKey = now.toISOString().slice(0, 7);
+  const next = sessions.filter(x => x.status === 'planned' && new Date(x.starts_at) >= new Date(now.getTime() - 3 * 36e5));
+  const nextOne = next[0];
+  kpis.innerHTML = kpi('📅', next.filter(x => new Date(x.starts_at) <= weekEnd).length, 'Cours dans les 7 jours')
+    + kpi('⏭', nextOne ? new Date(nextOne.starts_at).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + hm(new Date(nextOne.starts_at)) : '—', 'Prochain cours')
+    + kpi('✅', sessions.filter(x => x.status === 'done' && x.starts_at.slice(0, 7) === monthKey).length, 'Séance(s) faite(s) ce mois')
+    + kpi('🔁', sessions.filter(x => x.change_request).length, 'Demande(s) de changement');
+  message.textContent = !Object.keys(courses).length ? 'Aucun cours pour le moment.' : nextOne ? 'Prochain cours : ' + label(nextOne) + '.' : role === 'parent' ? 'Aucun cours planifié pour le moment : l’enseignant ajoutera bientôt les prochaines séances.' : 'Aucun cours planifié : ajoutez les prochaines séances avec « Planifier des séances ».';
+  document.querySelectorAll('.pl-tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === view));
+  const list = view === 'next' ? next : view === 'past' ? sessions.filter(x => x.status !== 'planned' || new Date(x.starts_at) < now).reverse() : sessions;
+  let html = '', last = '';
+  const today = dayKey(now);
+  list.forEach(x => {
+    const d = new Date(x.starts_at), k = dayKey(d);
+    if (k !== last) { html += '<h3 class="pl-day' + (k === today ? ' today' : '') + '">' + (k === today ? 'Aujourd’hui · ' : '') + d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + '</h3>'; last = k; }
+    html += card(x);
+  });
+  document.getElementById('list').innerHTML = html || '<section class="card d-card"><div class="d-empty"><span class="big">📅</span><p>' + (view === 'next' ? 'Aucun cours à venir.' : 'Aucune séance.') + '</p></div></section>';
+}
+
+function label(x) { const d = new Date(x.starts_at); return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' à ' + hm(d); }
+
+function card(x) {
+  const c = courses[x.course_request_id] || {}, d = new Date(x.starts_at), end = new Date(d.getTime() + x.duration_minutes * 6e4);
+  const st = STATUS[x.status] || [x.status, 'off'], future = d > new Date(), canManage = role === 'teacher' || role === 'admin';
+  const who = role === 'parent' ? (teachers[c.teacher_id] ? 'Enseignant : ' + safe(teachers[c.teacher_id].display_name) : '') : safe(c.school_level) + ' · 📍 ' + safe(c.location);
+  let actions = '';
+  if (x.status === 'planned' && canManage) {
+    actions = '<button type="button" class="d-link" onclick="setStatus(' + x.id + ',\'done\')">✓ Faite</button><button type="button" class="d-link" onclick="setStatus(' + x.id + ',\'absent\')">Absent</button>'
+      + '<button type="button" class="d-link" onclick="showMove(' + x.id + ')">Déplacer</button><button type="button" class="cancel" onclick="setStatus(' + x.id + ',\'cancelled\')">Annuler</button>';
+  } else if (x.status === 'planned' && role === 'parent' && future && !x.change_request) {
+    actions = '<button type="button" class="d-link" onclick="askChange(' + x.id + ',\'report\')">Demander un report</button><button type="button" class="cancel" onclick="askChange(' + x.id + ',\'cancel\')">Demander l’annulation</button>';
+  }
+  if (x.status === 'done') actions += '<a class="d-link" href="suivi.html?cours=' + x.course_request_id + '">📝 ' + (role === 'teacher' ? 'Écrire le compte rendu' : 'Compte rendu') + '</a>';
+  return '<div class="pl-s ' + x.status + '" id="s-' + x.id + '"><div class="pl-time">' + hm(d) + '<small>→ ' + hm(end) + ' · ' + (x.duration_minutes >= 60 ? (x.duration_minutes / 60).toLocaleString('fr-FR') + ' h' : x.duration_minutes + ' min') + '</small></div>'
+    + '<div class="pl-main"><div class="d-item-top"><div><b>' + safe(c.student_name) + ' · ' + safe(c.subject) + '</b><p class="d-sub">' + who + ' · ' + safe(c.format) + '</p></div><span class="d-pill ' + st[1] + '">' + st[0] + '</span></div>'
+    + (x.change_request ? '<p class="pl-req">🔁 ' + safe(x.change_request) + (canManage ? ' — déplacez ou annulez la séance pour répondre.' : ' — en attente de réponse.') + '</p>' : '')
+    + (actions ? '<div class="d-actions">' + actions + '</div>' : '') + '<div class="pl-move" id="mv-' + x.id + '" hidden><input type="datetime-local" id="mvd-' + x.id + '"><button type="button" class="d-btn sm" onclick="move(' + x.id + ')">Enregistrer</button></div></div></div>';
+}
+
+async function setStatus(id, status) {
+  if (status === 'cancelled' && !confirm('Annuler cette séance ? Le parent sera prévenu.')) return;
+  const r = await db.from('sessions').update({ status }).eq('id', id);
+  if (r.error) { alert(r.error.message); return; }
+  if (status === 'done' && role === 'teacher' && confirm('Séance marquée comme faite. Écrire le compte rendu maintenant ?')) { location.href = 'suivi.html?cours=' + sessions.find(x => x.id === id).course_request_id; return; }
+  load();
+}
+function showMove(id) { const x = sessions.find(s => s.id === id), d = new Date(x.starts_at); const el = document.getElementById('mvd-' + id); el.value = new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); document.getElementById('mv-' + id).hidden = false; }
+async function move(id) { const v = document.getElementById('mvd-' + id).value; if (!v) return; const r = await db.from('sessions').update({ starts_at: new Date(v).toISOString() }).eq('id', id); if (r.error) { alert(r.error.message); return; } load(); }
+async function askChange(id, kind) {
+  const text = prompt(kind === 'report' ? 'Pourquoi souhaitez-vous reporter ce cours ? Proposez un autre moment si possible.' : 'Pourquoi souhaitez-vous annuler ce cours ?');
+  if (text === null) return;
+  const r = await db.rpc('request_session_change', { p_session: id, p_kind: kind, p_message: text });
+  if (r.error) { alert(r.error.message); return; }
+  alert('Demande envoyée à l’enseignant et à KONE.EDUC.'); load();
+}
+
+function plannedDates() {
+  const days = Array.from(plDays.querySelectorAll('input:checked')).map(i => Number(i.value));
+  const [h, m] = (plTime.value || '15:00').split(':').map(Number), out = [];
+  const start = new Date(plStart.value + 'T00:00:00'), weeks = Number(plWeeks.value);
+  for (let i = 0; i < weeks * 7; i++) { const d = new Date(start); d.setDate(start.getDate() + i); if (days.includes(d.getDay())) { d.setHours(h, m, 0, 0); if (d > new Date()) out.push(d); } }
+  return out;
+}
+planForm.oninput = () => { const n = plannedDates(); plPreview.textContent = n.length ? n.length + ' séance(s) : du ' + n[0].toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' au ' + n[n.length - 1].toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + ', à ' + plTime.value + '.' : 'Choisissez au moins un jour.'; };
+planForm.onsubmit = async e => {
+  e.preventDefault();
+  const dates = plannedDates();
+  if (!dates.length) { plPreview.textContent = 'Choisissez au moins un jour de cours.'; return; }
+  const b = planForm.querySelector('button'); b.disabled = true;
+  const r = await db.rpc('plan_sessions', { p_course: Number(plCourse.value), p_starts: dates.map(d => d.toISOString()), p_duration: Number(plDur.value) });
+  b.disabled = false;
+  if (r.error) { alert('Planification impossible : ' + r.error.message); return; }
+  alert(r.data + ' séance(s) ajoutée(s) au planning. Le parent est prévenu.');
+  planBox.open = false; view = 'next'; load();
+};
+document.querySelectorAll('.pl-tabs button').forEach(b => { b.onclick = () => { view = b.dataset.v; render(); }; });
+init();
+</script><script src="app.js"></script></body></html>

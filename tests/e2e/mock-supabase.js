@@ -15,6 +15,11 @@
     var q = {
       select: function (c) { if (op === 'select') cols = c || '*'; return q; },
       eq: function (k, v) { filters.push([k, v]); return q; },
+      neq: function (k, v) { filters.push([k, v, 'neq']); return q; },
+      gte: function (k, v) { filters.push([k, v, 'gte']); return q; },
+      gt: function (k, v) { filters.push([k, v, 'gt']); return q; },
+      lte: function (k, v) { filters.push([k, v, 'lte']); return q; },
+      lt: function (k, v) { filters.push([k, v, 'lt']); return q; },
       order: function (k, o) { orders.push([k, !o || o.ascending !== false]); return q; },
       limit: function () { return q; },
       range: function () { return q; },
@@ -26,7 +31,11 @@
       maybeSingle: function () { single = 2; return q; },
       then: function (res, rej) { return Promise.resolve(run()).then(res, rej); }
     };
-    function match(r) { return filters.every(function (f) { return String(r[f[0]]) === String(f[1]); }); }
+    function match(r) { return filters.every(function (f) { var a = r[f[0]], b = f[1];
+      if (!f[2]) return String(a) === String(b);
+      if (f[2] === 'neq') return String(a) !== String(b);
+      if (a == null) return false;
+      return f[2] === 'gte' ? String(a) >= String(b) : f[2] === 'gt' ? String(a) > String(b) : f[2] === 'lte' ? String(a) <= String(b) : String(a) < String(b); }); }
     function run() {
       var db = load(); db[table] = db[table] || [];
       var rows = db[table], err;
@@ -92,6 +101,18 @@
       d.profiles.push({ id: id, full_name: a.p_full_name, phone: a.p_phone, role: a.p_role }); save(d); log(['rpc', name, a.p_email]);
       return { data: id, error: null };
     }
+    if (name === 'plan_sessions') {
+      var st4 = load(); st4.sessions = st4.sessions || []; var n4 = 0;
+      a.p_starts.forEach(function (t) { if (st4.sessions.some(function (x) { return x.course_request_id === a.p_course && x.starts_at === t; })) return;
+        st4.sessions.push({ id: st4.sessions.length + 1, course_request_id: a.p_course, starts_at: t, duration_minutes: a.p_duration || 60, status: 'planned', note: null, change_request: null, created_at: new Date().toISOString() }); n4++; });
+      save(st4); return { data: n4, error: null };
+    }
+    if (name === 'request_session_change') {
+      var st5 = load(); var s5 = (st5.sessions || []).find(function (x) { return x.id === a.p_session; });
+      if (!s5) return { data: null, error: { message: 'Séance introuvable' } };
+      s5.change_request = (a.p_kind === 'report' ? 'Demande de report' : 'Demande d’annulation') + (a.p_message ? ' : ' + a.p_message : ''); save(st5); return { data: null, error: null };
+    }
+    if (name === 'admin_send_reminders') return { data: 0, error: null };
     if (name === 'admin_email_status') return { data: [{ enabled: false, sender: null }], error: null };
     if (name === 'admin_users') {
       var st3 = load();

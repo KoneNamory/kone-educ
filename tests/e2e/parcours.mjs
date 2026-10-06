@@ -144,6 +144,15 @@ await p.click('.ke-bell');await p.waitForTimeout(200);step('Cloche : panneau ave
 await p.click('.ke-n:has-text("Nouveau cours attribué")');await p.waitForTimeout(800);d=await db();
 step('Notification ouverte : marquée lue et page du cours',p.url().endsWith('espace-enseignant.html')&&d.notifications.filter(n=>n.title==='Nouveau cours attribué').every(n=>n.is_read));
 step('Espace enseignant : cours attribué visible',(await p.locator('#courses .row',{hasText:'Awa Koné'}).count())===1);
+// Planning : l'enseignant planifie des séances et signale une absence
+await go('planning.html');await p.waitForTimeout(400);step('Planning : formulaire de planification (enseignant)',await p.locator('#planCard').isVisible());
+await p.evaluate(()=>{planBox.open=true});await p.check('#plDays input[value="3"]');await p.check('#plDays input[value="6"]');await p.selectOption('#plWeeks','2');await p.selectOption('#plCourse',String(reqId));
+await p.click('#planForm button');await p.waitForTimeout(600);
+d=await db();step('Planning : séances créées (2 jours × 2 semaines)',(d.sessions||[]).length>=3&&(d.sessions||[]).every(x=>x.course_request_id===reqId),String((d.sessions||[]).length));
+step('Planning : séances affichées',(await p.locator('.pl-s').count())===d.sessions.length);
+await p.locator('.pl-s').first().locator('button:has-text("Absent")').click();await p.waitForTimeout(500);
+d=await db();step('Planning : absence enregistrée',d.sessions.filter(x=>x.status==='absent').length===1);
+await go('espace-enseignant.html');await p.waitForTimeout(500);step('Espace enseignant : prochains cours affichés',(await p.locator('#nextList .d-note').count())>=1);
 await go('suivi.html?cours='+reqId);await p.selectOption('select[name=understanding]','4');await p.fill('input[name=topics]','Théorème de Pythagore');await p.fill('input[name=homework]','Ex. 4 p.112');await p.click('#reportForm button');await p.waitForTimeout(500);
 d=await db();step('Compte rendu de séance',(d.session_reports||[]).length===1);
 await go('messagerie.html?cours='+reqId);await p.fill('#body','Bonjour, Awa a bien travaillé.');await p.click('#send');await p.waitForTimeout(500);
@@ -153,6 +162,9 @@ await logout();await go('connexion.html');await p.fill('#email','mariam@test.ci'
 await go('suivi.html?cours='+reqId);step('Parent voit le compte rendu',(await p.textContent('#reports')).includes('Pythagore'));
 await p.click('#stars button:nth-child(5)');await p.fill('#reviewComment','Très bon enseignant');await p.click('#reviewBtn');await p.waitForTimeout(500);
 d=await db();step('Avis du parent',(d.reviews||[]).length===1&&d.reviews[0].rating===5);
+await go('planning.html');await p.waitForTimeout(400);step('Planning parent : séances visibles, sans planification',(await p.locator('.pl-s').count())>=2&&await p.locator('#planCard').isHidden());
+await p.locator('.pl-s button:has-text("Demander un report")').first().click();await p.waitForTimeout(500);
+d=await db();step('Planning parent : demande de report envoyée',d.sessions.some(x=>(x.change_request||'').startsWith('Demande de report')));
 await go('messagerie.html?cours='+reqId);step('Parent voit le message',(await p.textContent('#thread')).includes('bien travaillé'));
 await p.fill('#body','Merci beaucoup !');await p.click('#send');await p.waitForTimeout(500);
 d=await db();step('Réponse du parent',(d.messages||[]).length===2);
