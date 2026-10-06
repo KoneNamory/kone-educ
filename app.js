@@ -2,9 +2,9 @@
 (function () {
   var client = typeof db !== 'undefined' ? db : supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
   var LINKS = {
-    parent: [['espace-parent.html', 'Mon espace'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['reservation.html', 'Nouvelle demande']],
-    teacher: [['espace-enseignant.html', 'Mon espace'], ['offres.html', 'Offres de cours'], ['ressources.html', 'Ressources']],
-    admin: [['espace-admin.html', 'Administration'], ['gestion-documents.html', 'Documents'], ['ressources.html', 'Ressources']]
+    parent: [['espace-parent.html', 'Mon espace'], ['planning.html', 'Planning'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['reservation.html', 'Nouvelle demande']],
+    teacher: [['espace-enseignant.html', 'Mon espace'], ['planning.html', 'Planning'], ['offres.html', 'Offres de cours'], ['ressources.html', 'Ressources']],
+    admin: [['espace-admin.html', 'Administration'], ['planning.html', 'Planning'], ['gestion-documents.html', 'Documents'], ['ressources.html', 'Ressources']]
   };
   var page = location.pathname.split('/').pop() || 'index.html';
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };

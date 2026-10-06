@@ -950,5 +950,182 @@ do $$ begin
 exception when others then raise notice 'Journal des suppressions de comptes indisponible (%).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Planning des séances et rappels automatiques
+-- ============================================================
+create table if not exists public.sessions (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  starts_at timestamptz not null,
+  duration_minutes integer not null default 60 check (duration_minutes between 15 and 480),
+  status text not null default 'planned' check (status in ('planned','done','absent','cancelled')),
+  note text check (char_length(note) <= 300),
+  change_request text check (char_length(change_request) <= 400),
+  reminded_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists sessions_course_idx on public.sessions (course_request_id, starts_at);
+create index if not exists sessions_starts_idx on public.sessions (starts_at);
+alter table public.sessions enable row level security;
+grant select, update on public.sessions to authenticated;
+grant delete on public.sessions to authenticated;
+
+create or replace function public.course_role(p_course bigint) returns text
+language sql stable security definer set search_path = public as $$
+  select case when public.is_admin() then 'admin'
+              when cr.teacher_id = auth.uid() then 'teacher'
+              when cr.parent_id = auth.uid() then 'parent' end
+  from public.course_requests cr where cr.id = p_course;
+$$;
+
+drop policy if exists "Course participants read sessions" on public.sessions;
+create policy "Course participants read sessions" on public.sessions for select to authenticated
+  using (public.course_role(course_request_id) is not null);
+drop policy if exists "Teachers and admins update sessions" on public.sessions;
+create policy "Teachers and admins update sessions" on public.sessions for update to authenticated
+  using (public.course_role(course_request_id) in ('teacher','admin'))
+  with check (public.course_role(course_request_id) in ('teacher','admin'));
+drop policy if exists "Admins delete sessions" on public.sessions;
+create policy "Admins delete sessions" on public.sessions for delete to authenticated using (public.is_admin());
+
+-- Seuls l'horaire, la durée, le statut et la note se modifient ; une demande traitée est effacée
+create or replace function public.protect_session() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.course_request_id <> old.course_request_id then raise exception 'Le cours d’une séance ne peut pas être changé'; end if;
+  if auth.uid() is not null and new.reminded_at is distinct from old.reminded_at then new.reminded_at := old.reminded_at; end if;
+  if new.starts_at <> old.starts_at then new.reminded_at := null; end if;
+  if new.starts_at <> old.starts_at or new.status <> old.status then new.change_request := null; end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_session on public.sessions;
+create trigger protect_session before update on public.sessions
+  for each row execute function public.protect_session();
+
+create or replace function public.session_label(p_at timestamptz) returns text
+language sql immutable as $$
+  select to_char(p_at at time zone 'Africa/Abidjan', 'DD/MM/YYYY "à" HH24"h"MI');
+$$;
+
+-- Planifier plusieurs séances d'un coup (enseignant du cours ou administrateur)
+create or replace function public.plan_sessions(p_course bigint, p_starts timestamptz[], p_duration integer default 60)
+returns integer language plpgsql security definer set search_path = public as $$
+declare v_role text := public.course_role(p_course); v_cr public.course_requests; v_count integer; v_first timestamptz;
+begin
+  if v_role not in ('teacher','admin') or v_role is null then raise exception 'Seul l’enseignant du cours peut planifier ses séances'; end if;
+  select * into v_cr from public.course_requests where id = p_course;
+  if v_cr.status <> 'assigned' then raise exception 'Le cours doit être en cours (enseignant attribué)'; end if;
+  if coalesce(array_length(p_starts, 1), 0) = 0 or array_length(p_starts, 1) > 60 then raise exception 'Entre 1 et 60 séances à la fois'; end if;
+  insert into public.sessions (course_request_id, starts_at, duration_minutes)
+  select p_course, t, greatest(15, least(480, coalesce(p_duration, 60)))
+  from (select distinct u as t from unnest(p_starts) as u) as d
+  where t > now() - interval '1 day'
+    and not exists (select 1 from public.sessions s where s.course_request_id = p_course and s.starts_at = t and s.status <> 'cancelled');
+  get diagnostics v_count = row_count;
+  select min(t) into v_first from unnest(p_starts) as t where t > now();
+  if v_count > 0 then
+    insert into public.notifications (recipient_id, title, body, link)
+    select x, 'Séances planifiées', v_count || ' séance(s) de ' || v_cr.subject || ' pour ' || v_cr.student_name || ' ajoutée(s) au planning.'
+           || coalesce(' Prochaine : ' || public.session_label(v_first) || '.', ''), 'planning.html'
+    from unnest(array[v_cr.parent_id, case when v_role = 'admin' then v_cr.teacher_id end]) as x where x is not null;
+  end if;
+  return v_count;
+end;
+$$;
+revoke execute on function public.plan_sessions(bigint, timestamptz[], integer) from public;
+grant execute on function public.plan_sessions(bigint, timestamptz[], integer) to authenticated;
+
+-- Le parent demande un report ou une annulation
+create or replace function public.request_session_change(p_session bigint, p_kind text, p_message text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_s public.sessions; v_cr public.course_requests; v_title text;
+begin
+  select * into v_s from public.sessions where id = p_session;
+  if v_s.id is null or public.course_role(v_s.course_request_id) not in ('parent','admin') then raise exception 'Séance introuvable'; end if;
+  if v_s.status <> 'planned' then raise exception 'Cette séance n’est plus modifiable'; end if;
+  if p_kind not in ('report','cancel') then raise exception 'Demande invalide'; end if;
+  select * into v_cr from public.course_requests where id = v_s.course_request_id;
+  v_title := case p_kind when 'report' then 'Demande de report' else 'Demande d’annulation' end;
+  update public.sessions set change_request = v_title || coalesce(' : ' || nullif(trim(left(p_message, 300)), ''), '') where id = p_session;
+  insert into public.notifications (recipient_id, title, body, link)
+  select x, v_title, v_cr.subject || ' pour ' || v_cr.student_name || ', séance du ' || public.session_label(v_s.starts_at)
+         || coalesce(' : « ' || nullif(trim(left(p_message, 200)), '') || ' »', '') || '.', 'planning.html'
+  from (select v_cr.teacher_id as x union select id from public.profiles where role = 'admin') r where x is not null;
+end;
+$$;
+revoke execute on function public.request_session_change(bigint, text, text) from public;
+grant execute on function public.request_session_change(bigint, text, text) to authenticated;
+
+-- Prévenir l'autre partie d'un déplacement, d'une annulation ou d'une absence
+create or replace function public.notify_session_change() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_cr public.course_requests; v_title text; v_body text;
+begin
+  select * into v_cr from public.course_requests where id = new.course_request_id;
+  if new.status = 'cancelled' and old.status <> 'cancelled' then
+    v_title := 'Cours annulé'; v_body := 'La séance de ' || v_cr.subject || ' pour ' || v_cr.student_name || ' du ' || public.session_label(old.starts_at) || ' est annulée.';
+  elsif new.status = 'absent' and old.status <> 'absent' then
+    v_title := 'Absence signalée'; v_body := 'Absence signalée à la séance de ' || v_cr.subject || ' du ' || public.session_label(new.starts_at) || ' pour ' || v_cr.student_name || '.';
+  elsif new.starts_at <> old.starts_at and new.status = 'planned' then
+    v_title := 'Cours déplacé'; v_body := 'La séance de ' || v_cr.subject || ' pour ' || v_cr.student_name || ' est déplacée au ' || public.session_label(new.starts_at) || '.';
+  else return new;
+  end if;
+  insert into public.notifications (recipient_id, title, body, link)
+  select x, v_title, v_body, 'planning.html'
+  from unnest(array[v_cr.parent_id, v_cr.teacher_id]) as x where x is not null and x is distinct from auth.uid();
+  return new;
+end;
+$$;
+drop trigger if exists notify_session_change on public.sessions;
+create trigger notify_session_change after update on public.sessions
+  for each row execute function public.notify_session_change();
+
+-- Rappels automatiques : cours du lendemain, factures en retard (une fois par semaine)
+alter table public.invoices add column if not exists last_reminder_at timestamptz;
+create or replace function public.send_reminders() returns integer
+language plpgsql security definer set search_path = public as $$
+declare v_n integer := 0; v_k integer;
+begin
+  with due as (
+    update public.sessions s set reminded_at = now()
+    where s.status = 'planned' and s.reminded_at is null
+      and s.starts_at between now() + interval '12 hours' and now() + interval '36 hours'
+    returning s.course_request_id, s.starts_at)
+  insert into public.notifications (recipient_id, title, body, link)
+  select x, 'Rappel de cours', 'Cours de ' || cr.subject || ' pour ' || cr.student_name || ' le ' || public.session_label(d.starts_at) || '. Pensez-y !', 'planning.html'
+  from due d join public.course_requests cr on cr.id = d.course_request_id
+  cross join lateral unnest(array[cr.parent_id, cr.teacher_id]) as x where x is not null;
+  get diagnostics v_k = row_count; v_n := v_n + v_k;
+  with late as (
+    update public.invoices i set last_reminder_at = now()
+    where i.status = 'unpaid' and i.due_date < current_date
+      and (i.last_reminder_at is null or i.last_reminder_at < now() - interval '7 days')
+    returning i.parent_id, i.amount, i.month, i.due_date)
+  insert into public.notifications (recipient_id, title, body, link)
+  select l.parent_id, 'Rappel de paiement', 'Votre facture de ' || to_char(l.month, 'MM/YYYY') || ' (' || l.amount || ' FCFA) était à régler le ' || to_char(l.due_date, 'DD/MM') || '. Merci de la régler dans « Mes paiements ».', 'paiements.html'
+  from late l;
+  get diagnostics v_k = row_count; v_n := v_n + v_k;
+  return v_n;
+end;
+$$;
+revoke execute on function public.send_reminders() from public;
+create or replace function public.admin_send_reminders() returns integer
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  return public.send_reminders();
+end;
+$$;
+revoke execute on function public.admin_send_reminders() from public;
+grant execute on function public.admin_send_reminders() to authenticated;
+
+-- Exécution automatique toutes les heures (pg_cron, gratuit sur Supabase)
+do $$ begin
+  begin create extension if not exists pg_cron with schema pg_catalog; exception when others then create extension if not exists pg_cron; end;
+  perform cron.schedule('kone-educ-rappels', '7 * * * *', 'select public.send_reminders()');
+exception when others then raise notice 'Rappels automatiques indisponibles (pg_cron : %).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';
