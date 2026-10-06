@@ -155,6 +155,9 @@ d=await db();step('Planning : absence enregistrée',d.sessions.filter(x=>x.statu
 await go('espace-enseignant.html');await p.waitForTimeout(500);step('Espace enseignant : prochains cours affichés',(await p.locator('#nextList .d-note').count())>=1);
 await go('suivi.html?cours='+reqId);await p.selectOption('select[name=understanding]','4');await p.fill('input[name=topics]','Théorème de Pythagore');await p.fill('input[name=homework]','Ex. 4 p.112');await p.click('#reportForm button');await p.waitForTimeout(500);
 d=await db();step('Compte rendu de séance',(d.session_reports||[]).length===1);
+await go('bilan.html?cours='+reqId);await p.waitForTimeout(500);step('Bilan : courbe et notions du mois',await p.locator('#chart svg').count()===1&&(await p.textContent('#sheet')).includes('Pythagore'));
+await p.fill('textarea[name=appreciation]','Awa progresse bien ce mois-ci.');await p.fill('textarea[name=strengths]','Calcul littéral');await p.click('#apprForm button');await p.waitForTimeout(600);
+d=await db();step('Bilan : appréciation publiée par l’enseignant',(d.monthly_assessments||[]).length===1&&(await p.textContent('#apprBox')).includes('progresse bien'));
 await go('messagerie.html?cours='+reqId);await p.fill('#body','Bonjour, Awa a bien travaillé.');await p.click('#send');await p.waitForTimeout(500);
 d=await db();step('Message de l’enseignant',(d.messages||[]).length===1);
 // 9. Parent : suivi, avis, réponse
@@ -162,6 +165,7 @@ await logout();await go('connexion.html');await p.fill('#email','mariam@test.ci'
 await go('suivi.html?cours='+reqId);step('Parent voit le compte rendu',(await p.textContent('#reports')).includes('Pythagore'));
 await p.click('#stars button:nth-child(5)');await p.fill('#reviewComment','Très bon enseignant');await p.click('#reviewBtn');await p.waitForTimeout(500);
 d=await db();step('Avis du parent',(d.reviews||[]).length===1&&d.reviews[0].rating===5);
+await go('bilan.html?cours='+reqId);await p.waitForTimeout(500);const bil=await p.textContent('#sheet');step('Bilan parent : appréciation visible, sans formulaire',bil.includes('progresse bien')&&bil.includes('Calcul littéral')&&await p.locator('#apprForm').count()===0);
 await go('planning.html');await p.waitForTimeout(400);step('Planning parent : séances visibles, sans planification',(await p.locator('.pl-s').count())>=2&&await p.locator('#planCard').isHidden());
 await p.locator('.pl-s button:has-text("Demander un report")').first().click();await p.waitForTimeout(500);
 d=await db();step('Planning parent : demande de report envoyée',d.sessions.some(x=>(x.change_request||'').startsWith('Demande de report')));

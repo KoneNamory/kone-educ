@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bilan de progression | KONE.EDUC</title><meta name="robots" content="noindex"><meta name="theme-color" content="#1559eb">
+<link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48">
+<script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--b:#1559eb;--o:#fa7518;--ink:#0f1b37;--mut:#5b6884;--line:#e3ebf8;--grid:#e9eff8;--ok:#11743a;--okbg:#e5f7ec;--wait:#9a5a00;--waitbg:#fff1dc}
+*{box-sizing:border-box}body{margin:0;background:#eef2f8;color:var(--ink);font:15px/1.5 "DM Sans",Arial,sans-serif}
+.bar{max-width:860px;margin:20px auto 0;padding:0 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.bar a{color:var(--b);font-weight:700;text-decoration:none}
+.bar .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar select{padding:10px 12px;border:1px solid #d7e1f2;border-radius:10px;background:#fff;font:700 14px "DM Sans",Arial,sans-serif;color:var(--ink)}
+.btn{padding:11px 16px;border:0;border-radius:10px;background:var(--b);color:#fff;font:800 14px "DM Sans",Arial,sans-serif;cursor:pointer}
+.btn:disabled{opacity:.6}
+.sheet{max-width:860px;margin:14px auto 40px;padding:40px 44px;background:#fff;border-radius:16px;box-shadow:0 18px 48px rgba(21,61,140,.12)}
+.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid var(--b)}
+.brand{display:flex;gap:12px;align-items:center}.brand img{width:58px;height:58px;object-fit:contain}
+.brand b{display:block;font:800 24px Manrope,sans-serif;letter-spacing:-1px;color:var(--b)}.brand b span{color:var(--o)}
+.brand small{display:block;color:var(--mut);font-size:12.5px}
+.doc{text-align:right}.doc h1{margin:0;font:800 26px/1.15 Manrope,sans-serif;letter-spacing:-.8px}.doc .m{font-weight:800;color:var(--b);text-transform:capitalize}
+.who{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}
+.who h2,.sec h2{margin:0 0 4px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--mut)}
+.who p{margin:0;font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{padding:16px;border:1px solid var(--line);border-radius:14px}
+.kpi b{display:block;font:800 26px/1.1 Manrope,sans-serif;letter-spacing:-.8px}
+.kpi span{display:block;color:var(--mut);font-size:13px;font-weight:600}
+.kpi em{display:block;margin-top:6px;font-style:normal;font-size:12.5px;font-weight:800;color:var(--mut)}
+.kpi em.up{color:var(--ok)}.kpi em.down{color:#b42318}
+.sec{margin-top:26px}
+.sec h2{font-size:13px;margin-bottom:10px}
+.chart{position:relative}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;padding:8px 10px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;white-space:nowrap;transform:translate(-50%,-115%);display:none;z-index:2}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{padding:16px 18px;border-radius:12px;border:1px solid var(--line)}
+.box.good{background:#f3fbf6;border-color:#cdebd7}.box.work{background:#fff8ef;border-color:#ffe2c7}
+.box h3{margin:0 0 8px;font-size:15px}
+.box ul{margin:0;padding-left:18px}.box li{margin:3px 0}
+.box p{margin:0}
+.muted{color:var(--mut)}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 10px;background:#f4f7fc;text-align:left;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--mut)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+.lv{display:inline-block;padding:2px 8px;border-radius:99px;background:#eaf1ff;color:var(--b);font-size:12px;font-weight:800;white-space:nowrap}
+.appr{padding:18px 20px;border-left:4px solid var(--b);border-radius:0 12px 12px 0;background:#f4f8ff}
+.appr p{margin:0;white-space:pre-wrap}
+.appr small{display:block;margin-top:8px;color:var(--mut)}
+form label{display:block;margin-top:12px;font-weight:700;font-size:14px}
+form textarea{width:100%;min-height:80px;margin-top:5px;padding:10px;border:1px solid #d7e1f2;border-radius:8px;font:inherit;font-weight:400;resize:vertical}
+.status{min-height:20px;margin:8px 0 0;font-size:14px;font-weight:700}
+.foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);color:var(--mut);font-size:12px;text-align:center}
+#msg{max-width:860px;margin:40px auto;padding:0 16px;text-align:center}
+@media(max-width:700px){.sheet{padding:24px 16px;border-radius:0}.top{flex-direction:column}.doc{text-align:left}.who,.kpis{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.kpi b{font-size:22px}th,td{padding:9px 6px;font-size:13px}.lv{white-space:normal}td:first-child{white-space:normal!important}}
+@media print{body{background:#fff}.bar,.no-print{display:none!important}.sheet{margin:0;max-width:none;box-shadow:none;border-radius:0;padding:8mm 6mm}.sec,.kpi,.box{break-inside:avoid}@page{size:A4;margin:10mm}}
+</style></head><body>
+<div class="bar"><a id="back" href="espace-parent.html">← Retour</a><div class="right"><label for="month" class="muted" style="font-size:14px;font-weight:700">Mois</label><select id="month"></select><button type="button" class="btn" onclick="window.print()">🖨 Imprimer / PDF</button></div></div>
+<p id="msg">Chargement du bilan…</p>
+<main class="sheet" id="sheet" hidden></main>
+<div class="tip" id="tip"></div>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LEVELS = ['', 'Très difficile', 'Fragile', 'En progrès', 'Bonne', 'Excellente'];
+const monthFr = m => new Date(m + '-01T00:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+const dayFr = d => new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const dayLong = d => new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const num = (n, d = 1) => Number(n).toLocaleString('fr-FR', { maximumFractionDigits: d });
+const ym = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); };
+const prevMonth = m => { const [y, mo] = m.split('-').map(Number); return mo === 1 ? (y - 1) + '-12' : y + '-' + String(mo - 1).padStart(2, '0'); };
+const params = new URLSearchParams(location.search);
+const courseId = Number(params.get('cours'));
+let user, role, course, teacherName = '', reports = [], sessions = [], month, assessment = null;
+
+(async function () {
+  const { data: { user: u } } = await db.auth.getUser();
+  user = u;
+  if (!user) { msg.innerHTML = '<a href="connexion.html">Connectez-vous</a> pour voir le bilan.'; return; }
+  if (!courseId) { msg.textContent = 'Aucun cours sélectionné.'; return; }
+  const c = await db.from('course_requests').select('*').eq('id', courseId).maybeSingle();
+  if (c.error || !c.data) { msg.textContent = 'Ce cours est introuvable ou ne vous concerne pas.'; return; }
+  course = c.data;
+  role = course.teacher_id === user.id ? 'teacher' : course.parent_id === user.id ? 'parent' : 'admin';
+  back.href = role === 'teacher' ? 'espace-enseignant.html' : role === 'parent' ? 'espace-parent.html' : 'espace-admin.html';
+  const [t, r, s] = await Promise.all([
+    course.teacher_id ? db.from('profiles').select('full_name').eq('id', course.teacher_id).maybeSingle() : Promise.resolve({ data: null }),
+    db.from('session_reports').select('*').eq('course_request_id', courseId).order('session_date', { ascending: true }),
+    db.from('sessions').select('starts_at, duration_minutes, status').eq('course_request_id', courseId)
+  ]);
+  teacherName = (t.data && t.data.full_name) || '';
+  reports = r.data || [];
+  sessions = s.error ? [] : (s.data || []);
+  // Mois proposés : de la création du cours jusqu'au mois en cours (12 au plus)
+  const now = ym(new Date()), months = [];
+  for (let m = now; months.length < 12; m = prevMonth(m)) { months.push(m); if (m <= ym(course.created_at)) break; }
+  const wanted = params.get('mois');
+  const lastWithReports = reports.length ? String(reports[reports.length - 1].session_date).slice(0, 7) : now;
+  month = /^\d{4}-\d{2}$/.test(wanted || '') ? wanted : lastWithReports;
+  if (!months.includes(month)) months.push(month);
+  months.sort().reverse();
+  document.getElementById('month').innerHTML = months.map(m => '<option value="' + m + '"' + (m === month ? ' selected' : '') + '>' + monthFr(m) + '</option>').join('');
+  document.getElementById('month').onchange = e => {
+    month = e.target.value;
+    history.replaceState(null, '', 'bilan.html?cours=' + courseId + '&mois=' + month);
+    render();
+  };
+  window.addEventListener('resize', () => { if (!sheet.hidden) drawChart(); });
+  render();
+})();
+
+function stats(m) {
+  const rep = reports.filter(x => String(x.session_date).slice(0, 7) === m);
+  const ses = sessions.filter(x => ym(x.starts_at) === m);
+  const done = ses.filter(x => x.status === 'done').length;
+  const absent = ses.filter(x => x.status === 'absent').length;
+  const count = done || rep.length;
+  const minutes = done ? ses.filter(x => x.status === 'done').reduce((a, x) => a + x.duration_minutes, 0) : rep.reduce((a, x) => a + x.duration_minutes, 0);
+  const avg = rep.length ? rep.reduce((a, x) => a + x.understanding, 0) / rep.length : null;
+  return { rep, count, absent, minutes, avg };
+}
+
+async function render() {
+  const a = await db.from('monthly_assessments').select('*').eq('course_request_id', courseId).eq('month', month + '-01').maybeSingle();
+  assessment = a.error ? null : a.data;
+  const cur = stats(month), prev = stats(prevMonth(month));
+  const delta = cur.avg != null && prev.avg != null ? cur.avg - prev.avg : null;
+  const trend = delta == null ? '<em>Premier mois suivi</em>'
+    : Math.abs(delta) < 0.15 ? '<em>→ stable par rapport à ' + monthFr(prevMonth(month)).split(' ')[0] + '</em>'
+    : '<em class="' + (delta > 0 ? 'up' : 'down') + '">' + (delta > 0 ? '↗ +' : '↘ ') + num(delta) + ' par rapport à ' + monthFr(prevMonth(month)).split(' ')[0] + '</em>';
+  const presence = cur.count + cur.absent ? Math.round(cur.count / (cur.count + cur.absent) * 100) : null;
+  const good = cur.rep.filter(x => x.understanding >= 4), work = cur.rep.filter(x => x.understanding <= 2);
+  const homework = cur.rep.filter(x => x.homework);
+  const comments = cur.rep.filter(x => x.comment);
+  const list = (arr, empty) => arr.length ? '<ul>' + arr.map(x => '<li>' + safe(x.topics) + ' <span class="muted">(' + dayFr(x.session_date) + ')</span></li>').join('') + '</ul>' : '<p class="muted">' + empty + '</p>';
+  document.title = 'Bilan ' + monthFr(month) + ' · ' + course.student_name + ' | KONE.EDUC';
+
+  sheet.innerHTML =
+    '<div class="top"><div class="brand"><img src="assets/logo/kone-educ-embleme.jpg" alt=""><div><b>KONE.<span>EDUC</span></b><small>L’excellence à domicile · Abidjan</small></div></div>'
+    + '<div class="doc"><h1>Bilan de progression</h1><div class="m">' + monthFr(month) + '</div></div></div>'
+    + '<div class="who"><div><h2>Élève</h2><p>' + safe(course.student_name) + '</p></div><div><h2>Niveau</h2><p>' + safe(course.school_level) + '</p></div>'
+    + '<div><h2>Matière</h2><p>' + safe(course.subject) + '</p></div><div><h2>Enseignant</h2><p>' + safe(teacherName || '—') + '</p></div></div>'
+    + '<div class="kpis">'
+    + '<div class="kpi"><b>' + cur.count + '</b><span>séance(s) effectuée(s)</span>' + (prev.count ? '<em>' + prev.count + ' le mois précédent</em>' : '') + '</div>'
+    + '<div class="kpi"><b>' + num(cur.minutes / 60) + ' h</b><span>de cours</span></div>'
+    + '<div class="kpi"><b>' + (cur.avg == null ? '–' : num(cur.avg) + '/5') + '</b><span>compréhension moyenne</span>' + (cur.avg == null ? '' : trend) + '</div>'
+    + '<div class="kpi"><b>' + (presence == null ? '–' : presence + ' %') + '</b><span>d’assiduité</span><em>' + (cur.absent ? cur.absent + ' absence(s)' : presence == null ? '' : 'Aucune absence') + '</em></div>'
+    + '</div>'
+    + '<section class="sec"><h2>Compréhension séance après séance</h2><div class="chart" id="chart"></div></section>'
+    + '<section class="sec"><h2>Appréciation de l’enseignant</h2><div id="apprBox">' + apprHtml() + '</div>' + (role !== 'parent' ? formHtml() : '') + '</section>'
+    + '<section class="sec cols"><div class="box good"><h3>✅ Points forts du mois</h3>' + (assessment && assessment.strengths ? '<p style="white-space:pre-wrap;margin-bottom:8px">' + safe(assessment.strengths) + '</p>' : '') + list(good, 'Pas encore de notion pleinement maîtrisée ce mois-ci.') + '</div>'
+    + '<div class="box work"><h3>🎯 À retravailler</h3>' + (assessment && assessment.improvements ? '<p style="white-space:pre-wrap;margin-bottom:8px">' + safe(assessment.improvements) + '</p>' : '') + list(work, 'Aucune notion jugée fragile ce mois-ci.') + '</div></section>'
+    + '<section class="sec"><h2>Notions travaillées</h2>' + (cur.rep.length
+      ? '<table><thead><tr><th>Séance</th><th>Notions</th><th>Compréhension</th></tr></thead><tbody>' + cur.rep.map(x => '<tr><td style="white-space:nowrap">' + dayLong(x.session_date) + '<br><span class="muted">' + x.duration_minutes + ' min</span></td><td>' + safe(x.topics) + '</td><td><span class="lv">' + x.understanding + '/5 · ' + LEVELS[x.understanding] + '</span></td></tr>').join('') + '</tbody></table>'
+      : '<p class="muted">Aucun compte rendu de séance pour ' + monthFr(month) + '.</p>') + '</section>'
+    + (homework.length ? '<section class="sec"><h2>Devoirs donnés</h2><ul>' + homework.map(x => '<li><b>' + dayFr(x.session_date) + ' :</b> ' + safe(x.homework) + '</li>').join('') + '</ul></section>' : '')
+    + (comments.length ? '<section class="sec"><h2>Remarques des séances</h2><ul>' + comments.map(x => '<li><b>' + dayFr(x.session_date) + ' :</b> <span style="white-space:pre-wrap">' + safe(x.comment) + '</span></li>').join('') + '</ul></section>' : '')
+    + '<div class="foot">KONE.EDUC — Bilan établi à partir des comptes rendus de séance · Édité le ' + new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) + '</div>';
+  msg.hidden = true; sheet.hidden = false;
+  drawChart();
+  const f = document.getElementById('apprForm');
+  if (f) f.onsubmit = saveAssessment;
+}
+
+function apprHtml() {
+  if (!assessment) return '<p class="muted" style="margin:0">' + (role === 'parent' ? 'L’enseignant n’a pas encore rédigé son appréciation pour ce mois.' : 'Aucune appréciation pour ce mois : rédigez-la ci-dessous, le parent sera prévenu.') + '</p>';
+  return '<div class="appr"><p>' + safe(assessment.appreciation) + '</p><small>' + safe(teacherName || 'L’enseignant') + ' · mis à jour le ' + new Date(assessment.updated_at || assessment.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + '</small></div>';
+}
+
+function formHtml() {
+  const v = assessment || {};
+  return '<form id="apprForm" class="no-print"><label>Appréciation générale du mois<textarea name="appreciation" required maxlength="1500" placeholder="Travail, attitude, progrès réalisés…">' + safe(v.appreciation) + '</textarea></label>'
+    + '<label>Points forts<textarea name="strengths" maxlength="600" placeholder="Ce que l’élève maîtrise bien">' + safe(v.strengths) + '</textarea></label>'
+    + '<label>À retravailler<textarea name="improvements" maxlength="600" placeholder="Notions à revoir, conseils pour le mois prochain">' + safe(v.improvements) + '</textarea></label>'
+    + '<button class="btn" style="margin-top:12px">' + (assessment ? 'Mettre à jour le bilan' : 'Publier le bilan du mois') + '</button><p class="status" id="apprStatus" role="status"></p></form>';
+}
+
+async function saveAssessment(e) {
+  e.preventDefault();
+  const f = e.target, b = f.querySelector('button');
+  b.disabled = true;
+  const row = { course_request_id: courseId, month: month + '-01', appreciation: f.appreciation.value.trim(), strengths: f.strengths.value.trim() || null, improvements: f.improvements.value.trim() || null };
+  const r = assessment
+    ? await db.from('monthly_assessments').update(row).eq('id', assessment.id)
+    : await db.from('monthly_assessments').insert(Object.assign(role === 'teacher' ? { teacher_id: user.id } : {}, row));
+  b.disabled = false;
+  const st = document.getElementById('apprStatus');
+  if (r.error) { st.style.color = '#b42318'; st.textContent = 'Erreur : ' + r.error.message; return; }
+  const first = !assessment;
+  await render();
+  const st2 = document.getElementById('apprStatus');
+  if (st2) { st2.style.color = '#11743a'; st2.textContent = first ? 'Bilan publié. Le parent a été prévenu.' : 'Bilan mis à jour.'; }
+}
+
+function drawChart() {
+  const el = document.getElementById('chart');
+  if (!el) return;
+  const pts = stats(month).rep, prevAvg = stats(prevMonth(month)).avg;
+  if (!pts.length) { el.innerHTML = '<p class="muted" style="margin:0">La courbe apparaîtra dès le premier compte rendu du mois.</p>'; return; }
+  const W = Math.max(280, el.clientWidth), H = W < 500 ? 200 : 230, L = 30, R = 16, T = 14, B = 30, n = pts.length;
+  const xs = i => n === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (n - 1), ys = v => T + (5 - v) * (H - T - B) / 4;
+  let g = '';
+  for (let v = 1; v <= 5; v++) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="var(--grid)"/><text x="' + (L - 10) + '" y="' + (ys(v) + 4) + '" text-anchor="end" font-size="12" fill="#5b6884">' + v + '</text>';
+  if (prevAvg != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(prevAvg) + '" y2="' + ys(prevAvg) + '" stroke="#8a96b0" stroke-width="1.5" stroke-dasharray="5 4"/><text x="' + (W - R) + '" y="' + (ys(prevAvg) - 6) + '" text-anchor="end" font-size="11.5" fill="#5b6884">' + (W < 500 ? 'Moy. mois préc.' : 'Moyenne du mois précédent') + ' (' + num(prevAvg) + ')</text>';
+  const step = Math.ceil(n / Math.max(2, Math.floor(W / 90)));
+  pts.forEach((x, i) => { if (i % step === 0 || i === n - 1) g += '<text x="' + xs(i) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="12" fill="#5b6884">' + dayFr(x.session_date) + '</text>'; });
+  if (n > 1) g += '<polyline points="' + pts.map((x, i) => xs(i) + ',' + ys(x.understanding)).join(' ') + '" fill="none" stroke="#1559eb" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  pts.forEach((x, i) => { g += '<circle cx="' + xs(i) + '" cy="' + ys(x.understanding) + '" r="5" fill="#1559eb" stroke="#fff" stroke-width="2"/><circle class="hit" data-i="' + i + '" cx="' + xs(i) + '" cy="' + ys(x.understanding) + '" r="16" fill="transparent" style="cursor:pointer"/>'; });
+  el.innerHTML = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Compréhension de 1 à 5 pour les ' + n + ' séances de ' + monthFr(month) + '">' + g + '</svg>';
+  el.querySelectorAll('.hit').forEach(c => {
+    const show = () => {
+      const x = pts[c.dataset.i], box = el.querySelector('svg').getBoundingClientRect(), k = box.width / W;
+      tip.innerHTML = '<b>' + dayFr(x.session_date) + '</b> · ' + x.understanding + '/5 ' + LEVELS[x.understanding] + '<br>' + safe(String(x.topics).slice(0, 60));
+      tip.style.left = (box.left + window.scrollX + c.cx.baseVal.value * k) + 'px';
+      tip.style.top = (box.top + window.scrollY + c.cy.baseVal.value * k) + 'px';
+      tip.style.display = 'block';
+    };
+    c.addEventListener('mouseenter', show); c.addEventListener('click', show);
+    c.addEventListener('mouseleave', () => tip.style.display = 'none');
+  });
+}
+</script></body></html>

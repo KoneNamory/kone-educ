@@ -53,7 +53,7 @@ async function load() {
       : t ? '<p class="d-sub">Enseignant : <b>' + safe(t.display_name) + '</b> · ' + safe(t.subject) + '</p>' : '';
     return '<div class="d-item row"><span class="d-av">' + safe(String(x.student_name || '?').charAt(0).toUpperCase()) + '</span><div class="d-item-main"><div class="d-item-top"><div><b>' + safe(x.student_name) + ' · ' + safe(x.subject) + '</b><p class="d-sub">Demande du ' + day(x.created_at) + '</p></div><span class="d-pill tag ' + st[1] + '">' + safe(st[0]) + '</span></div>'
       + '<div class="d-meta"><span>' + safe(x.school_level) + '</span><span>📍 ' + safe(x.location) + '</span><span>' + safe(x.format) + '</span><span>🗓 ' + safe(x.availability) + '</span></div>' + teacher
-      + '<div class="d-actions">' + (x.teacher_id && x.status !== 'cancelled' ? '<a class="d-link" href="suivi.html?cours=' + x.id + '">📈 Suivi des séances</a><a class="d-link" href="messagerie.html?cours=' + x.id + '">💬 Écrire à l’enseignant</a>' : '')
+      + '<div class="d-actions">' + (x.teacher_id && x.status !== 'cancelled' ? '<a class="d-link" href="suivi.html?cours=' + x.id + '">📈 Suivi des séances</a><a class="d-link" href="bilan.html?cours=' + x.id + '">📊 Bilan du mois</a><a class="d-link" href="messagerie.html?cours=' + x.id + '">💬 Écrire à l’enseignant</a>' : '')
       + (x.status === 'pending' ? '<button type="button" class="cancel" onclick="cancelRequest(' + x.id + ')">Annuler la demande</button>' : '') + '</div></div></div>';
   }).join('') || '<div class="d-empty"><span class="big">🎒</span><p>Aucune demande pour le moment.</p><a class="d-btn" href="reservation.html">Faire ma première demande</a></div>';
 

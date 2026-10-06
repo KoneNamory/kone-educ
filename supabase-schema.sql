@@ -1127,5 +1127,68 @@ do $$ begin
 exception when others then raise notice 'Rappels automatiques indisponibles (pg_cron : %).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Bilan de progression mensuel (appréciation de l'enseignant)
+-- ============================================================
+create table if not exists public.monthly_assessments (
+  id bigint generated always as identity primary key,
+  course_request_id bigint not null references public.course_requests(id) on delete cascade,
+  month date not null check (extract(day from month) = 1),
+  teacher_id uuid references public.profiles(id) on delete set null,
+  appreciation text not null check (char_length(appreciation) between 1 and 1500),
+  strengths text check (char_length(strengths) <= 600),
+  improvements text check (char_length(improvements) <= 600),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (course_request_id, month)
+);
+alter table public.monthly_assessments enable row level security;
+grant select, insert, update on public.monthly_assessments to authenticated;
+grant usage, select on sequence public.monthly_assessments_id_seq to authenticated;
+drop policy if exists "Course participants read assessments" on public.monthly_assessments;
+create policy "Course participants read assessments" on public.monthly_assessments for select to authenticated
+  using (public.course_role(course_request_id) is not null);
+drop policy if exists "Teachers write assessments" on public.monthly_assessments;
+create policy "Teachers write assessments" on public.monthly_assessments for insert to authenticated
+  with check (public.course_role(course_request_id) in ('teacher','admin'));
+drop policy if exists "Teachers update assessments" on public.monthly_assessments;
+create policy "Teachers update assessments" on public.monthly_assessments for update to authenticated
+  using (public.course_role(course_request_id) in ('teacher','admin'))
+  with check (public.course_role(course_request_id) in ('teacher','admin'));
+
+create or replace function public.notify_assessment() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_cr public.course_requests; v_mois text;
+begin
+  if tg_op = 'UPDATE' then
+    if new.course_request_id <> old.course_request_id or new.month <> old.month then raise exception 'Le cours et le mois d’un bilan ne changent pas'; end if;
+    new.created_at := old.created_at;
+  end if;
+  new.updated_at := now();
+  new.teacher_id := (select teacher_id from public.course_requests where id = new.course_request_id);
+  if tg_op = 'INSERT' then
+    select * into v_cr from public.course_requests where id = new.course_request_id;
+    v_mois := to_char(new.month, 'MM/YYYY');
+    if v_cr.parent_id is not null then
+      insert into public.notifications (recipient_id, title, body, link)
+      values (v_cr.parent_id, 'Bilan du mois disponible',
+              'Le bilan de progression de ' || v_cr.student_name || ' en ' || v_cr.subject || ' (' || v_mois || ') est disponible.',
+              'bilan.html?cours=' || new.course_request_id || '&mois=' || to_char(new.month, 'YYYY-MM'));
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_assessment on public.monthly_assessments;
+create trigger notify_assessment before insert or update on public.monthly_assessments
+  for each row execute function public.notify_assessment();
+
+do $$ begin
+  drop trigger if exists audit_changes on public.monthly_assessments;
+  create trigger audit_changes after insert or update or delete on public.monthly_assessments
+    for each row execute function public.audit_changes();
+exception when others then raise notice 'Journal des bilans indisponible (%).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

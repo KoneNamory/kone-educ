@@ -80,7 +80,7 @@ async function load() {
     const pill = c.status === 'completed' ? '<span class="d-pill off">Terminé</span>' : c.status === 'cancelled' ? '<span class="d-pill bad">Annulé</span>' : '<span class="d-pill ok">En cours</span>';
     return '<div class="d-item row"><span class="d-av">' + safe(String(c.subject || '?').charAt(0)) + '</span><div class="d-item-main"><div class="d-item-top"><div><b>' + safe(c.student_name) + ' · ' + safe(c.subject) + '</b><p class="d-sub">' + safe(c.availability) + '</p></div>' + pill + '</div>'
       + '<div class="d-meta"><span>' + safe(c.school_level) + '</span><span>📍 ' + safe(c.location) + '</span><span>' + safe(c.format) + '</span></div>'
-      + (c.status === 'cancelled' ? '' : '<div class="d-actions"><a class="d-link" href="suivi.html?cours=' + c.id + '">📝 Compte rendu de séance</a><a class="d-link" href="messagerie.html?cours=' + c.id + '">💬 Écrire au parent</a></div>') + '</div></div>';
+      + (c.status === 'cancelled' ? '' : '<div class="d-actions"><a class="d-link" href="suivi.html?cours=' + c.id + '">📝 Compte rendu de séance</a><a class="d-link" href="bilan.html?cours=' + c.id + '">📊 Bilan du mois</a><a class="d-link" href="messagerie.html?cours=' + c.id + '">💬 Écrire au parent</a></div>') + '</div></div>';
   }).join('') || '<div class="d-empty"><span class="big">📚</span>' + (t && t.approved ? '<p>Aucun cours pour le moment. Postulez aux offres de cours pour être choisi par l’équipe.</p><a class="d-btn" href="offres.html">Voir les offres de cours</a>' : '<p>Les cours vous seront proposés une fois votre dossier validé.</p>') + '</div>';
 
   // Notifications
