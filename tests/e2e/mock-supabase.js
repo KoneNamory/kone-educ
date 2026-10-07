@@ -142,6 +142,23 @@
           applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null };
       }).filter(Boolean), error: null };
     }
+    if (name === 'public_teacher_profile') {
+      var s3 = load(), tp3 = (s3.teacher_profiles || []).find(function (t) { return t.id === a.p_id && t.approved; });
+      var p3 = tp3 && (s3.profiles || []).find(function (x) { return x.id === tp3.id; });
+      if (!tp3 || !p3 || p3.role !== 'teacher') return { data: null, error: null };
+      var short = function (n) { var w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length ? w[0] + (w[1] ? ' ' + w[1].charAt(0).toUpperCase() + '.' : '') : 'Parent'; };
+      var rv3 = (s3.reviews || []).filter(function (r) { return r.teacher_id === tp3.id; });
+      return { data: { id: tp3.id, display_name: short(p3.full_name), subject: tp3.subject, degree: tp3.degree, experience: tp3.experience, levels: tp3.levels, location: tp3.location, format: tp3.format, availability: tp3.availability, bio: tp3.bio, photo_url: tp3.photo_url,
+        member_since: p3.created_at || new Date().toISOString(), diploma_checked: !!tp3.diploma_path, id_checked: !!tp3.id_doc_path,
+        rating: rv3.length ? Math.round(rv3.reduce(function (x, r) { return x + r.rating; }, 0) / rv3.length * 10) / 10 : null, reviews_count: rv3.length,
+        stars: [5, 4, 3, 2, 1].map(function (k) { return rv3.filter(function (r) { return r.rating === k; }).length; }),
+        students: (s3.course_requests || []).filter(function (r) { return r.teacher_id === tp3.id && (r.status === 'assigned' || r.status === 'completed'); }).length,
+        sessions: (s3.session_reports || []).filter(function (r) { return r.teacher_id === tp3.id; }).length,
+        reviews: rv3.filter(function (r) { return r.is_public; }).map(function (r) {
+          var cr = (s3.course_requests || []).find(function (c) { return c.id === r.course_request_id; }) || {}, pp = (s3.profiles || []).find(function (x) { return x.id === r.parent_id; }) || {};
+          return { id: r.id, rating: r.rating, comment: r.comment, created_at: r.created_at, author: short(pp.full_name), level: cr.school_level, subject: cr.subject };
+        }) }, error: null };
+    }
     if (name !== 'public_teachers') return { data: null, error: { message: 'function not found' } };
     var db = load();
     var out = (db.teacher_profiles || []).filter(function (t) { return t.approved; }).map(function (t) {

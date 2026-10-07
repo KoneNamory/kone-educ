@@ -155,6 +155,9 @@ d=await db();step('Planning : absence enregistrée',d.sessions.filter(x=>x.statu
 await go('espace-enseignant.html');await p.waitForTimeout(500);step('Espace enseignant : prochains cours affichés',(await p.locator('#nextList .d-note').count())>=1);
 await go('suivi.html?cours='+reqId);await p.selectOption('select[name=understanding]','4');await p.fill('input[name=topics]','Théorème de Pythagore');await p.fill('input[name=homework]','Ex. 4 p.112');await p.click('#reportForm button');await p.waitForTimeout(500);
 d=await db();step('Compte rendu de séance',(d.session_reports||[]).length===1);
+await go('bilan.html?cours='+reqId);await p.waitForTimeout(500);step('Bilan : courbe et notions du mois',await p.locator('#chart svg').count()===1&&(await p.textContent('#sheet')).includes('Pythagore'));
+await p.fill('textarea[name=appreciation]','Awa progresse bien ce mois-ci.');await p.fill('textarea[name=strengths]','Calcul littéral');await p.click('#apprForm button');await p.waitForTimeout(600);
+d=await db();step('Bilan : appréciation publiée par l’enseignant',(d.monthly_assessments||[]).length===1&&(await p.textContent('#apprBox')).includes('progresse bien'));
 await go('messagerie.html?cours='+reqId);await p.fill('#body','Bonjour, Awa a bien travaillé.');await p.click('#send');await p.waitForTimeout(500);
 d=await db();step('Message de l’enseignant',(d.messages||[]).length===1);
 // 9. Parent : suivi, avis, réponse
@@ -162,6 +165,7 @@ await logout();await go('connexion.html');await p.fill('#email','mariam@test.ci'
 await go('suivi.html?cours='+reqId);step('Parent voit le compte rendu',(await p.textContent('#reports')).includes('Pythagore'));
 await p.click('#stars button:nth-child(5)');await p.fill('#reviewComment','Très bon enseignant');await p.click('#reviewBtn');await p.waitForTimeout(500);
 d=await db();step('Avis du parent',(d.reviews||[]).length===1&&d.reviews[0].rating===5);
+await go('bilan.html?cours='+reqId);await p.waitForTimeout(500);const bil=await p.textContent('#sheet');step('Bilan parent : appréciation visible, sans formulaire',bil.includes('progresse bien')&&bil.includes('Calcul littéral')&&await p.locator('#apprForm').count()===0);
 await go('planning.html');await p.waitForTimeout(400);step('Planning parent : séances visibles, sans planification',(await p.locator('.pl-s').count())>=2&&await p.locator('#planCard').isHidden());
 await p.locator('.pl-s button:has-text("Demander un report")').first().click();await p.waitForTimeout(500);
 d=await db();step('Planning parent : demande de report envoyée',d.sessions.some(x=>(x.change_request||'').startsWith('Demande de report')));
@@ -170,6 +174,17 @@ await p.fill('#body','Merci beaucoup !');await p.click('#send');await p.waitForT
 d=await db();step('Réponse du parent',(d.messages||[]).length===2);
 // 9 bis. Profil public de l’enseignant
 await logout();await go('enseignants.html');await p.waitForTimeout(400);const pub=await p.textContent('#teachers-grid');step('Profil public de l’enseignant validé',pub.includes('Yao K.')&&pub.includes('5/5')&&!pub.includes('0500112233'),pub.slice(0,80).replace(/\s+/g,' '));
+await p.locator('#teachers-grid .teacher',{hasText:'Yao K.'}).locator('a.book',{hasText:'Voir le profil'}).click();await p.waitForTimeout(800);
+const fiche=await p.textContent('#page');step('Fiche publique : profil, note et avis vérifié publié',p.url().includes('enseignant.html?id=')&&fiche.includes('Yao K.')&&fiche.includes('Très bon enseignant')&&fiche.includes('Avis vérifié')&&!fiche.includes('0500112233')&&!fiche.includes('Kouassi'));
+await go('connexion.html');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await go('enseignants.html');await p.locator('#teachers-grid .teacher',{hasText:'Yao K.'}).locator('a.book',{hasText:'Demander cet enseignant'}).click();await p.waitForTimeout(900);
+step('Réservation : enseignant souhaité affiché',(await p.textContent('#chosen-teacher')).includes('Yao K.'));
+await p.fill('input[name=studentName]','Fatou Koné');{const lv=await p.$$eval('select[name=level] option',o=>o.map(x=>x.value).filter(Boolean));await p.selectOption('select[name=level]',lv[2]);}
+await p.selectOption('#commune','Cocody');await p.waitForTimeout(100);{const qs=await p.$$eval('#quartier option',o=>o.map(x=>x.value).filter(Boolean));await p.selectOption('#quartier',qs[0]);}
+await tick('input[name=format][value="À domicile"]');await tick('input[name=days][value=Samedi]');
+{const consent=p.locator('#booking-form input[type=checkbox]:not([name])');if(await consent.count())await tick('#booking-form input[type=checkbox]:not([name])');}
+await p.click('#booking-form button[type=submit], #booking-form button');await p.waitForTimeout(700);
+d=await db();{const last=d.course_requests[d.course_requests.length-1];const yao=d.profiles.find(x=>x.full_name&&x.full_name.startsWith('Yao'));step('Demande envoyée avec l’enseignant souhaité',last.student_name==='Fatou Koné'&&yao&&last.preferred_teacher_id===yao.id&&(await p.textContent('#booking-success')).includes('Yao K.'));}
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

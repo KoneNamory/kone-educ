@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profil enseignant | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="description" content="Profil d’un enseignant vérifié KONE.EDUC : parcours, avis des parents et demande de cours."><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><meta property="og:type" content="website"><meta property="og:site_name" content="KONE.EDUC"><meta property="og:locale" content="fr_CI"><meta property="og:image" content="https://kone-educ.vercel.app/assets/og-image.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="KONE.EDUC – cours particuliers à domicile à Abidjan"><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="Profil enseignant | KONE.EDUC"><meta property="og:description" content="Des enseignants sélectionnés et vérifiés pour chaque matière et chaque niveau, du primaire au lycée, à Abidjan et en Côte d'Ivoire."><link rel="stylesheet" href="site.css"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><style>
+:root{--blue:#1559eb;--orange:#fa7518;--ink:#101a35;--muted:#596580;--line:#dbe5f5;--pale:#f5f9ff;--ok:#11743a}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:"DM Sans",sans-serif;background:#f6f9fe}a{color:inherit;text-decoration:none}
+.shell{width:min(1120px,calc(100% - 48px));margin:auto}
+.f-msg{padding:80px 0;text-align:center;color:var(--muted)}
+.f-hero{padding:46px 0 40px;background:linear-gradient(120deg,#eef4ff,#fff 60%,#fff3e8);border-bottom:1px solid var(--line)}
+.f-hero-grid{display:grid;grid-template-columns:240px 1fr;gap:40px;align-items:center}
+.f-photo{width:240px;height:240px;border-radius:28px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(145deg,#1559eb,#3d7bff);color:#fff;font:800 96px Manrope,sans-serif;box-shadow:0 22px 46px rgba(21,89,235,.22);border:6px solid #fff}
+.f-photo img{width:100%;height:100%;object-fit:cover}
+.f-back{display:inline-block;margin-bottom:14px;color:var(--blue);font-size:14px;font-weight:800}
+.f-badge{display:inline-flex;margin:0 0 10px;padding:6px 12px;border-radius:99px;background:#e5f7ec;color:var(--ok);font-size:13px;font-weight:800}
+.f-id h1{margin:0;font:800 clamp(34px,4.6vw,52px)/1.05 Manrope,sans-serif;letter-spacing:-2px}
+.f-subject{margin:10px 0 0;font-size:19px;font-weight:700;color:var(--blue)}
+.f-rating{margin:12px 0 0;font-size:16px;font-weight:700}.f-rating .st{color:#f5a400;letter-spacing:1px}.f-rating small{color:var(--muted);font-weight:600}
+.f-where{margin:6px 0 0;color:var(--muted)}
+.f-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.f-btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;padding:14px 22px;border-radius:12px;background:var(--orange);color:#fff;font-weight:800;font-size:15px;box-shadow:0 10px 22px rgba(250,117,24,.25);transition:transform .15s}
+.f-btn:hover{transform:translateY(-1px)}
+.f-btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.f-btn.wide{display:flex;margin-top:16px}
+.f-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:-1px;padding:22px 0}
+.f-stat{padding:18px 20px;border:1px solid var(--line);border-radius:16px;background:#fff}
+.f-stat b{display:block;font:800 26px/1.1 Manrope,sans-serif;letter-spacing:-.8px}
+.f-stat span{color:var(--muted);font-size:13.5px;font-weight:600}
+.f-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start;padding-bottom:60px}
+.f-col{display:grid;gap:20px;min-width:0}
+.f-card{padding:26px;border:1px solid var(--line);border-radius:18px;background:#fff}
+.f-card h2{margin:0 0 14px;font:800 20px Manrope,sans-serif;letter-spacing:-.4px}
+#bio{margin:0;line-height:1.7;white-space:pre-wrap;color:#2c3a5c}
+.f-dl{display:grid;gap:12px;margin:0}.f-dl div{display:grid;gap:2px}.f-dl dt{color:var(--muted);font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}.f-dl dd{margin:0;font-weight:600}
+.f-checks{margin:0;padding:0;list-style:none;display:grid;gap:10px}.f-checks li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px}
+.f-checks i{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;font-style:normal;font-size:12px;font-weight:800}
+.f-help{background:linear-gradient(140deg,#fff7ef,#fff);border-color:#ffe2c7}
+.f-steps{margin:0;padding-left:20px;display:grid;gap:8px;color:#2c3a5c;font-size:14.5px}
+.f-sum{display:grid;grid-template-columns:150px 1fr;gap:24px;align-items:center;padding-bottom:18px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.f-big{text-align:center}.f-big b{display:block;font:800 46px/1 Manrope,sans-serif;letter-spacing:-1.5px}.f-big .st{color:#f5a400;font-size:18px;letter-spacing:1px}.f-big small{display:block;color:var(--muted);font-size:13px}
+.f-bars{display:grid;gap:7px}
+.f-bar{display:grid;grid-template-columns:28px 1fr 26px;gap:10px;align-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+.f-bar .tr{height:9px;border-radius:99px;background:#eef2f9;overflow:hidden}.f-bar .tr i{display:block;height:100%;border-radius:99px;background:#f5a400}
+.f-bar span:last-child{text-align:right;color:var(--ink)}
+.f-rev{padding:18px 0;border-top:1px solid var(--line)}.f-rev:first-child{border-top:0}
+.f-rev-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.f-rev .st{color:#f5a400;letter-spacing:1px}
+.f-rev p{margin:8px 0 0;line-height:1.6;white-space:pre-wrap}
+.f-rev small{color:var(--muted)}
+.f-ver{display:inline-block;margin-top:8px;padding:3px 9px;border-radius:99px;background:#eaf1ff;color:var(--blue);font-size:12px;font-weight:800}
+.f-hide{margin-left:8px;padding:3px 9px;border:1px solid #f1c7c2;border-radius:99px;background:#fff;color:#b42318;font:800 12px "DM Sans",sans-serif;cursor:pointer}
+.f-empty{margin:14px 0 0;color:var(--muted)}
+.f-note{margin:18px 0 0;padding:12px 14px;border-radius:12px;background:var(--pale);color:#3c4b6b;font-size:13px;line-height:1.55}
+.f-sticky{position:fixed;left:0;right:0;bottom:0;z-index:20;display:none;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line);box-shadow:0 -10px 24px rgba(16,26,53,.08)}
+.f-sticky small{display:block;color:var(--muted);font-size:12.5px}.f-sticky .f-btn{padding:12px 18px}
+@media(max-width:900px){.f-grid{grid-template-columns:1fr}.f-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.shell{width:calc(100% - 32px)}.f-hero{padding:28px 0}.f-hero-grid{grid-template-columns:1fr;gap:20px;text-align:center}.f-photo{width:150px;height:150px;margin:auto;font-size:60px;border-radius:24px}.f-cta{justify-content:center}.f-sum{grid-template-columns:1fr;gap:14px}.f-card{padding:20px}.f-sticky:not([hidden]){display:flex}main{padding-bottom:80px}body:has(.f-sticky:not([hidden])) .ke-whatsapp{bottom:calc(84px + env(safe-area-inset-bottom))}.f-stat b{font-size:22px}}
+</style></head><body><header class="ke-header"><nav class="ke-nav" aria-label="Navigation principale"><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><button class="ke-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button><div class="ke-menu"><div class="ke-links"><a href="index.html">Accueil</a><a href="services.html">Services</a><a href="enseignants.html">Enseignants</a><a href="tarifs.html">Tarifs</a><a href="a-propos.html">À propos</a><a href="conseils.html">Conseils</a><a href="contact.html">Contact</a></div><div class="ke-actions"><a class="ke-btn" href="connexion.html">Se connecter</a><a class="ke-btn fill" href="reservation.html">Réserver un cours</a></div></div></nav></header><main id="fiche" aria-live="polite">
+<div class="shell"><p id="msg" class="f-msg">Chargement du profil…</p></div>
+<div id="page" hidden>
+<section class="f-hero"><div class="shell f-hero-grid">
+  <div class="f-photo" id="photo"></div>
+  <div class="f-id">
+    <a class="f-back" href="enseignants.html">← Tous nos enseignants</a>
+    <p class="f-badge">✓ Profil vérifié par KONE.EDUC</p>
+    <h1 id="name"></h1>
+    <p class="f-subject" id="subject"></p>
+    <p class="f-rating" id="rating"></p>
+    <p class="f-where" id="where"></p>
+    <div class="f-cta"><a class="f-btn" id="ask" href="reservation.html">Demander cet enseignant</a><a class="f-btn ghost" href="https://wa.me/2250161701361" id="wa">💬 Une question ?</a></div>
+  </div>
+</div></section>
+<section class="shell f-stats" id="stats"></section>
+<div class="shell f-grid">
+  <div class="f-col">
+    <section class="f-card" id="bioCard"><h2>À propos</h2><p id="bio"></p></section>
+    <section class="f-card" id="reviewsCard"><h2>Avis des parents</h2><div class="f-sum" id="summary"></div><div id="reviews"></div>
+      <p class="f-note">🔒 <b>Avis vérifiés :</b> seuls les parents dont l’enfant a suivi des cours avec cet enseignant via KONE.EDUC peuvent donner un avis. Les avis publiés le sont avec l’accord du parent, sous son prénom et l’initiale de son nom.</p></section>
+  </div>
+  <aside class="f-col">
+    <section class="f-card"><h2>Parcours</h2><dl class="f-dl" id="facts"></dl></section>
+    <section class="f-card"><h2>Nos garanties</h2><ul class="f-checks" id="checks"></ul></section>
+    <section class="f-card f-help"><h2>Comment ça marche ?</h2><ol class="f-steps"><li>Vous envoyez votre demande en précisant cet enseignant.</li><li>Nous vérifions ses disponibilités et vous recontactons rapidement.</li><li>Les cours démarrent, avec un compte rendu après chaque séance.</li></ol><a class="f-btn wide" id="ask2" href="reservation.html">Demander cet enseignant</a></section>
+  </aside>
+</div>
+</div>
+<div class="f-sticky" id="sticky" hidden><div><b id="stName"></b><small id="stSub"></small></div><a class="f-btn" id="ask3" href="reservation.html">Demander</a></div>
+</main>
+<footer class="ke-footer"><div class="ke-footer-grid"><div><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><p>Cours particuliers à domicile et en ligne, avec un suivi après chaque séance. Abidjan et toute la Côte d’Ivoire.</p></div><div><h4>Familles</h4><a href="reservation.html">Réserver un cours</a><a href="tarifs.html">Tarifs</a><a href="services.html">Services</a><a href="connexion.html">Espace parent</a><a href="conseils.html">Conseils aux parents</a></div><div><h4>Enseignants</h4><a href="candidature-enseignant.html">Devenir enseignant</a><a href="enseignants.html">Notre réseau</a><a href="connexion.html">Espace enseignant</a></div><div><h4>KONE.EDUC</h4><a href="a-propos.html">À propos</a><a href="contact.html">Contact</a><a href="mailto:contact@kone.educ">contact@kone.educ</a><a href="https://wa.me/2250161701361">WhatsApp : 01 61 70 13 61</a></div></div><div class="ke-footer-bottom"><span>© 2026 KONE.EDUC — L’excellence à domicile.</span><a href="mentions-legales.html" style="display:inline;margin:0">Mentions légales et confidentialité</a></div></footer><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+(async function () {
+  var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var stars = function (n) { n = Math.round(Number(n) || 0); return '★★★★★'.slice(0, n) + '<span style="color:#d5dcea">' + '★★★★★'.slice(n) + '</span>'; };
+  var $ = function (id) { return document.getElementById(id); };
+  var id = new URLSearchParams(location.search).get('id');
+  var db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+  if (!id) { $('msg').innerHTML = 'Aucun enseignant sélectionné. <a href="enseignants.html" style="color:#1559eb;font-weight:800">Voir nos enseignants</a>'; return; }
+  var r = await db.rpc('public_teacher_profile', { p_id: id });
+  var t = r.data;
+  if (r.error || !t) { $('msg').innerHTML = 'Ce profil n’est pas (ou plus) disponible. <a href="enseignants.html" style="color:#1559eb;font-weight:800">Voir nos enseignants</a>'; return; }
+  var isAdmin = false;
+  try {
+    var u = (await db.auth.getUser()).data.user;
+    if (u) { var me = await db.from('profiles').select('role').eq('id', u.id).maybeSingle(); isAdmin = !!(me.data && me.data.role === 'admin'); }
+  } catch (e) {}
+  var name = t.display_name || 'Enseignant';
+  document.title = name + ' · Professeur de ' + (t.subject || 'soutien scolaire') + ' | KONE.EDUC';
+  var desc = name + ', enseignant(e) vérifié(e) KONE.EDUC en ' + (t.subject || '') + (t.location ? ' à ' + t.location : '') + '. Cours particuliers à domicile et en ligne à Abidjan.';
+  var md = document.querySelector('meta[name=description]'); if (md) md.content = desc;
+  $('photo').innerHTML = t.photo_url ? '<img src="' + esc(t.photo_url) + '" alt="Photo de ' + esc(name) + '">' : esc(name.charAt(0));
+  $('name').textContent = name;
+  $('subject').textContent = 'Professeur de ' + (t.subject || 'soutien scolaire') + (t.levels ? ' · ' + t.levels : '');
+  $('rating').innerHTML = t.reviews_count > 0
+    ? '<span class="st">' + stars(t.rating) + '</span> ' + Number(t.rating).toLocaleString('fr-FR') + '/5 <small>· ' + t.reviews_count + ' avis de parents</small>'
+    : '<small>Nouveau sur KONE.EDUC · pas encore d’avis</small>';
+  $('where').textContent = [t.location ? '📍 ' + t.location : '', t.format ? '🏠 ' + t.format : ''].filter(Boolean).join('   ·   ');
+  var ask = 'reservation.html?enseignant=' + encodeURIComponent(t.id) + (t.subject ? '&matiere=' + encodeURIComponent(t.subject) : '');
+  ['ask', 'ask2', 'ask3'].forEach(function (k) { $(k).href = ask; });
+  $('wa').href = 'https://wa.me/2250161701361?text=' + encodeURIComponent('Bonjour KONE.EDUC, j’ai une question au sujet de l’enseignant ' + name + ' (' + (t.subject || '') + ').');
+  $('stName').textContent = name; $('stSub').textContent = t.subject || '';
+  var since = t.member_since ? new Date(t.member_since).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '';
+  $('stats').innerHTML = [
+    [t.reviews_count > 0 ? Number(t.rating).toLocaleString('fr-FR') + '/5' : '–', 'note moyenne des parents'],
+    [t.students || 0, 'élève(s) accompagné(s)'],
+    [t.sessions || 0, 'séance(s) avec compte rendu'],
+    [since || '–', 'membre de KONE.EDUC']
+  ].map(function (x) { return '<div class="f-stat"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></div>'; }).join('');
+  if (t.bio) $('bio').textContent = t.bio; else $('bioCard').hidden = true;
+  $('facts').innerHTML = [['Diplôme', t.degree], ['Expérience', t.experience], ['Matière', t.subject], ['Niveaux enseignés', t.levels], ['Format', t.format], ['Zone', t.location], ['Disponibilités', t.availability]]
+    .filter(function (x) { return x[1]; }).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + esc(x[1]) + '</dd></div>'; }).join('');
+  $('checks').innerHTML = [
+    t.id_checked ? 'Pièce d’identité contrôlée' : null,
+    t.diploma_checked ? 'Diplôme vérifié par notre équipe' : null,
+    'Entretien pédagogique et validation KONE.EDUC',
+    'Compte rendu envoyé aux parents après chaque séance',
+    'Remplacement de l’enseignant si besoin'
+  ].filter(Boolean).map(function (x) { return '<li><i>✓</i><span>' + x + '</span></li>'; }).join('');
+  // Résumé des notes (répartition 5 → 1 étoiles)
+  var counts = t.stars || [0, 0, 0, 0, 0], total = t.reviews_count || 0;
+  $('summary').innerHTML = total
+    ? '<div class="f-big"><b>' + Number(t.rating).toLocaleString('fr-FR') + '</b><span class="st">' + stars(t.rating) + '</span><small>' + total + ' avis</small></div><div class="f-bars" role="img" aria-label="Répartition des notes">'
+      + counts.map(function (c, i) { return '<div class="f-bar"><span>' + (5 - i) + ' ★</span><span class="tr"><i style="width:' + (total ? Math.round(c / total * 100) : 0) + '%"></i></span><span>' + c + '</span></div>'; }).join('') + '</div>'
+    : '<p class="f-empty" style="grid-column:1/-1;margin:0">Cet enseignant vient de rejoindre KONE.EDUC : les premiers avis apparaîtront après ses premiers cours.</p>';
+  var list = t.reviews || [];
+  $('reviews').innerHTML = list.length ? list.map(function (v) {
+    var d = new Date(v.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return '<div class="f-rev"><div class="f-rev-top"><b>' + esc(v.author) + '</b><span class="st">' + stars(v.rating) + '</span></div>'
+      + (v.comment ? '<p>' + esc(v.comment) + '</p>' : '')
+      + '<small>Parent d’un élève de ' + esc(v.level) + ' · ' + esc(v.subject) + ' · ' + d + '</small><br><span class="f-ver">✓ Avis vérifié · cours suivi via KONE.EDUC</span>'
+      + (isAdmin ? '<button class="f-hide" type="button" data-id="' + v.id + '">Masquer cet avis</button>' : '') + '</div>';
+  }).join('') : (total ? '<p class="f-empty">Les parents n’ont pas encore publié de commentaire.</p>' : '');
+  document.querySelectorAll('.f-hide').forEach(function (b) {
+    b.onclick = async function () {
+      if (!confirm('Masquer cet avis de la fiche publique ?')) return;
+      var x = await db.from('reviews').update({ is_public: false }).eq('id', Number(b.dataset.id));
+      if (x.error) { alert('Erreur : ' + x.error.message); return; }
+      b.closest('.f-rev').remove();
+    };
+  });
+  $('msg').parentNode.hidden = true; $('page').hidden = false; $('sticky').hidden = false;
+})();
+</script><script src="site.js"></script></body></html>
