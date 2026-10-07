@@ -174,6 +174,17 @@ await p.fill('#body','Merci beaucoup !');await p.click('#send');await p.waitForT
 d=await db();step('Réponse du parent',(d.messages||[]).length===2);
 // 9 bis. Profil public de l’enseignant
 await logout();await go('enseignants.html');await p.waitForTimeout(400);const pub=await p.textContent('#teachers-grid');step('Profil public de l’enseignant validé',pub.includes('Yao K.')&&pub.includes('5/5')&&!pub.includes('0500112233'),pub.slice(0,80).replace(/\s+/g,' '));
+await p.locator('#teachers-grid .teacher',{hasText:'Yao K.'}).locator('a.book',{hasText:'Voir le profil'}).click();await p.waitForTimeout(800);
+const fiche=await p.textContent('#page');step('Fiche publique : profil, note et avis vérifié publié',p.url().includes('enseignant.html?id=')&&fiche.includes('Yao K.')&&fiche.includes('Très bon enseignant')&&fiche.includes('Avis vérifié')&&!fiche.includes('0500112233')&&!fiche.includes('Kouassi'));
+await go('connexion.html');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await go('enseignants.html');await p.locator('#teachers-grid .teacher',{hasText:'Yao K.'}).locator('a.book',{hasText:'Demander cet enseignant'}).click();await p.waitForTimeout(900);
+step('Réservation : enseignant souhaité affiché',(await p.textContent('#chosen-teacher')).includes('Yao K.'));
+await p.fill('input[name=studentName]','Fatou Koné');{const lv=await p.$$eval('select[name=level] option',o=>o.map(x=>x.value).filter(Boolean));await p.selectOption('select[name=level]',lv[2]);}
+await p.selectOption('#commune','Cocody');await p.waitForTimeout(100);{const qs=await p.$$eval('#quartier option',o=>o.map(x=>x.value).filter(Boolean));await p.selectOption('#quartier',qs[0]);}
+await tick('input[name=format][value="À domicile"]');await tick('input[name=days][value=Samedi]');
+{const consent=p.locator('#booking-form input[type=checkbox]:not([name])');if(await consent.count())await tick('#booking-form input[type=checkbox]:not([name])');}
+await p.click('#booking-form button[type=submit], #booking-form button');await p.waitForTimeout(700);
+d=await db();{const last=d.course_requests[d.course_requests.length-1];const yao=d.profiles.find(x=>x.full_name&&x.full_name.startsWith('Yao'));step('Demande envoyée avec l’enseignant souhaité',last.student_name==='Fatou Koné'&&yao&&last.preferred_teacher_id===yao.id&&(await p.textContent('#booking-success')).includes('Yao K.'));}
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

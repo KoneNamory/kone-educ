@@ -50,7 +50,7 @@ async function load() {
   if (!t) message.textContent = 'Bienvenue ! Complétez votre dossier pour postuler et recevoir des cours.';
   else if (!t.approved) message.textContent = missing.length ? 'Votre dossier est presque prêt : complétez les éléments manquants pour qu’il soit étudié.' : 'Votre dossier est en cours d’étude par notre équipe. Nous vous contactons très vite.';
   else message.textContent = active.length ? 'Vous suivez ' + active.length + ' élève(s). Pensez au compte rendu après chaque séance.' : 'Votre profil est validé. Consultez les offres de cours et postulez à celles qui vous correspondent.';
-  heroCta.innerHTML = !t || missing.length ? '<a class="d-btn light" href="candidature-enseignant.html#teacher-form">Compléter mon dossier →</a>' : (t.approved ? '<a class="d-btn light" href="offres.html">📢 Voir les offres de cours</a>' : '<a class="d-btn light" href="enseignants.html">Voir mon profil public</a>');
+  heroCta.innerHTML = !t || missing.length ? '<a class="d-btn light" href="candidature-enseignant.html#teacher-form">Compléter mon dossier →</a>' : (t.approved ? '<a class="d-btn light" href="offres.html">📢 Voir les offres de cours</a><a class="d-btn ghost" href="enseignant.html?id=' + user.id + '">👁 Ma fiche publique</a>' : '');
   kpis.innerHTML = kpi('📁', pct + ' %', 'Dossier complété') + kpi('🎓', active.length, 'Élève(s) suivi(s)') + kpi('📝', reports.error ? 0 : reports.data.length, 'Compte(s) rendu(s)') + kpi('🔔', unread, 'Notification(s) non lue(s)');
   statusPill.innerHTML = !t ? '<span class="d-pill off">À compléter</span>' : t.approved ? '<span class="d-pill ok">✓ Profil validé</span>' : '<span class="d-pill wait">En attente de validation</span>';
 

@@ -32,7 +32,7 @@ jobs:
           done
           if [ "$MISSING" = "1" ]; then echo "::warning::Des tables manquent : relancer supabase-schema.sql dans Supabase (SQL Editor)."; fi
           # Colonnes ajoutées après coup : une erreur 42703 signifie que la colonne manque.
-          for TC in teacher_profiles.levels teacher_profiles.location teacher_profiles.photo_url teacher_profiles.id_doc_path teacher_profiles.diploma_path teacher_profiles.cv_path course_requests.monthly_fee invoices.due_date; do
+          for TC in teacher_profiles.levels teacher_profiles.location teacher_profiles.photo_url teacher_profiles.id_doc_path teacher_profiles.diploma_path teacher_profiles.cv_path course_requests.monthly_fee invoices.due_date course_requests.preferred_teacher_id reviews.is_public; do
             BODY=$(curl -s "$URL/rest/v1/${TC%%.*}?select=${TC#*.}&limit=0" -H "apikey: $KEY")
             if echo "$BODY" | grep -q '42703'; then echo "❌ colonne $TC absente"; echo "::warning::Colonne $TC absente : relancer supabase-schema.sql."; else echo "✅ colonne $TC"; fi
           done
@@ -46,7 +46,7 @@ jobs:
           AUTH=$(curl -s -o /dev/null -w '%{http_code}' "$URL/auth/v1/health" -H "apikey: $KEY")
           if [ "$AUTH" = "200" ]; then echo "✅ service de connexion (Auth)"; else echo "❌ service de connexion (HTTP $AUTH)"; echo "::warning::Service de connexion Supabase indisponible (HTTP $AUTH)."; fi
           # Fonctions réservées : présentes si elles répondent autre chose que « introuvable » (PGRST202 / 404)
-          for SPEC in 'admin_users|{}' 'teacher_offers|{}' 'generate_month_invoices|{"p_month":"2000-01-01"}' 'admin_set_profile|{"p_id":"00000000-0000-0000-0000-000000000000","p_role":"parent"}'; do
+          for SPEC in 'admin_users|{}' 'teacher_offers|{}' 'generate_month_invoices|{"p_month":"2000-01-01"}' 'admin_set_profile|{"p_id":"00000000-0000-0000-0000-000000000000","p_role":"parent"}' 'public_teacher_profile|{"p_id":"00000000-0000-0000-0000-000000000000"}'; do
             FN=${SPEC%%|*}; ARGS=${SPEC#*|}
             CODE=$(curl -s -o /tmp/fn.json -w '%{http_code}' -X POST "$URL/rest/v1/rpc/$FN" -H "apikey: $KEY" -H "Content-Type: application/json" -d "$ARGS")
             if [ "$CODE" = "404" ] || grep -q 'PGRST202' /tmp/fn.json; then echo "❌ fonction $FN absente"; echo "::warning::Fonction $FN absente : relancer supabase-schema.sql."; else echo "✅ fonction $FN (HTTP $CODE)"; fi

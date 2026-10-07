@@ -1190,5 +1190,85 @@ do $$ begin
 exception when others then raise notice 'Journal des bilans indisponible (%).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Fiche publique de l'enseignant, avis vérifiés, « Demander cet enseignant »
+-- ============================================================
+-- Le parent choisit de publier son avis (prénom + initiale seulement) ; l'équipe peut le masquer
+alter table public.reviews add column if not exists is_public boolean not null default false;
+drop policy if exists "Admins update reviews" on public.reviews;
+create policy "Admins update reviews" on public.reviews for update to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- Enseignant souhaité par le parent lors de sa demande (uniquement un enseignant validé)
+alter table public.course_requests add column if not exists preferred_teacher_id uuid references public.profiles(id) on delete set null;
+create or replace function public.check_preferred_teacher() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.preferred_teacher_id is not null
+     and (tg_op = 'INSERT' or new.preferred_teacher_id is distinct from old.preferred_teacher_id)
+     and not exists (select 1 from public.teacher_profiles tp join public.profiles p on p.id = tp.id
+                     where tp.id = new.preferred_teacher_id and tp.approved and p.role = 'teacher') then
+    new.preferred_teacher_id := null;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists check_preferred_teacher on public.course_requests;
+create trigger check_preferred_teacher before insert or update on public.course_requests
+  for each row execute function public.check_preferred_teacher();
+
+create or replace function public.notify_admins_new_request() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_pref text;
+begin
+  select full_name into v_pref from public.profiles where id = new.preferred_teacher_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, 'Nouvelle demande de cours', new.subject || ' · ' || new.school_level || ' · ' || new.location || ' pour ' || new.student_name || '.'
+         || case when v_pref is not null then ' Enseignant souhaité : ' || v_pref || '.' else ' Attribuez un enseignant.' end,
+         'espace-admin.html'
+  from public.profiles a where a.role = 'admin';
+  return new;
+end;
+$$;
+
+-- Nom public : prénom + initiale du nom
+create or replace function public.short_name(p_full text) returns text
+language sql immutable as $$
+  select case when n = '' then 'Parent'
+              else split_part(n, ' ', 1) || case when position(' ' in n) > 0 then ' ' || upper(left(split_part(n, ' ', 2), 1)) || '.' else '' end end
+  from (select regexp_replace(trim(coalesce(p_full, '')), '\s+', ' ', 'g') as n) x;
+$$;
+
+-- Fiche publique d'un enseignant validé : aucune donnée sensible (ni téléphone, ni documents)
+create or replace function public.public_teacher_profile(p_id uuid) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'id', tp.id,
+    'display_name', public.short_name(p.full_name),
+    'subject', tp.subject, 'degree', tp.degree, 'experience', tp.experience, 'levels', tp.levels,
+    'location', tp.location, 'format', tp.format, 'availability', tp.availability, 'bio', tp.bio, 'photo_url', tp.photo_url,
+    'member_since', p.created_at,
+    'diploma_checked', tp.diploma_path is not null, 'id_checked', tp.id_doc_path is not null,
+    'rating', (select round(avg(r.rating)::numeric, 1) from public.reviews r where r.teacher_id = tp.id),
+    'reviews_count', (select count(*) from public.reviews r where r.teacher_id = tp.id),
+    'stars', (select jsonb_build_array(
+                count(*) filter (where rating = 5), count(*) filter (where rating = 4), count(*) filter (where rating = 3),
+                count(*) filter (where rating = 2), count(*) filter (where rating = 1))
+              from public.reviews r where r.teacher_id = tp.id),
+    'students', (select count(distinct cr.id) from public.course_requests cr where cr.teacher_id = tp.id and cr.status in ('assigned','completed')),
+    'sessions', (select count(*) from public.session_reports sr where sr.teacher_id = tp.id),
+    'reviews', coalesce((select jsonb_agg(jsonb_build_object(
+                  'id', r.id, 'rating', r.rating, 'comment', r.comment, 'created_at', r.created_at,
+                  'author', public.short_name(pp.full_name), 'level', cr.school_level, 'subject', cr.subject) order by r.created_at desc)
+                from public.reviews r
+                join public.course_requests cr on cr.id = r.course_request_id
+                left join public.profiles pp on pp.id = r.parent_id
+                where r.teacher_id = tp.id and r.is_public), '[]'::jsonb))
+  from public.teacher_profiles tp join public.profiles p on p.id = tp.id
+  where tp.id = p_id and tp.approved and p.role = 'teacher';
+$$;
+revoke execute on function public.public_teacher_profile(uuid) from public;
+grant execute on function public.public_teacher_profile(uuid) to anon, authenticated;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';
