@@ -1270,5 +1270,45 @@ $$;
 revoke execute on function public.public_teacher_profile(uuid) from public;
 grant execute on function public.public_teacher_profile(uuid) to anon, authenticated;
 
+-- ============================================================
+-- Documents : à tout le monde, à tous les parents / enseignants, ou à une personne précise
+-- ============================================================
+alter table public.documents add column if not exists recipient_id uuid references public.profiles(id) on delete cascade;
+alter table public.documents drop constraint if exists documents_audience_check;
+alter table public.documents add constraint documents_audience_check
+  check (audience in ('parent','teacher','all','person') and ((audience = 'person') = (recipient_id is not null)));
+drop policy if exists "Users read intended documents" on public.documents;
+create policy "Users read intended documents" on public.documents for select to authenticated
+  using (audience = 'all' or recipient_id = auth.uid() or public.is_admin()
+         or (audience in ('parent','teacher') and audience = (select role from public.profiles where id = auth.uid())));
+
+-- Espace de stockage privé des documents (jusqu'à 10 Mo par fichier)
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('documents', 'documents', false, 10485760)
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
+drop policy if exists "Admins manage document files" on storage.objects;
+create policy "Admins manage document files" on storage.objects for all to authenticated
+  using (bucket_id = 'documents' and public.is_admin()) with check (bucket_id = 'documents' and public.is_admin());
+drop policy if exists "Users read intended document files" on storage.objects;
+create policy "Users read intended document files" on storage.objects for select to authenticated
+  using (bucket_id = 'documents' and exists (select 1 from public.documents d where d.storage_path = name));
+
+-- Les destinataires sont prévenus (notification + e-mail si activé)
+create or replace function public.notify_new_document() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body, link)
+  select p.id, 'Nouveau document', '« ' || new.title || ' » est disponible dans vos ressources.', 'ressources.html'
+  from public.profiles p
+  where p.role <> 'admin'
+    and (new.recipient_id = p.id
+         or (new.recipient_id is null and (new.audience = 'all' or new.audience = p.role)));
+  return new;
+end;
+$$;
+drop trigger if exists notify_new_document on public.documents;
+create trigger notify_new_document after insert on public.documents
+  for each row execute function public.notify_new_document();
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

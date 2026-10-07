@@ -16,6 +16,7 @@
       select: function (c) { if (op === 'select') cols = c || '*'; return q; },
       eq: function (k, v) { filters.push([k, v]); return q; },
       neq: function (k, v) { filters.push([k, v, 'neq']); return q; },
+      in: function (k, v) { filters.push([k, v, 'in']); return q; },
       gte: function (k, v) { filters.push([k, v, 'gte']); return q; },
       gt: function (k, v) { filters.push([k, v, 'gt']); return q; },
       lte: function (k, v) { filters.push([k, v, 'lte']); return q; },
@@ -34,6 +35,7 @@
     function match(r) { return filters.every(function (f) { var a = r[f[0]], b = f[1];
       if (!f[2]) return String(a) === String(b);
       if (f[2] === 'neq') return String(a) !== String(b);
+      if (f[2] === 'in') return b.map(String).indexOf(String(a)) >= 0;
       if (a == null) return false;
       return f[2] === 'gte' ? String(a) >= String(b) : f[2] === 'gt' ? String(a) > String(b) : f[2] === 'lte' ? String(a) <= String(b) : String(a) < String(b); }); }
     function run() {
@@ -88,7 +90,8 @@
         },
         getPublicUrl: function (path) { return { data: { publicUrl: 'https://storage.test/' + bucket + '/' + path } }; },
         createSignedUrl: async function (path) { log(['signedUrl', bucket, path]); return { data: { signedUrl: 'about:blank#' + bucket + '/' + path }, error: null }; },
-        download: async function () { return { data: new Blob(['x']), error: null }; }
+        download: async function () { return { data: new Blob(['x']), error: null }; },
+        remove: async function (paths) { var db = load(); db.__storage = (db.__storage || []).filter(function (f) { return !(f.bucket === bucket && paths.indexOf(f.path) >= 0); }); save(db); return { data: [], error: null }; }
       };
     }
   };
