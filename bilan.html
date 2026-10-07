@@ -89,6 +89,12 @@ let user, role, course, teacherName = '', reports = [], sessions = [], month, as
     db.from('sessions').select('starts_at, duration_minutes, status').eq('course_request_id', courseId)
   ]);
   teacherName = (t.data && t.data.full_name) || '';
+  // Le parent ne lit pas le profil de l'enseignant : on prend le nom public (prénom + initiale)
+  if (!teacherName && course.teacher_id) {
+    const pub = await db.rpc('public_teachers');
+    const x = (pub.data || []).find(p => p.id === course.teacher_id);
+    teacherName = (x && x.display_name) || '';
+  }
   reports = r.data || [];
   sessions = s.error ? [] : (s.data || []);
   // Mois proposés : de la création du cours jusqu'au mois en cours (12 au plus)
