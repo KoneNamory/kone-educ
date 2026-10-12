@@ -1,6 +1,6 @@
 // Service worker KONE.EDUC : installation de l'application et chargement rapide.
 // Changer VERSION à chaque modification de ce fichier pour forcer la mise à jour.
-const VERSION = 'kone-educ-v6';
+const VERSION = 'kone-educ-v7';
 const CORE = ['./', 'index.html', 'offline.html', 'site.css', 'site.js', 'app.css', 'app.js', 'assets/logo/kone-educ-embleme.jpg', 'assets/icons/favicon-48.png', 'assets/hero-tutor.webp', 'assets/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -18,7 +18,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
   if (req.mode === 'navigate') {
     // Pages : réseau d'abord pour toujours afficher la dernière version, cache si hors connexion.
-    e.respondWith(fetch(req).then((res) => {
+    e.respondWith(fetch(req, { cache: 'no-store' }).then((res) => {
       const copy = res.clone();
       caches.open(VERSION).then((c) => c.put(req, copy));
       return res;
