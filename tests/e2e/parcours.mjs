@@ -26,8 +26,12 @@ const logout=()=>p.evaluate(()=>localStorage.removeItem('__ke_user'));
 await go('index.html');
 await p.evaluate(()=>{localStorage.clear();const db={__users:[{id:'admin-1',email:'admin@kone.ci',password:'secret1'}],profiles:[{id:'admin-1',full_name:'Kone Namory',role:'admin',phone:'0161701361'}]};localStorage.setItem('__ke_db',JSON.stringify(db))});
 // 1. Inscription parent
-await go('inscription.html');
-await p.fill('#fullName','Mariam Koné');await p.fill('#phone','0700112233');await p.selectOption('#role','parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');
+await go('index.html');await p.click('.ke-actions a[href="connexion.html"]');await p.waitForTimeout(300);
+step('Accueil : « Se connecter » demande Parent ou Enseignant',await p.locator('dialog.ke-account').isVisible()&&(await p.textContent('dialog.ke-account')).includes('Enseignant'));
+await p.click('dialog.ke-account a[href="inscription.html?role=parent"]');await p.waitForTimeout(500);
+step('Inscription : compte Parent présélectionné',(await p.inputValue('#role'))==='parent'&&await p.locator('#form').isVisible()&&(await p.textContent('#title')).includes('Parent'));
+await go('inscription.html');step('Inscription : la question Parent / Enseignant est posée d’abord',await p.locator('#form').isHidden());await p.click('.role[data-role=parent]');
+await p.fill('#fullName','Mariam Koné');await p.fill('#phone','0700112233');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');
 await p.click('form button');await p.waitForTimeout(800);
 step('Inscription parent → espace parent',p.url().endsWith('espace-parent.html'),p.url().split('/').pop());
 step('Inscription directe, sans e-mail de confirmation',await p.evaluate(()=>localStorage.getItem('koneEducPendingProfile')===null&&JSON.parse(localStorage.getItem('__ke_db')).profiles.some(x=>x.full_name==='Mariam Koné'&&x.role==='parent')));
@@ -52,7 +56,7 @@ let d=await db();step('Annulation de la 2e demande',d.course_requests.find(r=>r.
 // 3 bis. Un compte Parent ne peut pas déposer de candidature ; la réservation est préremplie sans autocomplétion du nom de l'élève
 await go('candidature-enseignant.html');step('Compte Parent bloqué sur la candidature',(await p.textContent('.login-first')).includes('compte Parent')&&await p.locator('#teacher-form button').isDisabled());
 await go('offres.html');await p.waitForTimeout(300);step('Offres : page réservée aux enseignants (parent bloqué)',(await p.textContent('#content')).includes('réservée aux enseignants')&&(await p.locator('.o-card').count())===0);
-await go('reservation.html');await p.waitForTimeout(300);step('Réservation préremplie avec le compte Parent',(await p.inputValue('input[name=parentName]'))==='Mariam Koné'&&(await p.getAttribute('input[name=studentName]','autocomplete'))==='off');
+await go('reservation.html');await p.waitForTimeout(300);step('Réservation : bouton « Retour à mon espace » pour le parent',(await p.getAttribute('.back-space','href'))==='espace-parent.html');step('Réservation préremplie avec le compte Parent',(await p.inputValue('input[name=parentName]'))==='Mariam Koné'&&(await p.getAttribute('input[name=studentName]','autocomplete'))==='off');
 // 4. Inscription + candidature enseignant
 await logout();await go('candidature-enseignant.html');await p.waitForTimeout(300);step('Candidature sans connexion : invitation à créer un compte',(await p.locator('.login-first a[href="inscription.html?role=teacher"]').count())===1);
 await go('inscription.html?role=teacher');
@@ -89,7 +93,7 @@ d=await db();step('Dossier complété sans tout ressaisir',!!(d.teacher_profiles
 await go('offres.html');await p.waitForTimeout(300);step('Offres : enseignant non validé bloqué',(await p.textContent('#content')).includes('en cours de validation')&&(await p.locator('.o-card').count())===0);
 await go('espace-enseignant.html');step('Espace enseignant : dossier complet',(await p.textContent('#profile')).includes('Dossier complet'));
 // 5. Administrateur
-await logout();await go('connexion.html');await p.fill('#email',' Admin@Kone.ci ');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html');await p.click('#adminLink');await p.fill('#email',' Admin@Kone.ci ');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 step('Connexion admin → administration (e-mail avec espaces et majuscules accepté)',p.url().endsWith('espace-admin.html'));
 step('Inscrits : compteurs parents et enseignants',(await p.textContent('#userKpis')).replace(/\s+/g,' ').includes('Parents1')||(await p.textContent('#userKpis')).replace(/\s+/g,'').includes('Parents1'),(await p.textContent('#userKpis')).replace(/\s+/g,' '));
 await p.click('#userList .u-row:has-text("Yao Kouassi")');await p.waitForTimeout(300);
@@ -104,12 +108,12 @@ await p.click('#teachers button:has-text("Valider")');await p.waitForTimeout(500
 d=await db();step('Validation de l’enseignant',d.teacher_profiles[0].approved===true);
 const reqId=d.course_requests.find(r=>r.student_name==='Awa Koné').id;
 // 5 bis. Offres de cours : l'enseignant validé postule, l'admin choisit sa candidature
-await logout();await go('connexion.html');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html?role=teacher');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await go('offres.html');await p.waitForTimeout(300);
 step('Offres : demande en attente visible, sans le nom de l’élève',(await p.locator('.o-card',{hasText:'Cocody'}).count())===1&&!(await p.textContent('#content')).includes('Awa Koné')&&(await p.textContent('#content')).includes('Votre matière'));
 await p.click('.o-card button:has-text("Postuler")');await p.fill('.o-apply textarea','Disponible le mercredi et le samedi.');await p.click('.o-apply button:has-text("Envoyer")');await p.waitForTimeout(500);
 d=await db();step('Candidature à une offre',(d.course_applications||[]).length===1&&d.course_applications[0].course_request_id===reqId&&(await p.textContent('#offers')).includes('En cours d’étude'));
-await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html');await p.click('#adminLink');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 step('Admin : candidature visible sur la demande',(await p.locator('#requests .apps',{hasText:'Yao Kouassi'}).count())===1&&(await p.textContent('#requests .apps')).includes('Disponible le mercredi'));
 step('Admin : liste des enseignants visible et classée',await p.locator('#teacher-'+reqId).isVisible()&&(await p.textContent('#teacher-'+reqId)).includes('Yao Kouassi')&&(await p.textContent('#teacher-'+reqId)).includes('Recommandé')&&(await p.textContent('#teacher-'+reqId)).includes('Même matière')&&(await p.textContent('#teacher-'+reqId)).includes('A postulé'));
 await p.click('#requests .apps button:has-text("Choisir")');await p.waitForTimeout(600);
@@ -126,19 +130,25 @@ d=await db();step('Factures du mois générées en un clic (échéance le 10)',(
 step('Facturation : à encaisser affiché',(await p.textContent('#billKpis')).replace(/\s/g,'').includes('40000'),(await p.textContent('#billKpis')).replace(/\s+/g,' '));
 await p.click('#genBtn',{force:true}).catch(()=>{});await p.waitForTimeout(300);d=await db();step('Pas de facture en double',(d.invoices||[]).length===1);
 // 6. Parent : paiement
-await logout();await go('connexion.html');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html?role=parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 d=await db();await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('Facture imprimable pour le parent',(await p.textContent('#sheet')).includes('KE-')&&(await p.textContent('#sheet')).includes('Facture')&&(await p.textContent('#sheet')).replace(/\s/g,'').includes('40000FCFA'));
 await go('paiements.html');await p.selectOption('select[name=method]','moov_money');await p.fill('input[name=reference]','T_ABC123');await p.click('#list form .btn');await p.waitForTimeout(500);
 d=await db();step('Déclaration du paiement par le parent (Moov Money)',d.invoices[0].status==='pending'&&d.invoices[0].payment_method==='moov_money'&&d.invoices[0].payment_reference==='T_ABC123');
 // 7. Admin confirme
-await logout();await go('connexion.html');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html');await p.click('#adminLink');await p.fill('#email','admin@kone.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await p.click('text=Confirmer le paiement');await p.waitForTimeout(500);
+{const mid=(await db()).profiles.find(x=>x.full_name==='Mariam Koné').id;
+await go('gestion-documents.html?pour='+mid);await p.waitForTimeout(500);
+step('Documents : destinataire présélectionné depuis la fiche',await p.locator('#personBox').isVisible()&&(await p.inputValue('#person'))===mid);
+await p.fill('#title','Fiche de révision Pythagore');await p.setInputFiles('#file',FILES.doc);await p.click('#publish');await p.waitForTimeout(600);
+const dd=(await db()).documents||[];step('Documents : envoi à une personne précise',dd.length===1&&dd[0].audience==='person'&&dd[0].recipient_id===mid&&(await p.textContent('#msg')).includes('Mariam')&&(await p.textContent('#sent')).includes('Pythagore'));
+await go('espace-admin.html');await p.waitForTimeout(300);}
 await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('__ke_db'));db.invoices[0].paid_at=new Date().toISOString();localStorage.setItem('__ke_db',JSON.stringify(db))});
 d=await db();step('Confirmation du paiement par l’admin',d.invoices[0].status==='paid');
 await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('Reçu après paiement',(await p.textContent('#sheet')).includes('Reçu')&&(await p.textContent('#sheet')).includes('PAYÉE'));
 await go('espace-admin.html');step('Activité : encaissé ce mois',(await p.textContent('#aMonth')).replace(/\s/g,'').includes('40000'),await p.textContent('#aMonth'));step('Activité : graphiques affichés',(await p.locator('.chart svg').count())===2);
 // 8. Enseignant : compte rendu + message
-await logout();await go('connexion.html');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html?role=teacher');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await go('ressources.html');await p.waitForTimeout(500);step('Cloche : notification non lue visible',(await p.locator('.ke-bell span:not([hidden])').count())===1,await p.textContent('.ke-bell'));
 await p.click('.ke-bell');await p.waitForTimeout(200);step('Cloche : panneau avec la notification',(await p.textContent('.ke-panel')).includes('Nouveau cours attribué'));
 await p.click('.ke-n:has-text("Nouveau cours attribué")');await p.waitForTimeout(800);d=await db();
@@ -161,7 +171,7 @@ d=await db();step('Bilan : appréciation publiée par l’enseignant',(d.monthly
 await go('messagerie.html?cours='+reqId);await p.fill('#body','Bonjour, Awa a bien travaillé.');await p.click('#send');await p.waitForTimeout(500);
 d=await db();step('Message de l’enseignant',(d.messages||[]).length===1);
 // 9. Parent : suivi, avis, réponse
-await logout();await go('connexion.html');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await logout();await go('connexion.html?role=parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await go('suivi.html?cours='+reqId);step('Parent voit le compte rendu',(await p.textContent('#reports')).includes('Pythagore'));
 await p.click('#stars button:nth-child(5)');await p.fill('#reviewComment','Très bon enseignant');await p.click('#reviewBtn');await p.waitForTimeout(500);
 d=await db();step('Avis du parent',(d.reviews||[]).length===1&&d.reviews[0].rating===5);
@@ -176,7 +186,7 @@ d=await db();step('Réponse du parent',(d.messages||[]).length===2);
 await logout();await go('enseignants.html');await p.waitForTimeout(400);const pub=await p.textContent('#teachers-grid');step('Profil public de l’enseignant validé',pub.includes('Yao K.')&&pub.includes('5/5')&&!pub.includes('0500112233'),pub.slice(0,80).replace(/\s+/g,' '));
 await p.locator('#teachers-grid .teacher',{hasText:'Yao K.'}).locator('a.book',{hasText:'Voir le profil'}).click();await p.waitForTimeout(800);
 const fiche=await p.textContent('#page');step('Fiche publique : profil, note et avis vérifié publié',p.url().includes('enseignant.html?id=')&&fiche.includes('Yao K.')&&fiche.includes('Très bon enseignant')&&fiche.includes('Avis vérifié')&&!fiche.includes('0500112233')&&!fiche.includes('Kouassi'));
-await go('connexion.html');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await go('connexion.html?role=parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await go('enseignants.html');await p.locator('#teachers-grid .teacher',{hasText:'Yao K.'}).locator('a.book',{hasText:'Demander cet enseignant'}).click();await p.waitForTimeout(900);
 step('Réservation : enseignant souhaité affiché',(await p.textContent('#chosen-teacher')).includes('Yao K.'));
 await p.fill('input[name=studentName]','Fatou Koné');{const lv=await p.$$eval('select[name=level] option',o=>o.map(x=>x.value).filter(Boolean));await p.selectOption('select[name=level]',lv[2]);}

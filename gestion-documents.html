@@ -1,1 +1,117 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documents | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0;background:#f5f9ff;font:16px Arial;color:#102149}main{max-width:700px;margin:auto;padding:32px 22px}.card{background:#fff;padding:24px;border-radius:16px}label{display:block;margin-top:15px;font-weight:bold}input,select,textarea{box-sizing:border-box;width:100%;margin-top:6px;padding:11px;border:1px solid #dbe5f5;border-radius:8px;font:inherit}button{margin-top:20px;padding:12px 16px;border:0;border-radius:8px;background:#1559eb;color:#fff;font-weight:bold;cursor:pointer}button:disabled{opacity:.65;cursor:wait}a{color:#1559eb;font-weight:bold;text-decoration:none}.status{display:none;margin-top:16px;padding:12px;border-radius:8px;font-weight:bold}.status.show{display:block}.status.ok{color:#126b35;background:#e7f8ec}.status.err{color:#9b1c1c;background:#feecec}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body><main><a href="espace-admin.html">← Administration</a><h1>Publier un document</h1><section class="card"><form id="upload-form"><label>Titre<input id="title" required></label><label>Description<textarea id="description"></textarea></label><label>Destinataires<select id="audience"><option value="all">Parents et enseignants</option><option value="parent">Parents uniquement</option><option value="teacher">Enseignants uniquement</option></select></label><label>Fichier<input id="file" type="file" required></label><button id="publish" type="submit">Publier</button></form><p id="msg" class="status" role="status"></p></section></main><script>const db=supabase.createClient(KONE_EDUC_SUPABASE.url,KONE_EDUC_SUPABASE.publishableKey),form=document.getElementById('upload-form'),msg=document.getElementById('msg'),button=document.getElementById('publish');const show=(text,type)=>{msg.textContent=text;msg.className='status show '+type};form.addEventListener('submit',async e=>{e.preventDefault();const selectedFile=document.getElementById('file').files[0];if(!selectedFile){show('Choisissez un fichier.','err');return}button.disabled=true;button.textContent='Envoi en cours…';show('Téléversement du document…','ok');try{const auth=await db.auth.getUser();if(!auth.data.user)throw new Error('Connectez-vous avec le compte Administrateur.');const profile=await db.from('profiles').select('role').eq('id',auth.data.user.id).single();if(profile.data?.role!=='admin')throw new Error('Seul le compte Administrateur peut publier.');const path=document.getElementById('audience').value+'/'+crypto.randomUUID()+'-'+selectedFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');const upload=await db.storage.from('documents').upload(path,selectedFile);if(upload.error)throw upload.error;const saved=await db.from('documents').insert({title:document.getElementById('title').value,description:document.getElementById('description').value,audience:document.getElementById('audience').value,storage_path:path,file_name:selectedFile.name});if(saved.error)throw saved.error;show('Document publié avec succès. Il est maintenant disponible dans les ressources.','ok');form.reset()}catch(error){show('Erreur : '+error.message,'err')}finally{button.disabled=false;button.textContent='Publier'}})</script><script src="app.js"></script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documents | KONE.EDUC</title><meta name="robots" content="noindex"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+.to-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.to{position:relative;display:flex!important;flex-direction:column;gap:2px;margin:0!important;padding:12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;font-weight:800!important}
+.to input{position:absolute;opacity:0;pointer-events:none}
+.to small{color:var(--mut);font-weight:600;font-size:12.5px}
+.to:has(input:checked){border-color:var(--b);background:#f3f7ff;box-shadow:0 0 0 2px rgba(21,89,235,.15)}
+.to:has(input:focus-visible){outline:2px solid var(--b);outline-offset:2px}
+#personBox{margin-top:12px}
+.d-card form textarea{width:100%;margin-top:6px;padding:11px;border:1px solid #d7e1f2;border-radius:8px;font:inherit;min-height:70px;resize:vertical}
+.status{min-height:22px;margin:12px 0 0;font-weight:800;font-size:14px}.status.ok{color:var(--ok)}.status.err{color:var(--bad)}
+.doc-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:14px 0;border-top:1px solid var(--line)}.doc-row:first-child{border-top:0;padding-top:2px}
+.doc-row b{display:block}.doc-row small{color:var(--mut)}
+.doc-row .d-actions{margin-top:0;flex:none}
+@media(max-width:700px){.to-grid{grid-template-columns:1fr 1fr}.doc-row{flex-direction:column}}
+</style></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Administration</p><h1>Documents</h1><p id="message">Envoyez un document à tout le monde, à tous les parents, à tous les enseignants ou à une personne précise. Les destinataires reçoivent une notification.</p></div><div class="d-hero-cta"><a class="d-btn light" href="espace-admin.html">← Administration</a></div></section>
+<div class="d-grid" style="margin-top:18px">
+<div class="d-col">
+<section class="card d-card"><div class="d-head"><h2>Envoyer un document</h2></div>
+<form id="upload-form">
+<label>Destinataires</label>
+<div class="to-grid" role="radiogroup" aria-label="Destinataires">
+<label class="to"><input type="radio" name="to" value="all" checked>🌍 Tout le monde<small>Parents et enseignants</small></label>
+<label class="to"><input type="radio" name="to" value="parent">👪 Tous les parents</label>
+<label class="to"><input type="radio" name="to" value="teacher">👩‍🏫 Tous les enseignants</label>
+<label class="to"><input type="radio" name="to" value="person">👤 Une personne<small>Parent ou enseignant précis</small></label>
+</div>
+<div id="personBox" hidden><label>Rechercher la personne<input id="personSearch" type="search" placeholder="Nom ou téléphone…" autocomplete="off"></label><select id="person" size="6" aria-label="Personne destinataire"></select></div>
+<label>Titre<input id="title" required maxlength="150" placeholder="Ex. Fiche de révision BEPC — Mathématiques"></label>
+<label>Message (facultatif)<textarea id="description" maxlength="1000" placeholder="Quelques mots pour accompagner le document"></textarea></label>
+<label>Fichier (10 Mo maximum)<input id="file" type="file" required></label>
+<button id="publish" class="d-btn" type="submit">Envoyer le document</button>
+<p id="msg" class="status" role="status"></p>
+</form></section>
+</div>
+<div class="d-col">
+<section class="card d-card"><div class="d-head"><h2>Documents envoyés</h2><span class="d-count" id="count">0</span></div><div id="sent"><p class="d-sub">Chargement…</p></div></section>
+</div>
+</div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const form = document.getElementById('upload-form'), msg = document.getElementById('msg'), button = document.getElementById('publish');
+const ROLE = { parent: 'Parent', teacher: 'Enseignant' };
+const TO = { all: 'Tout le monde', parent: 'Tous les parents', teacher: 'Tous les enseignants' };
+let people = [], docs = [];
+const show = (text, type) => { msg.textContent = text; msg.className = 'status ' + type; };
+const toValue = () => form.querySelector('input[name=to]:checked').value;
+
+function renderPeople() {
+  const q = norm(personSearch.value), sel = person.value;
+  const list = people.filter(p => !q || norm(p.full_name + ' ' + (p.phone || '')).includes(q));
+  person.innerHTML = list.map(p => '<option value="' + p.id + '">' + safe(p.full_name || 'Sans nom') + ' · ' + ROLE[p.role] + (p.phone ? ' · ' + safe(p.phone) : '') + '</option>').join('');
+  if (list.some(p => p.id === sel)) person.value = sel; else if (list.length === 1) person.value = list[0].id;
+}
+form.querySelectorAll('input[name=to]').forEach(r => r.onchange = () => { personBox.hidden = toValue() !== 'person'; });
+personSearch.oninput = renderPeople;
+
+async function loadSent() {
+  const r = await db.from('documents').select('*').order('created_at', { ascending: false });
+  docs = r.data || [];
+  count.textContent = docs.length;
+  const who = d => d.recipient_id ? '👤 ' + safe((people.find(p => p.id === d.recipient_id) || {}).full_name || 'Personne') : TO[d.audience] || d.audience;
+  sent.innerHTML = docs.map((d, i) => '<div class="doc-row"><div><b>' + safe(d.title) + '</b><small>' + who(d) + ' · ' + new Date(d.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' + safe(d.file_name) + '</small></div>'
+    + '<div class="d-actions"><button class="cancel" type="button" onclick="removeDoc(' + i + ')">Supprimer</button></div></div>').join('')
+    || '<div class="d-empty"><span class="big">📄</span><p>Aucun document envoyé pour le moment.</p></div>';
+}
+
+async function removeDoc(i) {
+  const d = docs[i];
+  if (!confirm('Supprimer « ' + d.title + ' » ? Les destinataires ne pourront plus le télécharger.')) return;
+  const r = await db.from('documents').delete().eq('id', d.id);
+  if (r.error) { alert('Erreur : ' + r.error.message); return; }
+  await db.storage.from('documents').remove([d.storage_path]);
+  loadSent();
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const file = document.getElementById('file').files[0], to = toValue();
+  if (!file) { show('Choisissez un fichier.', 'err'); return; }
+  if (file.size > 10485760) { show('Fichier trop lourd : 10 Mo maximum.', 'err'); return; }
+  if (to === 'person' && !person.value) { show('Choisissez la personne destinataire.', 'err'); return; }
+  button.disabled = true; button.textContent = 'Envoi en cours…'; show('Téléversement du document…', 'ok');
+  try {
+    const path = to + '/' + crypto.randomUUID() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const up = await db.storage.from('documents').upload(path, file);
+    if (up.error) throw up.error;
+    const row = { title: title.value.trim(), description: description.value.trim() || null, audience: to, storage_path: path, file_name: file.name };
+    if (to === 'person') row.recipient_id = person.value;
+    const saved = await db.from('documents').insert(row);
+    if (saved.error) { await db.storage.from('documents').remove([path]); throw saved.error; }
+    const dest = to === 'person' ? (people.find(p => p.id === person.value) || {}).full_name : TO[to].toLowerCase();
+    show('✓ Document envoyé à ' + dest + '. Les destinataires ont reçu une notification.', 'ok');
+    title.value = ''; description.value = ''; document.getElementById('file').value = '';
+    loadSent();
+  } catch (error) {
+    show('Erreur : ' + (/bucket not found/i.test(error.message) ? 'l’espace de stockage « documents » n’existe pas encore. Relancez supabase-schema.sql dans Supabase.' : error.message), 'err');
+  } finally { button.disabled = false; button.textContent = 'Envoyer le document'; }
+});
+
+(async function () {
+  const u = (await db.auth.getUser()).data.user;
+  if (!u) { message.innerHTML = '<a href="connexion.html" style="color:#fff">Connectez-vous</a> avec le compte Administrateur.'; form.hidden = true; return; }
+  const me = await db.from('profiles').select('role').eq('id', u.id).maybeSingle();
+  if (!me.data || me.data.role !== 'admin') { message.textContent = 'Seul un administrateur peut envoyer des documents.'; form.querySelectorAll('input,select,textarea,button').forEach(x => x.disabled = true); sent.innerHTML = ''; return; }
+  const p = await db.from('profiles').select('id, full_name, phone, role').in('role', ['parent', 'teacher']).order('full_name');
+  people = p.data || [];
+  renderPeople();
+  const pre = new URLSearchParams(location.search).get('pour');
+  if (pre && people.some(x => x.id === pre)) { form.querySelector('input[value=person]').checked = true; personBox.hidden = false; person.value = pre; }
+  loadSent();
+})();
+</script><script src="app.js"></script></body></html>
