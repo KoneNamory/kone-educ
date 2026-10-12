@@ -145,6 +145,13 @@
           applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null };
       }).filter(Boolean), error: null };
     }
+    if (name === 'request_account_deletion') {
+      var me4 = JSON.parse(localStorage.getItem('__ke_user') || 'null'), s4 = load();
+      var pr4 = me4 && (s4.profiles || []).find(function (x) { return x.id === me4.id; });
+      if (!pr4) return { data: null, error: { message: 'Connectez-vous pour demander la suppression de votre compte' } };
+      pr4.deletion_requested_at = new Date().toISOString(); pr4.deletion_reason = a.p_reason || null; save(s4);
+      return { data: null, error: null };
+    }
     if (name === 'public_teacher_profile') {
       var s3 = load(), tp3 = (s3.teacher_profiles || []).find(function (t) { return t.id === a.p_id && t.approved; });
       var p3 = tp3 && (s3.profiles || []).find(function (x) { return x.id === tp3.id; });

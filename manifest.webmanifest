@@ -1,7 +1,7 @@
 {
   "name": "KONE.EDUC – Cours particuliers à domicile",
   "short_name": "KONE.EDUC",
-  "description": "Cours particuliers à domicile et en ligne à Abidjan, avec suivi après chaque séance.",
+  "description": "Cours particuliers à domicile et en ligne à Abidjan : enseignants vérifiés, planning des séances, compte rendu après chaque séance, bilan mensuel et paiement Mobile Money.",
   "lang": "fr",
   "start_url": "index.html",
   "scope": "./",
@@ -9,12 +9,73 @@
   "background_color": "#ffffff",
   "theme_color": "#1559eb",
   "icons": [
-    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Réserver un cours", "url": "reservation.html" },
-    { "name": "Mon espace", "url": "connexion.html" }
+    {
+      "name": "Réserver un cours",
+      "url": "reservation.html"
+    },
+    {
+      "name": "Mon espace",
+      "url": "connexion.html"
+    },
+    {
+      "name": "Mes documents",
+      "url": "ressources.html"
+    }
+  ],
+  "id": "index.html",
+  "categories": [
+    "education"
+  ],
+  "dir": "ltr",
+  "orientation": "portrait",
+  "screenshots": [
+    {
+      "src": "assets/store/1-accueil.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Accueil"
+    },
+    {
+      "src": "assets/store/2-fiche-enseignant.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Fiche d’un enseignant vérifié"
+    },
+    {
+      "src": "assets/store/4-bilan.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Bilan de progression mensuel"
+    },
+    {
+      "src": "assets/store/5-planning.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Planning des séances"
+    }
   ]
 }

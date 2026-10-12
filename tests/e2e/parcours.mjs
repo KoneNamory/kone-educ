@@ -195,6 +195,13 @@ await tick('input[name=format][value="À domicile"]');await tick('input[name=day
 {const consent=p.locator('#booking-form input[type=checkbox]:not([name])');if(await consent.count())await tick('#booking-form input[type=checkbox]:not([name])');}
 await p.click('#booking-form button[type=submit], #booking-form button');await p.waitForTimeout(700);
 d=await db();{const last=d.course_requests[d.course_requests.length-1];const yao=d.profiles.find(x=>x.full_name&&x.full_name.startsWith('Yao'));step('Demande envoyée avec l’enseignant souhaité',last.student_name==='Fatou Koné'&&yao&&last.preferred_teacher_id===yao.id&&(await p.textContent('#booking-success')).includes('Yao K.'));}
+// 9 ter. Suppression de compte (exigence Google Play)
+await go('connexion.html?role=parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await go('espace-parent.html');step('Espace parent : lien « Supprimer mon compte »',(await p.locator('a[href="suppression-compte.html"]').count())===1);
+await go('suppression-compte.html');await p.waitForTimeout(500);step('Suppression : bouton désactivé tant que non confirmé',await p.locator('#scForm').isVisible()&&await p.locator('#scBtn').isDisabled());
+await p.check('#scConfirm');await p.fill('#scReason','Test');await p.click('#scBtn');await p.waitForTimeout(500);
+d=await db();step('Suppression : demande enregistrée',!!d.profiles.find(x=>x.full_name==='Mariam Koné').deletion_requested_at&&(await p.textContent('#scMsg')).includes('Demande envoyée'));
+await logout();await go('suppression-compte.html');await p.waitForTimeout(400);step('Suppression : marche à suivre visible sans connexion',await p.locator('#scLogin').isVisible()&&await p.locator('#scForm').isHidden());
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

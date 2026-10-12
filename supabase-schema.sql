@@ -1310,5 +1310,32 @@ drop trigger if exists notify_new_document on public.documents;
 create trigger notify_new_document after insert on public.documents
   for each row execute function public.notify_new_document();
 
+-- ============================================================
+-- Demande de suppression de compte (exigée par Google Play)
+-- ============================================================
+alter table public.profiles add column if not exists deletion_requested_at timestamptz;
+create or replace function public.request_account_deletion(p_reason text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare v_p public.profiles; v_email text;
+begin
+  select * into v_p from public.profiles where id = auth.uid();
+  if v_p.id is null then raise exception 'Connectez-vous pour demander la suppression de votre compte'; end if;
+  if v_p.role = 'admin' then raise exception 'Un compte administrateur se supprime depuis Supabase'; end if;
+  select email into v_email from auth.users where id = v_p.id;
+  update public.profiles set deletion_requested_at = now() where id = v_p.id;
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, 'Demande de suppression de compte',
+         coalesce(v_p.full_name, 'Un utilisateur') || ' (' || case v_p.role when 'teacher' then 'Enseignant' else 'Parent' end
+         || coalesce(' · ' || v_email, '') || coalesce(' · ' || v_p.phone, '') || ') demande la suppression de son compte.'
+         || coalesce(' Motif : « ' || nullif(trim(left(p_reason, 300)), '') || ' ».', '') || ' À traiter sous 30 jours.',
+         'espace-admin.html'
+  from public.profiles a where a.role = 'admin';
+  insert into public.notifications (recipient_id, title, body)
+  values (v_p.id, 'Demande de suppression reçue', 'Votre demande de suppression de compte a bien été reçue. Elle sera traitée sous 30 jours ; nous vous contacterons si nécessaire.');
+end;
+$$;
+revoke execute on function public.request_account_deletion(text) from public;
+grant execute on function public.request_account_deletion(text) to authenticated;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';
