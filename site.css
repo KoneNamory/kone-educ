@@ -33,3 +33,9 @@
 .ke-account-ic{font-size:30px}
 .ke-account-card .ke-btn{text-align:center}
 @media(max-width:520px){.ke-account{padding:22px 18px}.ke-account-grid{grid-template-columns:1fr}.ke-account-card small{min-height:0}}
+main{position:relative}.ke-backbar{position:absolute;z-index:5;top:14px;left:0;right:0;width:min(1180px,calc(100% - 48px));margin:0 auto;pointer-events:none}.ke-backbar .ke-back{pointer-events:auto}
+.ke-back{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:1px solid #cfe0ff;border-radius:999px;background:#fff;color:#1559eb;font:800 14px "DM Sans",sans-serif;text-decoration:none;box-shadow:0 4px 12px rgba(21,89,235,.08)}
+.ke-back:hover{background:#f3f7ff}
+@media(max-width:500px){.ke-backbar{width:calc(100% - 30px);top:10px}}
+.ke-backbar.flow{position:static;margin:14px auto 0}
+@media(max-width:500px){.ke-backbar.flow{margin-top:10px}}

@@ -90,10 +90,10 @@
   var $ = function (id) { return document.getElementById(id); };
   var id = new URLSearchParams(location.search).get('id');
   var db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
-  if (!id) { $('msg').innerHTML = 'Aucun enseignant sélectionné. <a href="enseignants.html" style="color:#1559eb;font-weight:800">Voir nos enseignants</a>'; return; }
+  if (!id) { $('msg').innerHTML = 'Aucun enseignant sélectionné. <br><br><a href="enseignants.html" style="color:#1559eb;font-weight:800">← Voir tous nos enseignants</a>'; return; }
   var r = await db.rpc('public_teacher_profile', { p_id: id });
   var t = r.data;
-  if (r.error || !t) { $('msg').innerHTML = 'Ce profil n’est pas (ou plus) disponible. <a href="enseignants.html" style="color:#1559eb;font-weight:800">Voir nos enseignants</a>'; return; }
+  if (r.error || !t) { $('msg').innerHTML = 'Ce profil n’est pas (ou plus) disponible. <br><br><a href="enseignants.html" style="color:#1559eb;font-weight:800">← Voir tous nos enseignants</a>'; return; }
   var isAdmin = false;
   try {
     var u = (await db.auth.getUser()).data.user;
