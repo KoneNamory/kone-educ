@@ -58,7 +58,7 @@ jobs:
           if ref:
               # L'adresse directe n'est pas joignable depuis GitHub : on essaie les « poolers » Supabase
               r = ref.group(1)
-              regions = ['eu-west-3','eu-west-1','eu-west-2','eu-central-1','eu-central-2','eu-north-1','us-east-1','us-east-2','us-west-1','us-west-2','ca-central-1','sa-east-1','ap-south-1','ap-southeast-1','ap-southeast-2','ap-northeast-1','ap-northeast-2']
+              regions = ['eu-central-1','eu-west-3','eu-west-1','eu-west-2','eu-central-2','eu-north-1','us-east-1','us-east-2','us-west-1','us-west-2','ca-central-1','sa-east-1','ap-south-1','ap-southeast-1','ap-southeast-2','ap-northeast-1','ap-northeast-2']
               cands = [('aws-%d-%s.pooler.supabase.com' % (n, g), '5432', 'postgres.' + r) for n in (0, 1) for g in regions] + cands
           with open('candidats.txt', 'w') as f:
               for c in cands: f.write(' '.join(c) + ' ' + db + '\n')
