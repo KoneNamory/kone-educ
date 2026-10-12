@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Supprimer mon compte | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="description" content="Demander la suppression de votre compte KONE.EDUC et de vos données personnelles."><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><meta property="og:type" content="website"><meta property="og:site_name" content="KONE.EDUC"><meta property="og:locale" content="fr_CI"><link rel="canonical" href="https://kone-educ.vercel.app/suppression-compte.html"><meta property="og:image" content="https://kone-educ.vercel.app/assets/og-image.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="KONE.EDUC – cours particuliers à domicile à Abidjan"><meta name="twitter:card" content="summary_large_image"><meta property="og:title" content="Supprimer mon compte | KONE.EDUC"><meta property="og:description" content="Des enseignants sélectionnés et vérifiés pour chaque matière et chaque niveau, du primaire au lycée, à Abidjan et en Côte d'Ivoire."><link rel="stylesheet" href="site.css"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><style>
+:root{--blue:#1559eb;--orange:#fa7518;--ink:#101a35;--muted:#596580;--line:#dbe5f5}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:"DM Sans",sans-serif;background:#f6f9fe}a{color:var(--blue);font-weight:700}
+.sc-main{padding:48px 0 70px}.sc-wrap{width:min(820px,calc(100% - 32px));margin:auto}
+.sc-kicker{margin:0 0 10px;color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.sc-main h1{margin:0;font:800 clamp(30px,4.4vw,44px)/1.1 Manrope,sans-serif;letter-spacing:-1.5px}
+.sc-lead{max-width:640px;color:var(--muted);font-size:17px;line-height:1.6}
+.sc-card{margin-top:18px;padding:26px;border:1px solid var(--line);border-radius:18px;background:#fff}
+.sc-card h2{margin:0 0 10px;font:800 20px Manrope,sans-serif}.sc-card h3{margin:0 0 8px;font-size:16px}
+.sc-card p,.sc-card li{line-height:1.6;color:#2c3a5c}
+.sc-steps{padding-left:20px;display:grid;gap:6px}
+.sc-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}.sc-cols>div{padding:16px;border-radius:14px;background:#f8fbff}.sc-cols ul{margin:0;padding-left:18px}
+.sc-small{margin:14px 0 0;font-size:14px}
+.sc-card label{display:block;margin-top:12px;font-weight:700}
+.sc-card textarea{width:100%;min-height:80px;margin-top:6px;padding:11px;border:1px solid #d7e1f2;border-radius:10px;font:inherit;resize:vertical}
+.sc-check{display:flex!important;gap:10px;align-items:flex-start;font-weight:600!important}.sc-check input{margin-top:4px}
+.sc-btn{margin-top:16px;padding:13px 18px;border:0;border-radius:11px;color:#fff;background:var(--blue);font:800 15px "DM Sans",sans-serif;cursor:pointer}
+.sc-btn.danger{background:#b42318}.sc-btn:disabled{opacity:.5;cursor:not-allowed}
+.sc-msg{min-height:22px;font-weight:800}
+@media(max-width:640px){.sc-cols{grid-template-columns:1fr}.sc-card{padding:20px}.sc-btn{width:100%}}
+</style></head><body><header class="ke-header"><nav class="ke-nav" aria-label="Navigation principale"><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><button class="ke-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button><div class="ke-menu"><div class="ke-links"><a href="index.html">Accueil</a><a href="services.html">Services</a><a href="enseignants.html">Enseignants</a><a href="tarifs.html">Tarifs</a><a href="a-propos.html">À propos</a><a href="conseils.html">Conseils</a><a href="contact.html">Contact</a></div><div class="ke-actions"><a class="ke-btn" href="connexion.html">Se connecter</a><a class="ke-btn fill" href="reservation.html">Réserver un cours</a></div></div></nav></header><main class="sc-main"><div class="sc-wrap">
+<p class="sc-kicker">Compte et données personnelles</p>
+<h1>Supprimer mon compte KONE.EDUC</h1>
+<p class="sc-lead">Vous pouvez demander à tout moment la suppression de votre compte (Parent ou Enseignant) et des données qui y sont liées, depuis le site ou depuis l’application.</p>
+
+<section class="sc-card" id="scForm" hidden>
+  <h2>Demander la suppression</h2>
+  <p id="scWho"></p>
+  <label for="scReason">Motif (facultatif)</label>
+  <textarea id="scReason" maxlength="300" placeholder="Vous pouvez nous dire pourquoi (facultatif)"></textarea>
+  <label class="sc-check"><input type="checkbox" id="scConfirm"> Je comprends que mon compte et mes données seront supprimés définitivement.</label>
+  <button type="button" id="scBtn" class="sc-btn danger" disabled>Demander la suppression de mon compte</button>
+  <p id="scMsg" class="sc-msg" role="status"></p>
+</section>
+
+<section class="sc-card" id="scLogin">
+  <h2>Comment faire ?</h2>
+  <ol class="sc-steps">
+    <li><a href="connexion.html?redirect=suppression-compte.html">Connectez-vous</a> à votre compte (sur le site ou dans l’application).</li>
+    <li>Revenez sur cette page : un bouton « Demander la suppression de mon compte » s’affiche. Vous le trouvez aussi en bas de votre espace.</li>
+    <li>Confirmez. Votre demande est transmise à l’équipe KONE.EDUC.</li>
+  </ol>
+  <p>Vous n’arrivez plus à vous connecter ? Écrivez-nous via le <a href="contact.html">formulaire de contact</a> ou sur WhatsApp au <a href="https://wa.me/2250161701361">01 61 70 13 61</a>, en indiquant l’adresse e-mail de votre compte.</p>
+</section>
+
+<section class="sc-card">
+  <h2>Ce qui est supprimé, ce qui est conservé</h2>
+  <div class="sc-cols">
+    <div><h3>🗑 Supprimé sous 30 jours</h3><ul>
+      <li>Votre compte de connexion (e-mail, mot de passe)</li>
+      <li>Votre profil : nom, téléphone, photo</li>
+      <li>Pour un enseignant : diplôme, CV, pièce d’identité et fiche publique</li>
+      <li>Vos messages, notifications et demandes de cours</li>
+    </ul></div>
+    <div><h3>🗄 Conservé</h3><ul>
+      <li>Les factures et paiements, pendant la durée légale de conservation des pièces comptables (10 ans)</li>
+      <li>Les comptes rendus de séance d’un enseignant, rendus anonymes, car ils font partie du suivi des élèves</li>
+    </ul></div>
+  </div>
+  <p class="sc-small">Plus d’informations : <a href="mentions-legales.html#confidentialite">politique de confidentialité</a>.</p>
+</section>
+</div></main>
+<footer class="ke-footer"><div class="ke-footer-grid"><div><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><p>Cours particuliers à domicile et en ligne, avec un suivi après chaque séance. Abidjan et toute la Côte d’Ivoire.</p></div><div><h4>Familles</h4><a href="reservation.html">Réserver un cours</a><a href="tarifs.html">Tarifs</a><a href="services.html">Services</a><a href="connexion.html">Espace parent</a><a href="conseils.html">Conseils aux parents</a></div><div><h4>Enseignants</h4><a href="candidature-enseignant.html">Devenir enseignant</a><a href="enseignants.html">Notre réseau</a><a href="connexion.html">Espace enseignant</a></div><div><h4>KONE.EDUC</h4><a href="a-propos.html">À propos</a><a href="contact.html">Contact</a><a href="https://wa.me/2250161701361">WhatsApp : 01 61 70 13 61</a></div></div><div class="ke-footer-bottom"><span>© 2026 KONE.EDUC — L’excellence à domicile.</span><a href="mentions-legales.html" style="display:inline;margin:0">Mentions légales et confidentialité</a></div></footer><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+(async function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+  var u = (await db.auth.getUser()).data.user;
+  if (!u) return;
+  var p = (await db.from('profiles').select('full_name, role, deletion_requested_at').eq('id', u.id).maybeSingle()).data;
+  if (!p || p.role === 'admin') return;
+  $('scLogin').hidden = true; $('scForm').hidden = false;
+  $('scWho').textContent = 'Compte ' + (p.role === 'teacher' ? 'Enseignant' : 'Parent') + ' : ' + (p.full_name || '') + (u.email ? ' (' + u.email + ')' : '') + '.';
+  var done = function (d) { $('scBtn').disabled = true; $('scConfirm').disabled = true; $('scReason').disabled = true; $('scMsg').style.color = '#11743a'; $('scMsg').textContent = '✓ Demande envoyée le ' + new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) + '. Elle sera traitée sous 30 jours.'; };
+  if (p.deletion_requested_at) { done(p.deletion_requested_at); return; }
+  $('scConfirm').onchange = function () { $('scBtn').disabled = !this.checked; };
+  $('scBtn').onclick = async function () {
+    if (!confirm('Confirmer la demande de suppression de votre compte ?')) return;
+    $('scBtn').disabled = true;
+    var r = await db.rpc('request_account_deletion', { p_reason: $('scReason').value.trim() || null });
+    if (r.error) { $('scBtn').disabled = false; $('scMsg').style.color = '#b42318'; $('scMsg').textContent = 'Erreur : ' + r.error.message; return; }
+    done(new Date().toISOString());
+  };
+})();
+</script><script src="site.js"></script></body></html>

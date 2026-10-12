@@ -42,3 +42,6 @@ button.ke-app-bell:hover{background:#e6eefb}
 @media(max-width:760px){.ke-panel{position:fixed;top:64px;right:8px;left:8px;width:auto}}
 .ke-app-bell[hidden]{display:none}
 .ke-n>span:last-child{flex:1;min-width:0}.ke-n small{white-space:normal;overflow-wrap:anywhere}
+
+/* Téléphone (et application) : barre compacte sur une ligne, menu défilant avec indice visuel */
+@media(max-width:520px){.ke-app-brand span{display:none}.ke-app-in{gap:8px 10px}.ke-app-out{padding:8px 10px}.ke-app-nav{-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);padding-right:24px}}
