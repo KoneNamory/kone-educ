@@ -36,10 +36,50 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 > /dev/null
           /usr/lib/postgresql/17/bin/pg_dump --version
 
-      - name: Sauvegarder et chiffrer
+      - name: Trouver la connexion à la base
         if: steps.cfg.outputs.ok == 'true'
         env:
           DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          # Lecture tolérante de l'adresse : le mot de passe peut contenir « @ », « : » ou « / »
+          python3 - <<'PY'
+          import os, re, urllib.parse
+          url = os.environ['DB'].strip()
+          m = re.match(r'^postgres(?:ql)?://([^:@/]+)(?::(.*))?@([^@/:]+)(?::(\d+))?(?:/([^?]*))?', url)
+          if not m:
+              raise SystemExit('Adresse SUPABASE_DB_URL illisible : elle doit commencer par postgresql://')
+          user, pwd, host, port, db = m.group(1), m.group(2) or '', m.group(3), m.group(4) or '5432', m.group(5) or 'postgres'
+          pwd = urllib.parse.unquote(pwd) if '%' in pwd else pwd
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('PGPASSWORD<<__FIN__\n%s\n__FIN__\n' % pwd)
+          ref = re.match(r'^db\.([a-z0-9]+)\.supabase\.co$', host)
+          cands = [(host, port, user)]
+          if ref:
+              # L'adresse directe n'est pas joignable depuis GitHub : on essaie les « poolers » Supabase
+              r = ref.group(1)
+              regions = ['eu-central-1','eu-west-3','eu-west-1','eu-west-2','eu-central-2','eu-north-1','us-east-1','us-east-2','us-west-1','us-west-2','ca-central-1','sa-east-1','ap-south-1','ap-southeast-1','ap-southeast-2','ap-northeast-1','ap-northeast-2']
+              cands = [('aws-%d-%s.pooler.supabase.com' % (n, g), '5432', 'postgres.' + r) for n in (0, 1) for g in regions] + cands
+          with open('candidats.txt', 'w') as f:
+              for c in cands: f.write(' '.join(c) + ' ' + db + '\n')
+          PY
+          echo "::add-mask::$(grep -A1 '^PGPASSWORD<<' "$GITHUB_ENV" | tail -1)"
+          export PGPASSWORD="$(grep -A1 '^PGPASSWORD<<' "$GITHUB_ENV" | tail -1)"
+          export PGSSLMODE=require PGCONNECT_TIMEOUT=8
+          while read -r H P U D; do
+            if /usr/lib/postgresql/17/bin/psql -h "$H" -p "$P" -U "$U" -d "$D" -tAc 'select 1' >/dev/null 2>err.txt; then
+              echo "Connexion réussie via $H"
+              { echo "PGHOST=$H"; echo "PGPORT=$P"; echo "PGUSER=$U"; echo "PGDATABASE=$D"; echo "PGSSLMODE=require"; } >> "$GITHUB_ENV"
+              rm -f err.txt candidats.txt; exit 0
+            fi
+          done < candidats.txt
+          echo "Dernière erreur : $(tail -1 err.txt)"
+          echo "::error::Impossible de joindre la base. Vérifiez SUPABASE_DB_URL (Supabase → Connect → Session pooler) et le mot de passe."
+          exit 1
+
+      - name: Sauvegarder et chiffrer
+        if: steps.cfg.outputs.ok == 'true'
+        env:
           PASS: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
@@ -47,12 +87,12 @@ jobs:
           mkdir -p out
           PGD=/usr/lib/postgresql/17/bin/pg_dump
           # Tables du site (structure + données)
-          $PGD "$DB" --no-owner --no-privileges --schema=public -f out/site.sql
+          $PGD --no-owner --no-privileges --schema=public -f out/site.sql
           # Comptes de connexion (données seulement)
-          $PGD "$DB" --no-owner --no-privileges --data-only --table=auth.users --table=auth.identities -f out/comptes.sql
+          $PGD --no-owner --no-privileges --data-only --table=auth.users --table=auth.identities -f out/comptes.sql
           # Réglages privés (clé e-mail) et liste des fichiers stockés
-          $PGD "$DB" --no-owner --no-privileges --data-only --schema=private -f out/reglages.sql || true
-          $PGD "$DB" --no-owner --no-privileges --data-only --table=storage.objects -f out/fichiers.sql || true
+          $PGD --no-owner --no-privileges --data-only --schema=private -f out/reglages.sql || true
+          $PGD --no-owner --no-privileges --data-only --table=storage.objects -f out/fichiers.sql || true
           echo "Tailles :"; du -h out/*
           tar -czf "kone-educ-$D.tar.gz" -C out .
           gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 -o "kone-educ-$D.tar.gz.gpg" "kone-educ-$D.tar.gz"
