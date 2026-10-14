@@ -1428,5 +1428,111 @@ do $$ begin
 exception when others then raise notice 'Journal des versements indisponible (%).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Satisfaction après le premier cours (👍 / 👎) : alerte immédiate de l'équipe
+-- ============================================================
+create table if not exists public.first_lesson_feedback (
+  course_request_id bigint primary key references public.course_requests(id) on delete cascade,
+  parent_id uuid references public.profiles(id) on delete set null,
+  teacher_id uuid references public.profiles(id) on delete set null,
+  asked_at timestamptz not null default now(),
+  answer text check (answer in ('good','bad')),
+  comment text check (char_length(comment) <= 600),
+  wants_change boolean not null default false,
+  answered_at timestamptz,
+  handled_at timestamptz
+);
+alter table public.first_lesson_feedback enable row level security;
+grant select on public.first_lesson_feedback to authenticated;
+grant update on public.first_lesson_feedback to authenticated;
+drop policy if exists "Parents and admins read first feedback" on public.first_lesson_feedback;
+create policy "Parents and admins read first feedback" on public.first_lesson_feedback for select to authenticated
+  using (parent_id = auth.uid() or public.is_admin());
+drop policy if exists "Admins update first feedback" on public.first_lesson_feedback;
+create policy "Admins update first feedback" on public.first_lesson_feedback for update to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- Demande au parent, une seule fois par cours, dès le premier cours fait
+create or replace function public.ask_first_feedback(p_course bigint) returns void
+language plpgsql security definer set search_path = public as $$
+declare v_cr public.course_requests; v_n integer;
+begin
+  select * into v_cr from public.course_requests where id = p_course;
+  if v_cr.id is null or v_cr.parent_id is null or v_cr.teacher_id is null then return; end if;
+  -- Seulement au tout premier cours (pas pour les cours déjà en route)
+  if (select count(*) from public.sessions where course_request_id = p_course and status = 'done') > 1
+     or (select count(*) from public.session_reports where course_request_id = p_course) > 1 then return; end if;
+  insert into public.first_lesson_feedback (course_request_id, parent_id, teacher_id)
+  values (p_course, v_cr.parent_id, v_cr.teacher_id) on conflict (course_request_id) do nothing;
+  get diagnostics v_n = row_count;
+  if v_n = 0 then return; end if;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_cr.parent_id, 'Comment s’est passé le premier cours ?',
+          'Le premier cours de ' || v_cr.subject || ' de ' || v_cr.student_name || ' a eu lieu. Dites-nous en un clic s’il s’est bien passé : 👍 ou 👎.',
+          'avis-premier-cours.html?cours=' || p_course);
+end;
+$$;
+revoke execute on function public.ask_first_feedback(bigint) from public;
+
+create or replace function public.first_feedback_on_session() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'done' and old.status is distinct from 'done' then perform public.ask_first_feedback(new.course_request_id); end if;
+  return new;
+end;
+$$;
+drop trigger if exists first_feedback_on_session on public.sessions;
+create trigger first_feedback_on_session after update on public.sessions
+  for each row execute function public.first_feedback_on_session();
+
+create or replace function public.first_feedback_on_report() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  perform public.ask_first_feedback(new.course_request_id);
+  return new;
+end;
+$$;
+drop trigger if exists first_feedback_on_report on public.session_reports;
+create trigger first_feedback_on_report after insert on public.session_reports
+  for each row execute function public.first_feedback_on_report();
+
+-- Réponse du parent : 👎 alerte immédiatement l'équipe ; 👍 encourage l'enseignant
+create or replace function public.answer_first_feedback(p_course bigint, p_answer text, p_comment text default null, p_wants_change boolean default false)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_f public.first_lesson_feedback; v_cr public.course_requests; v_teacher text; v_parent text; v_phone text;
+begin
+  select * into v_f from public.first_lesson_feedback where course_request_id = p_course;
+  if v_f.course_request_id is null or v_f.parent_id is distinct from auth.uid() then raise exception 'Avis introuvable'; end if;
+  if v_f.answered_at is not null then raise exception 'Vous avez déjà donné votre avis, merci !'; end if;
+  if p_answer not in ('good','bad') then raise exception 'Réponse invalide'; end if;
+  update public.first_lesson_feedback
+  set answer = p_answer, comment = nullif(trim(left(p_comment, 600)), ''), wants_change = (p_answer = 'bad' and coalesce(p_wants_change, false)), answered_at = now()
+  where course_request_id = p_course;
+  select * into v_cr from public.course_requests where id = p_course;
+  select full_name into v_teacher from public.profiles where id = v_cr.teacher_id;
+  select full_name, phone into v_parent, v_phone from public.profiles where id = v_cr.parent_id;
+  if p_answer = 'bad' then
+    insert into public.notifications (recipient_id, title, body, link)
+    select a.id, '⚠ Premier cours insatisfaisant',
+           coalesce(v_parent, 'Un parent') || coalesce(' (' || v_phone || ')', '') || ' signale un premier cours insatisfaisant : ' || v_cr.subject
+           || ' de ' || v_cr.student_name || ' avec ' || coalesce(v_teacher, 'l’enseignant') || '.'
+           || case when p_wants_change then ' Demande un changement d’enseignant.' else '' end
+           || coalesce(' « ' || nullif(trim(left(p_comment, 300)), '') || ' »', '') || ' À rappeler rapidement.',
+           'espace-admin.html'
+    from public.profiles a where a.role = 'admin';
+  else
+    insert into public.notifications (recipient_id, title, body, link)
+    select a.id, '👍 Premier cours réussi', coalesce(v_parent, 'Le parent') || ' : premier cours satisfaisant en ' || v_cr.subject || ' de ' || v_cr.student_name || ' avec ' || coalesce(v_teacher, 'l’enseignant') || '.', 'espace-admin.html'
+    from public.profiles a where a.role = 'admin';
+    if v_cr.teacher_id is not null then
+      insert into public.notifications (recipient_id, title, body, link)
+      values (v_cr.teacher_id, 'Bravo pour votre premier cours ! 🎉', 'Le premier cours de ' || v_cr.subject || ' avec ' || v_cr.student_name || ' a plu à la famille. Continuez ainsi !', 'espace-enseignant.html');
+    end if;
+  end if;
+end;
+$$;
+revoke execute on function public.answer_first_feedback(bigint, text, text, boolean) from public;
+grant execute on function public.answer_first_feedback(bigint, text, text, boolean) to authenticated;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

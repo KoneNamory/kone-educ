@@ -17,6 +17,7 @@
       eq: function (k, v) { filters.push([k, v]); return q; },
       neq: function (k, v) { filters.push([k, v, 'neq']); return q; },
       in: function (k, v) { filters.push([k, v, 'in']); return q; },
+      not: function (k, op, v) { filters.push([k, v, 'not_' + op]); return q; },
       gte: function (k, v) { filters.push([k, v, 'gte']); return q; },
       gt: function (k, v) { filters.push([k, v, 'gt']); return q; },
       lte: function (k, v) { filters.push([k, v, 'lte']); return q; },
@@ -36,6 +37,7 @@
       if (!f[2]) return String(a) === String(b);
       if (f[2] === 'neq') return String(a) !== String(b);
       if (f[2] === 'in') return b.map(String).indexOf(String(a)) >= 0;
+      if (f[2] === 'not_is') return b === null ? a != null : String(a) !== String(b);
       if (a == null) return false;
       return f[2] === 'gte' ? String(a) >= String(b) : f[2] === 'gt' ? String(a) > String(b) : f[2] === 'lte' ? String(a) <= String(b) : String(a) < String(b); }); }
     function run() {
@@ -144,6 +146,14 @@
         return { id: r.id, subject: r.subject, school_level: r.school_level, location: r.location, format: r.format, availability: r.availability, created_at: r.created_at || new Date().toISOString(), request_status: r.status,
           applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null };
       }).filter(Boolean), error: null };
+    }
+    if (name === 'answer_first_feedback') {
+      var me6 = JSON.parse(localStorage.getItem('__ke_user') || 'null'), s6 = load();
+      var f6 = (s6.first_lesson_feedback || []).find(function (x) { return x.course_request_id === a.p_course && me6 && x.parent_id === me6.id; });
+      if (!f6) return { data: null, error: { message: 'Avis introuvable' } };
+      if (f6.answered_at) return { data: null, error: { message: 'Vous avez déjà donné votre avis, merci !' } };
+      f6.answer = a.p_answer; f6.comment = a.p_comment || null; f6.wants_change = a.p_answer === 'bad' && !!a.p_wants_change; f6.answered_at = new Date().toISOString(); save(s6);
+      return { data: null, error: null };
     }
     if (name === 'generate_month_payouts') {
       var s5 = load(), m5 = String(a.p_month).slice(0, 7) + '-01', n5 = 0;

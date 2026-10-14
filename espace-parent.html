@@ -1,6 +1,6 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Parent | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"></head><body><main>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Parent | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"><style>.fb-banner{display:flex;align-items:center;gap:14px;margin:16px 0 0;padding:16px 18px;border:1px solid #ffd7b0;border-radius:16px;background:linear-gradient(120deg,#fff4e8,#fff);color:var(--ink);text-decoration:none}.fb-banner>span{font-size:28px}.fb-banner div{flex:1;min-width:0}.fb-banner small{display:block;color:var(--mut)}.fb-banner em{font-style:normal;font-weight:800;color:var(--o);white-space:nowrap}@media(max-width:600px){.fb-banner{flex-wrap:wrap}.fb-banner em{width:100%}}</style></head><body><main>
 <section class="d-hero"><div><p class="eyebrow">Espace parent</p><h1 id="hello">Bonjour 👋</h1><p id="message">Chargement de vos demandes…</p></div><div class="d-hero-cta"><a class="d-btn light" href="reservation.html">+ Nouvelle demande de cours</a></div></section>
-<div class="d-kpis" id="kpis"></div>
+<div id="fbBanner"></div><div class="d-kpis" id="kpis"></div>
 <div class="d-grid">
 <div class="d-col">
 <section class="card d-card"><div class="d-head"><h2>Mes demandes de cours</h2><span class="d-count" id="count">0</span></div><div id="list">Chargement…</div></section>
@@ -75,4 +75,17 @@ db.from('sessions').select('*, course_requests(subject, student_name)').eq('stat
   el.innerHTML = r.data.map(x => { const d = new Date(x.starts_at), c = x.course_requests || {}; return '<div class="d-note"><b>' + d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b><small>' + String(c.subject || '').replace(/[<>&]/g, '') + ' · ' + String(c.student_name || '').replace(/[<>&]/g, '') + (x.change_request ? ' · 🔁 changement demandé' : '') + '</small></div>'; }).join('') || '<p class="d-sub">Aucun cours planifié pour le moment.</p>';
 });
 load();
+</script><script>
+// Avis après le premier cours : bandeau tant que le parent n'a pas répondu
+(async function () {
+  try {
+    const u = (await db.auth.getUser()).data.user; if (!u) return;
+    const r = await db.from('first_lesson_feedback').select('course_request_id, answered_at').eq('parent_id', u.id);
+    const todo = (r.data || []).filter(x => !x.answered_at); if (!todo.length) return;
+    const c = await db.from('course_requests').select('id, subject, student_name').eq('parent_id', u.id);
+    const by = {}; (c.data || []).forEach(x => by[x.id] = x);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    fbBanner.innerHTML = todo.map(x => { const k = by[x.course_request_id] || {}; return '<a class="fb-banner" href="avis-premier-cours.html?cours=' + x.course_request_id + '"><span>💬</span><div><b>Comment s’est passé le premier cours de ' + esc(k.subject) + ' de ' + esc(k.student_name) + ' ?</b><small>Répondez en un clic : 👍 ou 👎</small></div><em>Donner mon avis →</em></a>'; }).join('');
+  } catch (e) {}
+})();
 </script><script src="app.js"></script></body></html>

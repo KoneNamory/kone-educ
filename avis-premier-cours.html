@@ -1,0 +1,74 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Votre avis sur le premier cours | KONE.EDUC</title><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+.fb-wrap{max-width:640px;margin:0 auto}
+.fb-card{padding:30px 28px!important;text-align:center}
+.fb-card h1{margin:0 0 8px;font:800 26px/1.2 Manrope,sans-serif;letter-spacing:-.6px}
+.fb-card .lead{margin:0 auto 22px;max-width:460px;color:var(--mut)}
+.fb-choices{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fb-choice{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 12px;border:2px solid var(--line);border-radius:18px;background:#fff;font:800 16px "DM Sans",sans-serif;color:var(--ink);cursor:pointer;transition:transform .15s,border-color .15s}
+.fb-choice span{font-size:46px;line-height:1}
+.fb-choice small{color:var(--mut);font-weight:600;font-size:13px}
+.fb-choice:hover{transform:translateY(-2px)}
+.fb-choice.good.on{border-color:var(--ok);background:var(--okbg)}
+.fb-choice.bad.on{border-color:var(--bad);background:var(--badbg)}
+.fb-more{margin-top:18px;text-align:left}
+.fb-more label{display:block;margin-top:12px;font-weight:700;font-size:14px}
+.fb-more textarea{width:100%;min-height:90px;margin-top:6px;padding:11px;border:1px solid #d7e1f2;border-radius:10px;font:inherit;resize:vertical}
+.fb-check{display:flex!important;gap:10px;align-items:flex-start;font-weight:600!important}
+.fb-check input{margin-top:3px}
+.fb-send{margin-top:18px;width:100%;justify-content:center}
+.fb-msg{min-height:22px;margin:10px 0 0;font-weight:800;color:var(--bad)}
+.fb-done span{display:block;font-size:54px;margin-bottom:6px}
+@media(max-width:520px){.fb-card{padding:24px 18px!important}.fb-choice span{font-size:40px}}
+</style></head><body><main><div class="fb-wrap">
+<p style="margin:0 0 12px"><a class="d-link" href="espace-parent.html">← Mon espace</a></p>
+<section class="card d-card fb-card" id="card"><p class="d-sub" id="msg">Chargement…</p></section>
+</div></main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const courseId = Number(new URLSearchParams(location.search).get('cours'));
+let answer = null, course = null;
+
+function thanks(a) {
+  card.innerHTML = '<div class="fb-done">' + (a === 'good'
+    ? '<span>🎉</span><h1>Merci, ravi que ça se soit bien passé !</h1><p class="lead">Nous avons transmis vos encouragements à l’enseignant. Vous pouvez suivre chaque séance dans votre espace.</p>'
+      + '<div class="d-actions" style="justify-content:center"><a class="d-btn" href="suivi.html?cours=' + courseId + '">📈 Suivi des séances</a><a class="d-btn ghost" href="espace-parent.html">Mon espace</a></div>'
+    : '<span>🤝</span><h1>Merci de nous l’avoir dit</h1><p class="lead">L’équipe KONE.EDUC a été prévenue et vous recontacte très rapidement pour trouver la bonne solution, y compris un changement d’enseignant si besoin.</p>'
+      + '<div class="d-actions" style="justify-content:center"><a class="d-btn orange" href="https://wa.me/2250161701361">💬 Nous écrire sur WhatsApp</a><a class="d-btn ghost" href="espace-parent.html">Mon espace</a></div>') + '</div>';
+}
+
+function choose(a) {
+  answer = a;
+  document.querySelectorAll('.fb-choice').forEach(b => { b.classList.toggle('on', b.dataset.a === a); b.setAttribute('aria-pressed', b.dataset.a === a); });
+  more.hidden = false;
+  changeRow.hidden = a !== 'bad';
+  commentLabel.firstChild.textContent = a === 'bad' ? 'Qu’est-ce qui ne s’est pas bien passé ? (facultatif)' : 'Un mot pour l’enseignant ? (facultatif)';
+  sendBtn.textContent = a === 'bad' ? 'Prévenir l’équipe' : 'Envoyer mon avis';
+}
+
+(async function () {
+  const u = (await db.auth.getUser()).data.user;
+  if (!u) { msg.innerHTML = '<a href="connexion.html?role=parent">Connectez-vous</a> pour donner votre avis.'; return; }
+  const [f, c] = await Promise.all([
+    db.from('first_lesson_feedback').select('*').eq('course_request_id', courseId).maybeSingle(),
+    db.from('course_requests').select('subject, student_name').eq('id', courseId).maybeSingle()
+  ]);
+  if (!f.data || !c.data) { msg.textContent = 'Aucun avis à donner pour ce cours.'; return; }
+  course = c.data;
+  if (f.data.answered_at) { thanks(f.data.answer); return; }
+  card.innerHTML = '<h1>Le premier cours s’est-il bien passé ?</h1><p class="lead">Premier cours de <b>' + safe(course.subject) + '</b> pour <b>' + safe(course.student_name) + '</b>. Votre réponse nous aide à garantir un accompagnement de qualité.</p>'
+    + '<div class="fb-choices"><button type="button" class="fb-choice good" data-a="good" aria-pressed="false"><span>👍</span>Oui, très bien<small>Nous continuons ainsi</small></button>'
+    + '<button type="button" class="fb-choice bad" data-a="bad" aria-pressed="false"><span>👎</span>Pas vraiment<small>L’équipe vous rappelle</small></button></div>'
+    + '<div class="fb-more" id="more" hidden><label id="commentLabel">Commentaire<textarea id="comment" maxlength="600"></textarea></label>'
+    + '<label class="fb-check" id="changeRow" hidden><input type="checkbox" id="wantsChange"> Je souhaite changer d’enseignant</label>'
+    + '<button type="button" class="d-btn fb-send" id="sendBtn">Envoyer</button><p class="fb-msg" id="err" role="status"></p></div>';
+  document.querySelectorAll('.fb-choice').forEach(b => b.onclick = () => choose(b.dataset.a));
+  sendBtn.onclick = async () => {
+    sendBtn.disabled = true;
+    const r = await db.rpc('answer_first_feedback', { p_course: courseId, p_answer: answer, p_comment: comment.value.trim() || null, p_wants_change: wantsChange.checked });
+    if (r.error) { sendBtn.disabled = false; err.textContent = r.error.message; return; }
+    thanks(answer);
+  };
+})();
+</script><script src="app.js"></script></body></html>

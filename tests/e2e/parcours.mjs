@@ -175,6 +175,7 @@ d=await db();step('Planning : absence enregistrée',d.sessions.filter(x=>x.statu
 await go('espace-enseignant.html');await p.waitForTimeout(500);step('Espace enseignant : prochains cours affichés',(await p.locator('#nextList .d-note').count())>=1);
 await go('suivi.html?cours='+reqId);await p.selectOption('select[name=understanding]','4');await p.fill('input[name=topics]','Théorème de Pythagore');await p.fill('input[name=homework]','Ex. 4 p.112');await p.click('#reportForm button');await p.waitForTimeout(500);
 d=await db();step('Compte rendu de séance',(d.session_reports||[]).length===1);
+await p.evaluate(([cid])=>{const d=JSON.parse(localStorage.getItem('__ke_db'));const c=d.course_requests.find(x=>x.id===cid);d.first_lesson_feedback=[{course_request_id:cid,parent_id:c.parent_id,teacher_id:c.teacher_id,asked_at:new Date().toISOString(),answer:null,answered_at:null,wants_change:false}];localStorage.setItem('__ke_db',JSON.stringify(d))},[reqId]);
 await go('bilan.html?cours='+reqId);await p.waitForTimeout(500);step('Bilan : courbe et notions du mois',await p.locator('#chart svg').count()===1&&(await p.textContent('#sheet')).includes('Pythagore'));
 await p.fill('textarea[name=appreciation]','Awa progresse bien ce mois-ci.');await p.fill('textarea[name=strengths]','Calcul littéral');await p.click('#apprForm button');await p.waitForTimeout(600);
 d=await db();step('Bilan : appréciation publiée par l’enseignant',(d.monthly_assessments||[]).length===1&&(await p.textContent('#apprBox')).includes('progresse bien'));
@@ -183,6 +184,13 @@ d=await db();step('Message de l’enseignant',(d.messages||[]).length===1);
 // 9. Parent : suivi, avis, réponse
 await logout();await go('connexion.html?role=parent');await p.fill('#email','mariam@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
 await go('suivi.html?cours='+reqId);step('Parent voit le compte rendu',(await p.textContent('#reports')).includes('Pythagore'));
+await go('espace-parent.html');await p.waitForTimeout(600);step('Espace parent : bandeau « premier cours » affiché',(await p.locator('#fbBanner .fb-banner').count())===1);
+await p.click('#fbBanner .fb-banner');await p.waitForTimeout(700);
+await p.click('.fb-choice.bad');step('Avis premier cours : 👎 propose le changement d’enseignant',await p.locator('#changeRow').isVisible());
+await p.fill('#comment','Retard au premier cours');await p.check('#wantsChange');await p.click('#sendBtn');await p.waitForTimeout(500);
+d=await db();step('Avis premier cours : réponse enregistrée',d.first_lesson_feedback[0].answer==='bad'&&d.first_lesson_feedback[0].wants_change===true&&(await p.textContent('#card')).includes('Merci'));
+await go('espace-parent.html');await p.waitForTimeout(500);step('Espace parent : bandeau retiré après réponse',(await p.locator('#fbBanner .fb-banner').count())===0);
+await go('suivi.html?cours='+reqId);await p.waitForTimeout(400);
 await p.click('#stars button:nth-child(5)');await p.fill('#reviewComment','Très bon enseignant');await p.click('#reviewBtn');await p.waitForTimeout(500);
 d=await db();step('Avis du parent',(d.reviews||[]).length===1&&d.reviews[0].rating===5);
 await go('bilan.html?cours='+reqId);await p.waitForTimeout(500);const bil=await p.textContent('#sheet');step('Bilan parent : appréciation visible, sans formulaire',bil.includes('progresse bien')&&bil.includes('Calcul littéral')&&await p.locator('#apprForm').count()===0);
