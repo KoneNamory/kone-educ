@@ -1,0 +1,168 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tableau de bord | KONE.EDUC</title><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+.tb-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:18px 0 0}
+.seg{display:inline-flex;padding:4px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.seg button{padding:8px 14px;border:0;border-radius:9px;background:none;font:800 14px "DM Sans",sans-serif;color:var(--mut);cursor:pointer}
+.seg button[aria-pressed=true]{background:#eaf1ff;color:var(--b)}
+.d-kpi .delta{display:block;margin-top:4px;font-size:12.5px;font-weight:800;color:var(--mut)}
+.delta.up{color:var(--ok)}.delta.down{color:var(--bad)}
+.d-kpi small{display:block;margin-top:4px;color:var(--mut);font-size:12.5px}.d-kpi .warn{font-style:normal;font-weight:800;color:var(--bad)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+.d-card h2{font-size:17px}
+.chart{position:relative}.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;gap:14px;margin:0 0 8px;font-size:13px;font-weight:700;color:#3c4b6b}
+.legend i{display:inline-block;width:12px;height:12px;margin-right:6px;border-radius:3px;vertical-align:-1px}
+.tip{position:fixed;z-index:60;pointer-events:none;padding:8px 10px;border-radius:8px;background:#0f1b37;color:#fff;font-size:13px;white-space:nowrap;transform:translate(-50%,-115%);display:none}
+.hbar{display:grid;grid-template-columns:minmax(80px,38%) 1fr auto;gap:10px;align-items:center;margin:9px 0;font-size:14px}
+.hbar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:#3c4b6b}
+.hbar .tr{height:12px;border-radius:0 4px 4px 0;background:var(--soft)}.hbar .tr i{display:block;height:100%;border-radius:0 4px 4px 0;background:#1559eb}
+.hbar b{min-width:28px;text-align:right}
+.funnel{display:grid;gap:10px}
+.fstep{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:center;font-size:14px}
+.fstep .tr{height:22px;border-radius:0 6px 6px 0;background:var(--soft)}.fstep .tr i{display:flex;align-items:center;height:100%;padding-left:8px;border-radius:0 6px 6px 0;background:#1559eb;color:#fff;font-weight:800;font-size:12.5px;white-space:nowrap}
+.top{width:100%;border-collapse:collapse;font-size:14px}.top th{padding:9px 8px;background:var(--soft);text-align:left;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut)}.top td{padding:10px 8px;border-bottom:1px solid var(--line)}.top .num{text-align:right;white-space:nowrap}
+.empty{color:var(--mut);font-size:14px}
+@media(max-width:1000px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}.fstep{grid-template-columns:110px 1fr auto}}
+</style></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Administration</p><h1>Tableau de bord</h1><p id="message">Chargement des chiffres…</p></div><div class="d-hero-cta"><a class="d-btn light" href="espace-admin.html">← Administration</a></div></section>
+<div id="dash" hidden>
+<div class="tb-bar"><div class="seg" role="group" aria-label="Période"><button type="button" data-n="6" aria-pressed="true">6 mois</button><button type="button" data-n="12" aria-pressed="false">12 mois</button></div><span class="d-sub" id="updated"></span></div>
+<div class="d-kpis" id="kpis1"></div>
+<div class="d-kpis" id="kpis2" style="margin-top:0"></div>
+<div class="grid2">
+  <section class="card d-card"><h2>Nouveaux inscrits par mois</h2><div class="legend"><span><i style="background:#1559eb"></i>Parents</span><span><i style="background:#fa7518"></i>Enseignants</span></div><div class="chart" id="cSignups"></div></section>
+  <section class="card d-card"><h2>Encaissements par mois (FCFA)</h2><div class="chart" id="cRevenue"></div></section>
+</div>
+<div class="grid2">
+  <section class="card d-card"><h2>Demandes de cours par mois</h2><div class="chart" id="cRequests"></div></section>
+  <section class="card d-card"><h2>Des demandes aux cours</h2><p class="d-sub" style="margin:0 0 12px">Sur la période sélectionnée</p><div class="funnel" id="funnel"></div></section>
+</div>
+<div class="grid3">
+  <section class="card d-card"><h2>Matières les plus demandées</h2><div id="rSubjects"></div></section>
+  <section class="card d-card"><h2>Communes les plus actives</h2><div id="rPlaces"></div></section>
+  <section class="card d-card"><h2>Niveaux scolaires</h2><div id="rLevels"></div></section>
+</div>
+<section class="card d-card" style="margin-top:18px"><h2>Enseignants les plus actifs</h2><div id="topTeachers" style="overflow-x:auto"></div></section>
+</div>
+</main><div class="tip" id="tip"></div>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fcfa = n => Number(n || 0).toLocaleString('fr-FR') + ' FCFA';
+const short = v => v >= 1e6 ? (Math.round(v / 1e5) / 10).toLocaleString('fr-FR') + ' M' : v >= 1000 ? Math.round(v / 1000).toLocaleString('fr-FR') + ' k' : String(v);
+const mk = d => String(d || '').slice(0, 7);
+const BLUE = '#1559eb', ORANGE = '#fa7518';
+let D = null, N = 6;
+
+function months(n) {
+  const out = [], d = new Date(); d.setDate(1);
+  for (let i = n - 1; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); out.push({ key: x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'), label: x.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''), long: x.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) }); }
+  return out;
+}
+const kpi = (ic, v, l, extra) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + v + '</b><span>' + l + '</span>' + (extra || '') + '</div>';
+function delta(cur, prev, money) {
+  if (!prev && !cur) return '<span class="delta">= mois dernier</span>';
+  if (!prev) return '<span class="delta up">nouveau ce mois</span>';
+  const p = Math.round((cur - prev) / prev * 100);
+  return '<span class="delta ' + (p > 0 ? 'up' : p < 0 ? 'down' : '') + '">' + (p > 0 ? '↗ +' : p < 0 ? '↘ ' : '= ') + p + ' % vs ' + (money ? short(prev) + ' FCFA' : prev) + ' le mois dernier</span>';
+}
+
+// Barres verticales (1 ou 2 séries), valeurs écrites, info-bulle au survol
+function bars(el, ms, series, fmt) {
+  const W = Math.max(300, el.clientWidth || 500), H = 210, L = 8, R = 8, T = 22, B = 26, n = ms.length, k = series.length;
+  const max = Math.max(1, ...series.flatMap(s => s.values));
+  const slot = (W - L - R) / n, gap = 2, bw = Math.min(34, (slot * 0.7 - gap * (k - 1)) / k);
+  let g = '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + (H - B) + '" y2="' + (H - B) + '" stroke="#e3ebf8"/>';
+  ms.forEach((m, i) => {
+    const x0 = L + i * slot + (slot - (bw * k + gap * (k - 1))) / 2;
+    series.forEach((s, j) => {
+      const v = s.values[i], h = Math.round(v / max * (H - T - B)), x = x0 + j * (bw + gap), y = H - B - h;
+      if (h > 0) g += '<path d="M' + x + ',' + (H - B) + 'V' + (y + 4) + 'Q' + x + ',' + y + ' ' + (x + 4) + ',' + y + 'H' + (x + bw - 4) + 'Q' + (x + bw) + ',' + y + ' ' + (x + bw) + ',' + (y + 4) + 'V' + (H - B) + 'Z" fill="' + s.color + '"/>';
+      if (v > 0 && (k === 1 || bw >= 14)) g += '<text x="' + (x + bw / 2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#3c4b6b">' + fmt(v) + '</text>';
+      g += '<rect class="hit" x="' + (L + i * slot) + '" y="' + T + '" width="' + slot + '" height="' + (H - T - B) + '" fill="transparent" data-i="' + i + '"/>';
+    });
+    g += '<text x="' + (L + i * slot + slot / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="12" fill="#5b6884">' + m.label + '</text>';
+  });
+  el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="' + safe(series.map(s => s.name).join(' et ')) + ' par mois">' + g + '</svg>';
+  el.querySelectorAll('.hit').forEach(r => {
+    r.addEventListener('mousemove', e => { const i = +r.dataset.i; tip.innerHTML = '<b style="text-transform:capitalize">' + ms[i].long + '</b><br>' + series.map(s => s.name + ' : ' + (s.full || fmt)(s.values[i])).join('<br>'); tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; tip.style.display = 'block'; });
+    r.addEventListener('mouseleave', () => tip.style.display = 'none');
+  });
+}
+function ranking(el, map, unit) {
+  const list = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6), max = list.length ? list[0][1] : 1;
+  el.innerHTML = list.length ? list.map(([k, v]) => '<div class="hbar"><span title="' + safe(k) + '">' + safe(k) + '</span><span class="tr"><i style="width:' + Math.max(4, Math.round(v / max * 100)) + '%"></i></span><b>' + v + '</b></div>').join('') : '<p class="empty">Pas encore de données sur la période.</p>';
+}
+
+function render() {
+  const ms = months(N), keys = new Set(ms.map(m => m.key)), now = ms[ms.length - 1].key, prev = ms[ms.length - 2].key;
+  const { profiles, requests, invoices, sessions, feedback, reviews } = D;
+  const parents = profiles.filter(p => p.role === 'parent'), teachers = profiles.filter(p => p.role === 'teacher');
+  const inMonth = (arr, f, m) => arr.filter(x => mk(x[f]) === m).length;
+  const paid = invoices.filter(i => i.status === 'paid');
+  const cash = m => paid.filter(i => mk(i.paid_at || i.month) === m).reduce((a, i) => a + i.amount, 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const unpaid = invoices.filter(i => i.status !== 'paid'), late = unpaid.filter(i => i.due_date && i.due_date < today);
+  const pending = requests.filter(r => r.status === 'pending'), old = pending.filter(r => Date.now() - new Date(r.created_at) > 48 * 36e5);
+  const answered = feedback.filter(f => f.answered_at), good = answered.filter(f => f.answer === 'good');
+  const doneNow = sessions.filter(s => s.status === 'done' && mk(s.starts_at) === now).length, donePrev = sessions.filter(s => s.status === 'done' && mk(s.starts_at) === prev).length;
+  const avg = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : null;
+  const newNow = inMonth(parents, 'created_at', now) + inMonth(teachers, 'created_at', now), newPrev = inMonth(parents, 'created_at', prev) + inMonth(teachers, 'created_at', prev);
+
+  kpis1.innerHTML = kpi('🙋', newNow, 'nouveaux inscrits ce mois', delta(newNow, newPrev))
+    + kpi('⏳', pending.length, 'demande(s) en attente', '<small>' + (old.length ? '<em class="warn">' + old.length + ' depuis plus de 48 h</em>' : 'aucune en retard') + '</small>')
+    + kpi('📚', requests.filter(r => r.status === 'assigned').length, 'cours actifs', '<small>' + parents.length + ' parents · ' + teachers.length + ' enseignants inscrits</small>')
+    + kpi('💰', short(cash(now)) + ' FCFA', 'encaissé ce mois (en cours)', delta(cash(now), cash(prev), true));
+  kpis2.innerHTML = kpi('🧾', short(unpaid.reduce((a, i) => a + i.amount, 0)) + ' FCFA', 'reste à encaisser', '<small>' + (late.length ? '<em class="warn">' + late.length + ' facture(s) en retard · ' + fcfa(late.reduce((a, i) => a + i.amount, 0)) + '</em>' : 'aucune facture en retard') + '</small>')
+    + kpi('✅', doneNow, 'séances faites ce mois (en cours)', delta(doneNow, donePrev))
+    + kpi('👍', answered.length ? Math.round(good.length / answered.length * 100) + ' %' : '–', 'satisfaits du 1er cours', '<small>' + (answered.length ? good.length + ' sur ' + answered.length + ' réponse(s)' : 'pas encore de réponse') + '</small>')
+    + kpi('⭐', avg == null ? '–' : avg.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + '/5', 'note moyenne des enseignants', '<small>' + reviews.length + ' avis</small>');
+
+  bars(cSignups, ms, [{ name: 'Parents', color: BLUE, values: ms.map(m => inMonth(parents, 'created_at', m.key)) }, { name: 'Enseignants', color: ORANGE, values: ms.map(m => inMonth(teachers, 'created_at', m.key)) }], String);
+  bars(cRevenue, ms, [{ name: 'Encaissé', color: BLUE, values: ms.map(m => cash(m.key)), full: fcfa }], short);
+  bars(cRequests, ms, [{ name: 'Demandes', color: BLUE, values: ms.map(m => inMonth(requests, 'created_at', m.key)) }], String);
+
+  const per = requests.filter(r => keys.has(mk(r.created_at)));
+  const steps = [['Demandes reçues', per.length], ['Enseignant attribué', per.filter(r => ['assigned', 'completed'].includes(r.status)).length], ['Cours terminés', per.filter(r => r.status === 'completed').length], ['En attente', per.filter(r => r.status === 'pending').length], ['Annulées', per.filter(r => r.status === 'cancelled').length]];
+  funnel.innerHTML = steps.map(([l, v], i) => { const pct = per.length ? Math.round(v / per.length * 100) : 0; return '<div class="fstep"><span>' + l + '</span><span class="tr"><i style="width:' + Math.max(pct, v ? 2 : 0) + '%;' + (i >= 3 ? 'background:#8a96b0' : '') + '"></i></span><b>' + v + ' <small style="color:var(--mut);font-weight:700">· ' + pct + ' %</small></b></div>'; }).join('');
+
+  const count = (arr, f) => arr.reduce((o, x) => { const k = f(x); if (k) o[k] = (o[k] || 0) + 1; return o; }, {});
+  ranking(rSubjects, count(per, r => String(r.subject || '').trim()));
+  ranking(rPlaces, count(per, r => String(r.location || '').split(/[·,–-]/)[0].trim()));
+  ranking(rLevels, count(per, r => String(r.school_level || '').trim()));
+
+  const since = Date.now() - 90 * 864e5, tStats = {};
+  teachers.forEach(t => tStats[t.id] = { name: t.full_name || 'Enseignant', active: 0, done: 0, notes: [] });
+  requests.filter(r => r.status === 'assigned' && tStats[r.teacher_id]).forEach(r => tStats[r.teacher_id].active++);
+  const courseTeacher = {}; requests.forEach(r => courseTeacher[r.id] = r.teacher_id);
+  sessions.filter(s => s.status === 'done' && new Date(s.starts_at) > since).forEach(s => { const t = tStats[courseTeacher[s.course_request_id]]; if (t) t.done++; });
+  reviews.forEach(r => { if (tStats[r.teacher_id]) tStats[r.teacher_id].notes.push(r.rating); });
+  const top = Object.values(tStats).filter(t => t.active || t.done).sort((a, b) => b.done - a.done || b.active - a.active).slice(0, 8);
+  topTeachers.innerHTML = top.length ? '<table class="top"><thead><tr><th>Enseignant</th><th class="num">Cours actifs</th><th class="num">Séances (90 j)</th><th class="num">Note</th></tr></thead><tbody>' + top.map(t => '<tr><td>' + safe(t.name) + '</td><td class="num">' + t.active + '</td><td class="num">' + t.done + '</td><td class="num">' + (t.notes.length ? (t.notes.reduce((a, b) => a + b, 0) / t.notes.length).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' ⭐' : '–') + '</td></tr>').join('') + '</tbody></table>' : '<p class="empty">Aucun cours en cours pour le moment.</p>';
+  updated.textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+}
+
+(async function () {
+  const u = (await db.auth.getUser()).data.user;
+  if (!u) { message.innerHTML = '<a href="connexion.html?espace=equipe" style="color:#fff">Connectez-vous</a> avec un compte administrateur.'; return; }
+  const me = (await db.from('profiles').select('role').eq('id', u.id).maybeSingle()).data || {};
+  if (me.role !== 'admin') { message.textContent = 'Page réservée à l’équipe KONE.EDUC.'; return; }
+  const q = t => t.then(r => r.error ? [] : r.data);
+  const [profiles, requests, invoices, sessions, feedback, reviews] = await Promise.all([
+    q(db.from('profiles').select('id, full_name, role, created_at')),
+    q(db.from('course_requests').select('id, created_at, status, subject, location, school_level, teacher_id')),
+    q(db.from('invoices').select('amount, status, month, paid_at, due_date')),
+    q(db.from('sessions').select('course_request_id, status, starts_at')),
+    q(db.from('first_lesson_feedback').select('answer, answered_at')),
+    q(db.from('reviews').select('teacher_id, rating'))
+  ]);
+  D = { profiles, requests, invoices, sessions, feedback, reviews };
+  message.textContent = 'Les chiffres clés de KONE.EDUC : inscriptions, demandes, chiffre d’affaires et satisfaction.';
+  dash.hidden = false;
+  render();
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { N = +b.dataset.n; document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b)); render(); });
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(render, 200); });
+})();
+</script><script src="app.js"></script></body></html>

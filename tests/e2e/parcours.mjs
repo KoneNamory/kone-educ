@@ -147,6 +147,10 @@ await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('__ke_db'));db.in
 d=await db();step('Confirmation du paiement par l’admin',d.invoices[0].status==='paid');
 await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('Reçu après paiement',(await p.textContent('#sheet')).includes('Reçu')&&(await p.textContent('#sheet')).includes('PAYÉE'));
 await go('espace-admin.html');step('Activité : encaissé ce mois',(await p.textContent('#aMonth')).replace(/\s/g,'').includes('40000'),await p.textContent('#aMonth'));step('Activité : graphiques affichés',(await p.locator('.chart svg').count())===2);
+// 7 ter. Tableau de bord
+await go('tableau-de-bord.html');await p.waitForTimeout(700);
+{const t=await p.textContent('#dash');step('Tableau de bord : chiffres et graphiques affichés',await p.locator('#dash').isVisible()&&(await p.locator('#cSignups svg').count())===1&&(await p.locator('#cRevenue svg').count())===1&&t.includes('cours actifs')&&t.includes('Mathématiques'));}
+await p.click('.seg button[data-n="12"]');await p.waitForTimeout(300);step('Tableau de bord : période 12 mois',(await p.locator('#cRequests svg text').count())>=12);
 // 7 bis. Versements aux enseignants
 await go('versements.html');await p.waitForTimeout(600);
 step('Versements : page admin et cours listé',await p.locator('#adminView').isVisible()&&(await p.locator('#rate-'+reqId).count())===1);
