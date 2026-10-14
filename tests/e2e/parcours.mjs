@@ -147,8 +147,18 @@ await p.evaluate(()=>{const db=JSON.parse(localStorage.getItem('__ke_db'));db.in
 d=await db();step('Confirmation du paiement par l’admin',d.invoices[0].status==='paid');
 await go('facture.html?id='+d.invoices[0].id);await p.waitForTimeout(400);step('Reçu après paiement',(await p.textContent('#sheet')).includes('Reçu')&&(await p.textContent('#sheet')).includes('PAYÉE'));
 await go('espace-admin.html');step('Activité : encaissé ce mois',(await p.textContent('#aMonth')).replace(/\s/g,'').includes('40000'),await p.textContent('#aMonth'));step('Activité : graphiques affichés',(await p.locator('.chart svg').count())===2);
+// 7 bis. Versements aux enseignants
+await go('versements.html');await p.waitForTimeout(600);
+step('Versements : page admin et cours listé',await p.locator('#adminView').isVisible()&&(await p.locator('#rate-'+reqId).count())===1);
+await p.fill('#rate-'+reqId,'30000');await p.click('#rates .rate-row:has(#rate-'+reqId+') button');await p.waitForTimeout(500);
+d=await db();step('Versements : rémunération enregistrée',(d.teacher_rates||[]).some(x=>x.course_request_id===reqId&&x.monthly_amount===30000));
+await p.click('#genBtn');await p.waitForTimeout(500);
+d=await db();step('Versements : versement du mois généré',(d.teacher_payouts||[]).length===1&&d.teacher_payouts[0].amount===30000&&d.teacher_payouts[0].status==='due');
+{const pid=d.teacher_payouts[0].id;await p.selectOption('#met-'+pid,'wave');await p.fill('#ref-'+pid,'WV123');await p.click('#payouts .p-row button:has-text("Marquer versé")');await p.waitForTimeout(500);}
+d=await db();step('Versements : marqué comme versé',d.teacher_payouts[0].status==='paid'&&d.teacher_payouts[0].payment_method==='wave'&&d.teacher_payouts[0].payment_reference==='WV123');
 // 8. Enseignant : compte rendu + message
 await logout();await go('connexion.html?role=teacher');await p.fill('#email','yao@test.ci');await p.fill('#password','secret1');await p.click('#form button[type=submit], #form > button');await p.waitForTimeout(800);
+await go('versements.html');await p.waitForTimeout(600);{const tv=await p.textContent('#teacherView');step('Mes gains : versement visible côté enseignant',await p.locator('#teacherView').isVisible()&&tv.includes('30')&&tv.includes('Wave')&&await p.locator('#adminView').isHidden());}
 await go('ressources.html');await p.waitForTimeout(500);step('Cloche : notification non lue visible',(await p.locator('.ke-bell span:not([hidden])').count())===1,await p.textContent('.ke-bell'));
 await p.click('.ke-bell');await p.waitForTimeout(200);step('Cloche : panneau avec la notification',(await p.textContent('.ke-panel')).includes('Nouveau cours attribué'));
 await p.click('.ke-n:has-text("Nouveau cours attribué")');await p.waitForTimeout(800);d=await db();
