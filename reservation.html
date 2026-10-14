@@ -83,6 +83,9 @@
     const otherSubjectField = document.getElementById('subject-other-field');
     const otherSubject = document.getElementById('subject-other');
     setupAbidjanLocation('commune','quartier');
+    // Arrivée depuis une page « Cours à domicile à [commune] » : commune présélectionnée
+    { const c0 = new URLSearchParams(location.search).get('commune'); const sel = document.getElementById('commune');
+      if (c0 && Array.from(sel.options).some(o => o.value === c0)) { sel.value = c0; sel.dispatchEvent(new Event('change')); } }
     const wanted = new URLSearchParams(location.search).get('matiere');
     if (wanted) { const opt = Array.from(subject.options).find(o => (o.value || o.text) === wanted); if (opt) subject.value = opt.value; }
     subject.addEventListener('change', function () {
@@ -188,5 +191,5 @@
       const ct = document.getElementById('chosen-teacher'); if (ct) ct.hidden = true;
     });
   </script>
-<footer class="ke-footer"><div class="ke-footer-grid"><div><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><p>Cours particuliers à domicile et en ligne, avec un suivi après chaque séance. Abidjan et toute la Côte d’Ivoire.</p></div><div><h4>Familles</h4><a href="reservation.html">Réserver un cours</a><a href="tarifs.html">Tarifs</a><a href="services.html">Services</a><a href="connexion.html">Espace parent</a><a href="conseils.html">Conseils aux parents</a></div><div><h4>Enseignants</h4><a href="candidature-enseignant.html">Devenir enseignant</a><a href="enseignants.html">Notre réseau</a><a href="connexion.html">Espace enseignant</a></div><div><h4>KONE.EDUC</h4><a href="a-propos.html">À propos</a><a href="contact.html">Contact</a><a href="https://wa.me/2250161701361">WhatsApp : 01 61 70 13 61</a></div></div><div class="ke-footer-bottom"><span>© 2026 KONE.EDUC — L’excellence à domicile.</span><a href="mentions-legales.html" style="display:inline;margin:0">Mentions légales et confidentialité</a></div></footer><script src="site.js"></script></body>
+<footer class="ke-footer"><div class="ke-footer-grid"><div><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><p>Cours particuliers à domicile et en ligne, avec un suivi après chaque séance. Abidjan et toute la Côte d’Ivoire.</p></div><div><h4>Familles</h4><a href="reservation.html">Réserver un cours</a><a href="tarifs.html">Tarifs</a><a href="services.html">Services</a><a href="connexion.html">Espace parent</a><a href="conseils.html">Conseils aux parents</a><a href="cours-particuliers-abidjan.html">Cours à Abidjan</a></div><div><h4>Enseignants</h4><a href="candidature-enseignant.html">Devenir enseignant</a><a href="enseignants.html">Notre réseau</a><a href="connexion.html">Espace enseignant</a></div><div><h4>KONE.EDUC</h4><a href="a-propos.html">À propos</a><a href="contact.html">Contact</a><a href="https://wa.me/2250161701361">WhatsApp : 01 61 70 13 61</a></div></div><div class="ke-footer-bottom"><span>© 2026 KONE.EDUC — L’excellence à domicile.</span><a href="mentions-legales.html" style="display:inline;margin:0">Mentions légales et confidentialité</a></div></footer><script src="site.js"></script></body>
 </html>

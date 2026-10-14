@@ -225,6 +225,11 @@ await p.check('#scConfirm');await p.fill('#scReason','Test');await p.click('#scB
 d=await db();step('Suppression : demande enregistrée',!!d.profiles.find(x=>x.full_name==='Mariam Koné').deletion_requested_at&&(await p.textContent('#scMsg')).includes('Demande envoyée'));
 await logout();await go('suppression-compte.html');await p.waitForTimeout(400);step('Suppression : marche à suivre visible sans connexion',await p.locator('#scLogin').isVisible()&&await p.locator('#scForm').isHidden());
 await logout();await go('connexion.html');step('Connexion : aucun accès administration visible',!(await p.content()).includes('administration')&&(await p.locator('#adminLink').count())===0);
+// 9 quater. Pages locales (référencement Google)
+await logout();await go('cours-particuliers-a-domicile-cocody.html');await p.waitForTimeout(600);
+step('Page locale Cocody : titre, quartiers et FAQ',(await p.textContent('h1')).includes('Cocody')&&(await p.textContent('main')).includes('Riviera')&&(await p.locator('.faq details').count())>=5&&(await p.locator('script[type="application/ld+json"]').count())===1);
+await p.click('.l-cta a.l-btn');await p.waitForTimeout(600);step('Page locale → réservation : commune présélectionnée',(await p.inputValue('#commune'))==='Cocody'&&!(await p.locator('#quartier').isDisabled()));
+await go('cours-de-mathematiques-a-domicile-abidjan.html');await p.waitForTimeout(800);step('Page matière : enseignants de mathématiques affichés',(await p.locator('#teachers .t').count())>=1);
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

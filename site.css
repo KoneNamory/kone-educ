@@ -39,3 +39,5 @@ main{position:relative}.ke-backbar{position:absolute;z-index:5;top:14px;left:0;r
 @media(max-width:500px){.ke-backbar{width:calc(100% - 30px);top:10px}}
 .ke-backbar.flow{position:static;margin:14px auto 0}
 @media(max-width:500px){.ke-backbar.flow{margin-top:10px}}
+.ke-links a{white-space:nowrap}
+@media(min-width:861px) and (max-width:1320px){.ke-links{gap:18px}.ke-actions .ke-btn{padding:11px 13px}}
