@@ -1337,5 +1337,96 @@ $$;
 revoke execute on function public.request_account_deletion(text) from public;
 grant execute on function public.request_account_deletion(text) to authenticated;
 
+-- ============================================================
+-- Rémunération des enseignants et versements (jamais visibles par les parents)
+-- ============================================================
+create table if not exists public.teacher_rates (
+  course_request_id bigint primary key references public.course_requests(id) on delete cascade,
+  monthly_amount integer not null check (monthly_amount > 0),
+  updated_at timestamptz not null default now()
+);
+alter table public.teacher_rates enable row level security;
+grant select, insert, update, delete on public.teacher_rates to authenticated;
+drop policy if exists "Admins manage teacher rates" on public.teacher_rates;
+create policy "Admins manage teacher rates" on public.teacher_rates for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "Teachers read own rates" on public.teacher_rates;
+create policy "Teachers read own rates" on public.teacher_rates for select to authenticated
+  using (public.course_role(course_request_id) = 'teacher');
+
+create table if not exists public.teacher_payouts (
+  id bigint generated always as identity primary key,
+  teacher_id uuid references public.profiles(id) on delete set null,
+  teacher_name text not null,
+  course_request_id bigint references public.course_requests(id) on delete set null,
+  month date not null check (extract(day from month) = 1),
+  amount integer not null check (amount > 0),
+  label text not null check (char_length(label) <= 200),
+  status text not null default 'due' check (status in ('due','paid')),
+  payment_method text check (payment_method in ('wave','orange_money','mtn_money','moov_money')),
+  payment_reference text check (char_length(payment_reference) <= 100),
+  paid_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists teacher_payouts_course_month on public.teacher_payouts (course_request_id, month) where course_request_id is not null;
+create index if not exists teacher_payouts_teacher on public.teacher_payouts (teacher_id, month);
+alter table public.teacher_payouts enable row level security;
+grant select, insert, update, delete on public.teacher_payouts to authenticated;
+grant usage, select on sequence public.teacher_payouts_id_seq to authenticated;
+drop policy if exists "Admins manage payouts" on public.teacher_payouts;
+create policy "Admins manage payouts" on public.teacher_payouts for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "Teachers read own payouts" on public.teacher_payouts;
+create policy "Teachers read own payouts" on public.teacher_payouts for select to authenticated
+  using (teacher_id = auth.uid());
+
+-- Versements dus du mois : un par cours en cours ayant une rémunération, sans doublon
+create or replace function public.generate_month_payouts(p_month date) returns integer
+language plpgsql security definer set search_path = public as $$
+declare v_month date := date_trunc('month', p_month)::date; v_n integer;
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  insert into public.teacher_payouts (teacher_id, teacher_name, course_request_id, month, amount, label)
+  select cr.teacher_id, coalesce(p.full_name, 'Enseignant'), cr.id, v_month, tr.monthly_amount,
+         cr.subject || ' · ' || cr.student_name || ' (' || cr.school_level || ')'
+  from public.course_requests cr
+  join public.teacher_rates tr on tr.course_request_id = cr.id
+  left join public.profiles p on p.id = cr.teacher_id
+  where cr.status = 'assigned' and cr.teacher_id is not null
+  on conflict (course_request_id, month) where course_request_id is not null do nothing;
+  get diagnostics v_n = row_count;
+  return v_n;
+end;
+$$;
+revoke execute on function public.generate_month_payouts(date) from public;
+grant execute on function public.generate_month_payouts(date) to authenticated;
+
+-- Versement effectué : date automatique et notification à l'enseignant
+create or replace function public.notify_payout() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'paid' and new.paid_at is null then new.paid_at := now(); end if;
+  if new.status = 'due' then new.paid_at := null; end if;
+  if tg_op = 'UPDATE' and new.status = 'paid' and old.status <> 'paid' and new.teacher_id is not null then
+    insert into public.notifications (recipient_id, title, body, link)
+    values (new.teacher_id, 'Versement effectué',
+            new.amount || ' FCFA vous ont été versés pour ' || new.label || ' (' || to_char(new.month, 'MM/YYYY') || ')'
+            || coalesce(' · référence ' || nullif(new.payment_reference, ''), '') || '.', 'versements.html');
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_payout on public.teacher_payouts;
+create trigger notify_payout before insert or update on public.teacher_payouts
+  for each row execute function public.notify_payout();
+
+do $$ begin
+  drop trigger if exists audit_changes on public.teacher_payouts;
+  create trigger audit_changes after insert or update or delete on public.teacher_payouts for each row execute function public.audit_changes();
+  drop trigger if exists audit_changes on public.teacher_rates;
+  create trigger audit_changes after insert or update or delete on public.teacher_rates for each row execute function public.audit_changes();
+exception when others then raise notice 'Journal des versements indisponible (%).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

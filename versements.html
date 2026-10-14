@@ -1,0 +1,202 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Versements | KONE.EDUC</title><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+.vm-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:18px 0 0}
+.vm-bar label{display:flex;align-items:center;gap:8px;font-weight:800}
+.vm-bar input[type=month]{padding:9px 10px;border:1px solid var(--line);border-radius:10px;font:inherit}
+.d-kpis.five{grid-template-columns:repeat(5,1fr)}
+.d-kpi small{display:block;margin-top:4px;color:var(--mut);font-size:12px}
+.t-group{padding:14px 0;border-top:1px solid var(--line)}.t-group:first-child{border-top:0;padding-top:0}
+.t-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.t-head b{font-size:16px}.t-head span{color:var(--mut);font-size:13.5px;font-weight:700}
+.p-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.p-row.paid{background:#f5fbf7;border-color:#cdebd7}
+.p-row>div:first-child{flex:1 1 260px;min-width:0}.p-row small{display:block;color:var(--mut)}
+.p-act{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.p-act input,.p-act select,.rate-row input{padding:8px;border:1px solid #d7e1f2;border-radius:8px;font:inherit;font-size:14px}
+.p-act input.amt{width:110px}.p-act input.ref{width:130px}
+.rate-row{display:grid;grid-template-columns:1fr;gap:8px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.rate-row:first-child{border-top:0}
+.rate-row small{display:block;color:var(--mut)}
+.rate-row .r-in{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rate-row input{width:120px}
+.marge{font-size:12.5px;font-weight:800;color:var(--ok)}.marge.neg{color:var(--bad)}
+.add-form{display:grid;grid-template-columns:1fr 1fr 120px auto;gap:8px;margin-top:6px}
+.add-form select,.add-form input{padding:9px;border:1px solid #d7e1f2;border-radius:8px;font:inherit;font-size:14px;min-width:0}
+.hist{width:100%;border-collapse:collapse;font-size:14px}.hist th{padding:9px 8px;background:var(--soft);text-align:left;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut)}.hist td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top}.hist .num{text-align:right;white-space:nowrap;font-weight:800}
+@media(max-width:960px){.d-kpis.five{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.p-row,.rate-row{grid-template-columns:1fr}.p-act,.rate-row .r-in{justify-content:flex-start}.add-form{grid-template-columns:1fr 1fr}.hist th,.hist td{padding:9px 5px;font-size:13px}.hist td:first-child{white-space:nowrap}}
+</style></head><body><main>
+<section class="d-hero"><div><p class="eyebrow" id="eyebrow">Versements</p><h1 id="title">Versements enseignants</h1><p id="message">Chargement…</p></div><div class="d-hero-cta"><a class="d-btn light" id="back" href="index.html">← Mon espace</a></div></section>
+<div id="adminView" hidden>
+  <div class="vm-bar"><label>Mois <input id="month" type="month"></label><button type="button" class="d-btn" id="genBtn">⚡ Générer les versements du mois</button></div>
+  <div class="d-kpis five" id="kpis"></div>
+  <div class="d-grid">
+    <div class="d-col">
+      <section class="card d-card"><div class="d-head"><h2>À verser ce mois-ci</h2><span class="d-count" id="dueCount">0</span></div><div id="payouts"></div></section>
+      <section class="card d-card"><div class="d-head"><h2>➕ Versement ponctuel</h2></div><p class="d-sub" style="margin:0 0 6px">Prime, remplacement, ajustement… pour le mois sélectionné.</p>
+        <form class="add-form" id="addForm"><select id="addTeacher" required></select><input id="addLabel" required maxlength="200" placeholder="Motif (ex. Prime BEPC blanc)"><input id="addAmount" type="number" min="1" required placeholder="FCFA"><button class="d-btn sm" type="submit">Ajouter</button></form>
+        <p class="d-flash" id="addMsg"></p></section>
+    </div>
+    <div class="d-col">
+      <section class="card d-card"><div class="d-head"><h2>Rémunérations mensuelles</h2></div><p class="d-sub" style="margin:0 0 8px">Ce que touche l’enseignant par mois pour chaque cours en cours. Visible seulement par l’équipe et l’enseignant concerné, jamais par le parent.</p><div id="rates"></div></section>
+    </div>
+  </div>
+</div>
+<div id="teacherView" hidden>
+  <div class="d-kpis" id="tKpis"></div>
+  <section class="card d-card"><div class="d-head"><h2>Mes versements</h2><span class="d-count" id="tCount">0</span></div><div id="tList"></div>
+  <p class="d-sub" style="margin:14px 0 0">Une question sur un versement ? Écrivez-nous sur WhatsApp au <a href="https://wa.me/2250161701361">01 61 70 13 61</a>.</p></section>
+</div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fcfa = n => Number(n || 0).toLocaleString('fr-FR') + ' FCFA';
+const monthFr = m => new Date(String(m).slice(0, 7) + '-01T00:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+const dateFr = d => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const METHOD = { wave: 'Wave', orange_money: 'Orange Money', mtn_money: 'MTN MoMo', moov_money: 'Moov Money' };
+const kpi = (ic, v, l, sub) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + v + '</b><span>' + l + '</span>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>';
+let user, courses = [], people = {}, rates = {}, payouts = [];
+
+(async function () {
+  user = (await db.auth.getUser()).data.user;
+  if (!user) { message.innerHTML = '<a href="connexion.html" style="color:#fff">Connectez-vous</a> pour voir cette page.'; return; }
+  const me = (await db.from('profiles').select('role').eq('id', user.id).maybeSingle()).data || {};
+  if (me.role === 'admin') { back.href = 'espace-admin.html'; back.textContent = '← Administration'; return initAdmin(); }
+  if (me.role === 'teacher') { back.href = 'espace-enseignant.html'; return initTeacher(); }
+  back.href = 'espace-parent.html';
+  message.textContent = 'Cette page est réservée aux enseignants et à l’équipe KONE.EDUC.';
+})();
+
+// ---------- Vue enseignant : mes gains ----------
+async function initTeacher() {
+  eyebrow.textContent = 'Espace enseignant'; title.textContent = 'Mes gains';
+  const r = await db.from('teacher_payouts').select('*').eq('teacher_id', user.id).order('month', { ascending: false }).order('created_at', { ascending: false });
+  const list = r.error ? [] : r.data;
+  const year = String(new Date().getFullYear());
+  const due = list.filter(p => p.status === 'due'), paid = list.filter(p => p.status === 'paid');
+  const paidYear = paid.filter(p => String(p.paid_at || p.month).slice(0, 4) === year);
+  const last = paid.slice().sort((a, b) => String(b.paid_at).localeCompare(String(a.paid_at)))[0];
+  message.textContent = list.length ? 'Le détail de vos rémunérations et de vos versements, mois par mois.' : 'Vos versements apparaîtront ici dès votre premier mois de cours.';
+  tKpis.innerHTML = kpi('⏳', fcfa(due.reduce((a, p) => a + p.amount, 0)), 'À recevoir', due.length ? due.length + ' versement(s) en attente' : 'Rien en attente')
+    + kpi('✅', fcfa(paidYear.reduce((a, p) => a + p.amount, 0)), 'Reçu en ' + year)
+    + kpi('📅', last ? dateFr(last.paid_at) : '–', 'Dernier versement', last ? fcfa(last.amount) : '')
+    + kpi('📚', new Set(list.map(p => p.course_request_id).filter(Boolean)).size, 'Cours rémunérés');
+  tCount.textContent = list.length;
+  tList.innerHTML = list.length ? '<table class="hist"><thead><tr><th>Mois</th><th>Cours</th><th class="num">Montant</th></tr></thead><tbody>'
+    + list.map(p => '<tr><td style="white-space:nowrap">' + new Date(String(p.month).slice(0, 7) + '-01T00:00:00').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) + '</td><td>' + safe(p.label) + '<div style="margin-top:6px">'
+      + (p.status === 'paid' ? '<span class="d-pill ok">✓ Versé le ' + new Date(p.paid_at).toLocaleDateString('fr-FR') + '</span><small style="display:block;color:var(--mut);margin-top:4px">' + (METHOD[p.payment_method] || '') + (p.payment_reference ? ' · réf. ' + safe(p.payment_reference) : '') + '</small>' : '<span class="d-pill wait">À verser</span>')
+      + '</div></td><td class="num">' + fcfa(p.amount) + '</td></tr>').join('') + '</tbody></table>'
+    : '<div class="d-empty"><span class="big">💰</span><p>Aucun versement pour le moment.</p></div>';
+  teacherView.hidden = false;
+}
+
+// ---------- Vue administration ----------
+async function initAdmin() {
+  eyebrow.textContent = 'Administration'; title.textContent = 'Versements enseignants';
+  message.textContent = 'Fixez la rémunération de chaque enseignant, générez les versements du mois puis marquez-les comme versés : l’enseignant est prévenu.';
+  const now = new Date();
+  month.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const [c, p] = await Promise.all([
+    db.from('course_requests').select('*').in('status', ['assigned', 'completed']),
+    db.from('profiles').select('id, full_name, role').eq('role', 'teacher')
+  ]);
+  courses = (c.data || []).filter(x => x.teacher_id);
+  (p.data || []).forEach(x => people[x.id] = x);
+  addTeacher.innerHTML = '<option value="">Enseignant…</option>' + Object.values(people).sort((a, b) => String(a.full_name).localeCompare(String(b.full_name))).map(x => '<option value="' + x.id + '">' + safe(x.full_name) + '</option>').join('');
+  month.onchange = loadMonth;
+  adminView.hidden = false;
+  await loadRates();
+  await loadMonth();
+}
+
+async function loadRates() {
+  const r = await db.from('teacher_rates').select('*');
+  rates = {}; (r.data || []).forEach(x => rates[x.course_request_id] = x.monthly_amount);
+  const active = courses.filter(x => x.status === 'assigned');
+  rates_el().innerHTML = active.length ? active.map(x => {
+    const t = people[x.teacher_id] || {}, v = rates[x.id], fee = x.monthly_fee;
+    const marge = v && fee ? '<span class="marge' + (fee - v < 0 ? ' neg' : '') + '">Marge : ' + fcfa(fee - v) + ' (' + Math.round((fee - v) / fee * 100) + ' %)</span>' : '';
+    return '<div class="rate-row"><div><b>' + safe(t.full_name || 'Enseignant') + '</b><small>' + safe(x.subject) + ' · ' + safe(x.student_name) + ' (' + safe(x.school_level) + ')' + (fee ? ' · facturé ' + fcfa(fee) + ' / mois' : ' · tarif parent non fixé') + '</small>' + marge + '</div>'
+      + '<div class="r-in"><input type="number" min="1" id="rate-' + x.id + '" value="' + (v || '') + '" placeholder="FCFA / mois"><button type="button" class="d-btn sm ghost" onclick="saveRate(' + x.id + ')">Enregistrer</button></div></div>';
+  }).join('') : '<div class="d-empty"><p>Aucun cours en cours pour le moment.</p></div>';
+}
+function rates_el() { return document.getElementById('rates'); }
+
+async function saveRate(id) {
+  const v = Number(document.getElementById('rate-' + id).value);
+  if (!(v > 0)) { alert('Indiquez la rémunération mensuelle en FCFA.'); return; }
+  const r = await db.from('teacher_rates').upsert({ course_request_id: id, monthly_amount: v, updated_at: new Date().toISOString() }, { onConflict: 'course_request_id' });
+  if (r.error) { alert('Erreur : ' + r.error.message); return; }
+  await loadRates(); loadMonth();
+}
+
+async function loadMonth() {
+  const m = month.value + '-01', next = new Date(month.value + '-01T00:00:00'); next.setMonth(next.getMonth() + 1);
+  const nm = next.getFullYear() + '-' + String(next.getMonth() + 1).padStart(2, '0') + '-01';
+  const [p, inv, ses] = await Promise.all([
+    db.from('teacher_payouts').select('*').eq('month', m).order('teacher_name').order('created_at'),
+    db.from('invoices').select('amount, status').eq('month', m),
+    db.from('sessions').select('course_request_id, status, starts_at').gte('starts_at', m).lt('starts_at', nm)
+  ]);
+  payouts = p.error ? [] : p.data;
+  const invs = inv.data || [], done = {};
+  (ses.data || []).filter(s => s.status === 'done').forEach(s => done[s.course_request_id] = (done[s.course_request_id] || 0) + 1);
+  const billed = invs.reduce((a, x) => a + x.amount, 0), cashed = invs.filter(x => x.status === 'paid').reduce((a, x) => a + x.amount, 0);
+  const owed = payouts.reduce((a, x) => a + x.amount, 0), paid = payouts.filter(x => x.status === 'paid').reduce((a, x) => a + x.amount, 0);
+  kpis.innerHTML = kpi('🧾', fcfa(billed), 'Facturé aux parents', fcfa(cashed) + ' encaissé')
+    + kpi('👩‍🏫', fcfa(owed), 'Dû aux enseignants', payouts.length + ' versement(s)')
+    + kpi('✅', fcfa(paid), 'Déjà versé')
+    + kpi('⏳', fcfa(owed - paid), 'Reste à verser')
+    + kpi('📈', fcfa(billed - owed), 'Marge KONE.EDUC', billed ? Math.round((billed - owed) / billed * 100) + ' % du facturé' : '');
+  const pending = courses.filter(x => x.status === 'assigned' && rates[x.id] && !payouts.some(y => y.course_request_id === x.id)).length;
+  genBtn.textContent = pending ? '⚡ Générer les versements du mois (' + pending + ')' : '✓ Versements du mois générés';
+  genBtn.disabled = !pending;
+  dueCount.textContent = payouts.filter(x => x.status === 'due').length;
+  const groups = {};
+  payouts.forEach(x => (groups[x.teacher_name] = groups[x.teacher_name] || []).push(x));
+  document.getElementById('payouts').innerHTML = Object.keys(groups).length ? Object.keys(groups).map(name => {
+    const g = groups[name], tot = g.reduce((a, x) => a + x.amount, 0), rest = g.filter(x => x.status === 'due').reduce((a, x) => a + x.amount, 0);
+    return '<div class="t-group"><div class="t-head"><b>' + safe(name) + '</b><span>' + fcfa(tot) + (rest ? ' · reste ' + fcfa(rest) : ' · tout versé ✓') + '</span></div>'
+      + g.map(x => '<div class="p-row' + (x.status === 'paid' ? ' paid' : '') + '"><div><b>' + safe(x.label) + '</b><small>' + (x.course_request_id ? (done[x.course_request_id] || 0) + ' séance(s) faite(s) ce mois-ci · ' : '') + (x.status === 'paid' ? '✓ Versé le ' + new Date(x.paid_at).toLocaleDateString('fr-FR') + ' · ' + (METHOD[x.payment_method] || '') + (x.payment_reference ? ' · réf. ' + safe(x.payment_reference) : '') : 'À verser') + '</small></div>'
+        + '<div class="p-act">' + (x.status === 'paid'
+          ? '<b>' + fcfa(x.amount) + '</b><button type="button" class="cancel" onclick="unpay(' + x.id + ')">Annuler</button>'
+          : '<input class="amt" type="number" min="1" id="amt-' + x.id + '" value="' + x.amount + '" aria-label="Montant"><select id="met-' + x.id + '" aria-label="Moyen de paiement">' + Object.keys(METHOD).map(k => '<option value="' + k + '">' + METHOD[k] + '</option>').join('') + '</select><input class="ref" id="ref-' + x.id + '" maxlength="100" placeholder="Référence" aria-label="Référence"><button type="button" class="d-btn sm" onclick="pay(' + x.id + ')">Marquer versé</button><button type="button" class="cancel" onclick="removePayout(' + x.id + ')" aria-label="Supprimer">✕</button>')
+        + '</div></div>').join('') + '</div>';
+  }).join('') : '<div class="d-empty"><span class="big">💸</span><p>Aucun versement pour ' + monthFr(m) + '.</p><p class="d-sub">Fixez les rémunérations à droite, puis cliquez sur « Générer les versements du mois ».</p></div>';
+}
+
+genBtn.onclick = async () => {
+  genBtn.disabled = true;
+  const r = await db.rpc('generate_month_payouts', { p_month: month.value + '-01' });
+  if (r.error) { alert('Erreur : ' + r.error.message); genBtn.disabled = false; return; }
+  loadMonth();
+};
+async function pay(id) {
+  const amount = Number(document.getElementById('amt-' + id).value);
+  if (!(amount > 0)) { alert('Montant invalide.'); return; }
+  const r = await db.from('teacher_payouts').update({ amount, status: 'paid', paid_at: new Date().toISOString(), payment_method: document.getElementById('met-' + id).value, payment_reference: document.getElementById('ref-' + id).value.trim() || null }).eq('id', id);
+  if (r.error) { alert('Erreur : ' + r.error.message); return; }
+  loadMonth();
+}
+async function unpay(id) {
+  if (!confirm('Annuler ce versement (il repassera « à verser ») ?')) return;
+  const r = await db.from('teacher_payouts').update({ status: 'due', paid_at: null, payment_method: null, payment_reference: null }).eq('id', id);
+  if (r.error) { alert('Erreur : ' + r.error.message); return; }
+  loadMonth();
+}
+async function removePayout(id) {
+  if (!confirm('Supprimer ce versement ?')) return;
+  const r = await db.from('teacher_payouts').delete().eq('id', id);
+  if (r.error) { alert('Erreur : ' + r.error.message); return; }
+  loadMonth();
+}
+addForm.onsubmit = async e => {
+  e.preventDefault();
+  const t = people[addTeacher.value];
+  if (!t) { addMsg.style.color = 'var(--bad)'; addMsg.textContent = 'Choisissez l’enseignant.'; return; }
+  const r = await db.from('teacher_payouts').insert({ teacher_id: t.id, teacher_name: t.full_name || 'Enseignant', month: month.value + '-01', amount: Number(addAmount.value), label: addLabel.value.trim() });
+  addMsg.style.color = r.error ? 'var(--bad)' : 'var(--ok)';
+  addMsg.textContent = r.error ? 'Erreur : ' + r.error.message : '✓ Versement ajouté.';
+  if (!r.error) { addLabel.value = ''; addAmount.value = ''; loadMonth(); }
+};
+</script><script src="app.js"></script></body></html>

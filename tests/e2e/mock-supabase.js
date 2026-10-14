@@ -145,6 +145,19 @@
           applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null };
       }).filter(Boolean), error: null };
     }
+    if (name === 'generate_month_payouts') {
+      var s5 = load(), m5 = String(a.p_month).slice(0, 7) + '-01', n5 = 0;
+      s5.teacher_payouts = s5.teacher_payouts || [];
+      (s5.course_requests || []).forEach(function (r) {
+        var rate = (s5.teacher_rates || []).find(function (t) { return t.course_request_id === r.id; });
+        if (r.status !== 'assigned' || !r.teacher_id || !rate) return;
+        if (s5.teacher_payouts.some(function (x) { return x.course_request_id === r.id && x.month === m5; })) return;
+        var tp = (s5.profiles || []).find(function (x) { return x.id === r.teacher_id; }) || {};
+        s5.__seq = s5.__seq || {}; s5.__seq.teacher_payouts = (s5.__seq.teacher_payouts || 0) + 1;
+        s5.teacher_payouts.push({ id: s5.__seq.teacher_payouts, teacher_id: r.teacher_id, teacher_name: tp.full_name || 'Enseignant', course_request_id: r.id, month: m5, amount: rate.monthly_amount, label: r.subject + ' · ' + r.student_name + ' (' + r.school_level + ')', status: 'due', created_at: new Date().toISOString() }); n5++;
+      });
+      save(s5); return { data: n5, error: null };
+    }
     if (name === 'request_account_deletion') {
       var me4 = JSON.parse(localStorage.getItem('__ke_user') || 'null'), s4 = load();
       var pr4 = me4 && (s4.profiles || []).find(function (x) { return x.id === me4.id; });
