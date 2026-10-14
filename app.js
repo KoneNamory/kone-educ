@@ -4,7 +4,7 @@
   var LINKS = {
     parent: [['espace-parent.html', 'Mon espace'], ['planning.html', 'Planning'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['reservation.html', 'Nouvelle demande']],
     teacher: [['espace-enseignant.html', 'Mon espace'], ['planning.html', 'Planning'], ['offres.html', 'Offres de cours'], ['versements.html', 'Mes gains'], ['ressources.html', 'Ressources']],
-    admin: [['espace-admin.html', 'Administration'], ['planning.html', 'Planning'], ['versements.html', 'Versements'], ['gestion-documents.html', 'Documents'], ['ressources.html', 'Ressources']]
+    admin: [['espace-admin.html', 'Administration'], ['tableau-de-bord.html', 'Tableau de bord'], ['planning.html', 'Planning'], ['versements.html', 'Versements'], ['gestion-documents.html', 'Documents'], ['ressources.html', 'Ressources']]
   };
   var page = location.pathname.split('/').pop() || 'index.html';
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
