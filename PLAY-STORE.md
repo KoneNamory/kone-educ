@@ -15,7 +15,7 @@ Chaque amélioration du site apparaît donc aussitôt dans l’application, sans
 1. Sur un ordinateur, ouvrez https://www.pwabuilder.com et saisissez `https://kone-educ.vercel.app`.
 2. Cliquez sur **Package for stores**, puis sur **Android** et **Generate Package**.
 3. Réglages conseillés :
-   - Package ID : `app.vercel.kone_educ.twa`. Il est définitif : ne plus jamais le changer.
+   - Package ID : `com.koneeduc.app`. Il est définitif : ne plus jamais le changer.
    - App name : `KONE.EDUC` · Launcher name : `KONE.EDUC`
    - Theme color : `#1559EB` · Background color : `#FFFFFF` · Status bar color : `#1559EB`
    - Signing key : **Create new**, puis renseignez le nom et le pays (CI).
