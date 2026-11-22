@@ -1,6 +1,6 @@
 # Musique d'ambiance originale (synthétisée, libre de droits) : pad + arpèges, 100 BPM, Am–F–C–G
 import numpy as np, wave, sys
-SR=44100; DUR=117.0; BPM=100; beat=60/BPM; bar=4*beat
+SR=44100; DUR=float(sys.argv[2]) if len(sys.argv)>2 else 117.0; BPM=int(sys.argv[3]) if len(sys.argv)>3 else 100; beat=60/BPM; bar=4*beat
 t=np.arange(int(SR*DUR))/SR
 def hz(n): return 440*2**((n-69)/12)
 prog=[[57,60,64],[53,57,60],[48,52,55],[55,59,62]]  # Am F C G

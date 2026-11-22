@@ -1,0 +1,136 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-Regular.otf);font-weight:400}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-SemiBold.otf);font-weight:600}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-Bold.otf);font-weight:700}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-ExtraBold.otf);font-weight:800}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-Black.otf);font-weight:900}
+:root{--navy:#10294f;--navy2:#1d4a8c;--gold:#e9a92c;--ink:#0f1b37}
+*{margin:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--navy);font-family:I,sans-serif;color:#fff}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:radial-gradient(120% 70% at 50% 0%,#1d4a8c 0%,#10294f 55%,#0b1d3b 100%)}
+.bg{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(233,169,44,.22),rgba(233,169,44,0) 70%)}
+.sym{position:absolute;font-weight:800;color:rgba(255,255,255,.06);font-size:150px}
+.a{position:absolute;opacity:0;will-change:transform,opacity}
+.c{left:70px;right:70px;text-align:center}
+.h1{font-size:104px;font-weight:900;line-height:1.02;letter-spacing:-3px}
+.h2{font-size:76px;font-weight:900;line-height:1.05;letter-spacing:-2px}
+.h3{font-size:54px;font-weight:800;line-height:1.12;letter-spacing:-1px}
+.gold{color:var(--gold)}
+.kick{display:inline-block;padding:14px 30px;border-radius:99px;background:rgba(233,169,44,.16);color:var(--gold);font-size:34px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+.logo{display:flex;align-items:center;justify-content:center;gap:34px}
+.cap{flex:none;display:grid;place-items:center;border-radius:50%;background:var(--gold)}
+.word{font-weight:900;letter-spacing:-2px}
+.card{left:110px;right:150px;display:flex;align-items:center;gap:34px;padding:38px 42px;border-radius:34px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.12)}
+.card .ic{flex:none;display:grid;place-items:center;width:110px;height:110px;border-radius:28px;background:var(--gold);font-size:58px}
+.card b{display:block;font-size:50px;font-weight:800;line-height:1.12;letter-spacing:-.5px}
+.card small{display:block;margin-top:8px;font-size:34px;color:#cfdcf3;font-weight:600}
+.num{flex:none;display:grid;place-items:center;width:110px;height:110px;border-radius:50%;background:var(--gold);color:var(--ink);font-size:60px;font-weight:900}
+.tl{left:180px;display:flex;align-items:center;gap:36px;font-size:58px;font-weight:800}
+.tl i{flex:none;width:46px;height:46px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 12px rgba(233,169,44,.18)}
+.badge{padding:26px 44px;border-radius:99px;background:#fff;color:var(--navy);font-size:46px;font-weight:900}
+.phone{left:250px;width:580px;height:1060px;border-radius:70px;background:#0b1730;border:14px solid #22385f;box-shadow:0 40px 90px rgba(0,0,0,.45);overflow:hidden}
+.screen{position:absolute;inset:26px;border-radius:46px;background:#f4f7fc;color:var(--ink);padding:44px 34px}
+.bar{height:26px;border-radius:13px;background:#e3ebf8;overflow:hidden;margin-top:14px}.bar i{display:block;height:100%;background:#1559eb;border-radius:13px}
+.item{display:flex;gap:18px;align-items:center;margin-top:26px;padding:22px;border-radius:22px;background:#fff;font-size:33px;font-weight:800;box-shadow:0 6px 18px rgba(16,41,79,.08)}
+.photo{left:340px;width:400px;height:400px;border-radius:50%;overflow:hidden;border:12px solid var(--gold);box-shadow:0 30px 70px rgba(0,0,0,.4)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.tel{left:100px;right:140px;padding:44px 30px;border-radius:40px;background:var(--gold);color:var(--ink);text-align:center}
+.tel small{display:block;font-size:40px;font-weight:800}
+.tel b{display:block;font-size:118px;font-weight:900;letter-spacing:-3px;line-height:1.05}
+.doc{position:absolute;width:420px;height:540px;border-radius:24px;background:#fff;box-shadow:0 26px 60px rgba(0,0,0,.35);padding:40px;color:var(--ink)}
+.doc .t{font-size:34px;font-weight:900;color:#1d4a8c}.doc .l{height:16px;border-radius:8px;background:#e3ebf8;margin-top:22px}.doc .l.s{width:60%}.doc .eq{margin-top:30px;font-size:44px;font-weight:800;color:var(--gold)}
+#mini{position:absolute;left:60px;top:70px;display:flex;align-items:center;gap:18px;font-size:44px;font-weight:900;opacity:0}
+#sub{position:absolute;left:60px;right:60px;bottom:120px;min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px 34px;border-radius:30px;background:rgba(6,16,36,.72);font-size:46px;font-weight:700;line-height:1.28;opacity:0}
+#prog{position:absolute;left:0;bottom:0;height:10px;background:var(--gold)}
+.logocard{display:inline-block;width:500px;padding:26px;border-radius:44px;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.45)}.logocard img{display:block;width:100%;height:auto}.mlogo{flex:none;display:grid;place-items:center;width:84px;height:84px;border-radius:50%;background:#fff;overflow:hidden}.mlogo img{width:76px;height:76px;object-fit:contain}</style></head><body><div id="stage">
+<div class="bg" id="b1" style="width:900px;height:900px"></div><div class="bg" id="b2" style="width:700px;height:700px"></div>
+<div class="sym" style="left:60px;top:300px">π</div><div class="sym" style="right:80px;top:520px">√x</div><div class="sym" style="left:120px;top:1240px">∑</div><div class="sym" style="right:120px;top:1150px">x²</div>
+<div id="mini"><span class="mlogo"><img src="file:///home/user/kone-educ/assets/logo/kone-educ-embleme.jpg" alt=""></span><span>KONE<span class="gold">.EDUC</span></span></div>
+
+<!-- 1. Accroche -->
+<div class="a c h1" style="top:520px" data-in="0.15" data-out="3.0" data-fx="zoom">Votre enfant<br><span class="gold">a du mal</span><br>à l’école ?</div>
+<div class="a c" style="top:1000px;font-size:150px" data-in="0.8" data-out="3.0" data-fx="pop">🤔</div>
+<!-- 2. Le problème -->
+<div class="a card" style="top:520px" data-in="3.1" data-out="6.6" data-fx="left"><span class="ic">📉</span><span><b>Les lacunes s’accumulent</b></span></div>
+<div class="a card" style="top:750px" data-in="3.9" data-out="6.6" data-fx="right"><span class="ic">😟</span><span><b>La confiance baisse</b></span></div>
+<div class="a card" style="top:980px" data-in="4.7" data-out="6.6" data-fx="left"><span class="ic">⏳</span><span><b>Les examens approchent</b></span></div>
+<!-- 3. Retournement -->
+<div class="a c h2" style="top:560px" data-in="6.7" data-out="9.6" data-fx="up">Et s’il avait<br><span class="gold">le bon enseignant…</span><br>à la maison ?</div>
+<div class="a c" style="top:1050px;font-size:150px" data-in="7.6" data-out="9.6" data-fx="rise">🏠</div>
+<!-- 4. Logo -->
+<div class="a c" style="top:330px" data-in="9.7" data-out="13.2" data-fx="zoom"><div class="logocard"><img src="file:///home/user/kone-educ/assets/logo/kone-educ-logo.jpg" alt=""></div></div>
+<div class="a c" style="top:880px;font-size:54px;font-weight:800" data-in="10.3" data-out="13.2" data-fx="up">Cours particuliers à domicile<br><span class="gold">à Abidjan</span></div>
+<!-- 5. Offre -->
+<div class="a c" style="top:300px" data-in="13.3" data-out="19.4" data-fx="up"><span class="kick">Pour votre enfant</span></div>
+<div class="a card" style="top:440px" data-in="13.5" data-out="19.4" data-fx="left"><span class="ic">📚</span><span><b>Soutien scolaire</b><small>et cours de répétition</small></span></div>
+<div class="a card" style="top:680px" data-in="14.8" data-out="19.4" data-fx="right"><span class="ic">🎓</span><span><b>Préparation au BEPC et au BAC</b></span></div>
+<div class="a card" style="top:920px" data-in="16.1" data-out="19.4" data-fx="left"><span class="ic">🧮</span><span><b>Toutes les matières</b><small>du primaire au lycée</small></span></div>
+<!-- 6. Méthode -->
+<div class="a c" style="top:260px" data-in="19.5" data-out="29.4" data-fx="up"><span class="kick">Notre méthode</span></div>
+<div class="a card" style="top:400px" data-in="19.8" data-out="29.4" data-fx="left"><span class="num">1</span><span><b>Diagnostic</b><small>des difficultés</small></span></div>
+<div class="a card" style="top:630px" data-in="22.1" data-out="29.4" data-fx="left"><span class="num">2</span><span><b>Programme adapté</b><small>à votre enfant</small></span></div>
+<div class="a card" style="top:860px" data-in="24.4" data-out="29.4" data-fx="left"><span class="num">3</span><span><b>Exercices corrigés</b><small>expliqués pas à pas</small></span></div>
+<div class="a card" style="top:1090px" data-in="26.7" data-out="29.4" data-fx="left"><span class="num">4</span><span><b>Suivi régulier</b><small>des progrès</small></span></div>
+<!-- 7. Parents -->
+<div class="a c" style="top:200px" data-in="29.5" data-out="37.4" data-fx="up"><span class="kick">Vous, parents</span></div>
+<div class="a c h3" style="top:300px" data-in="29.7" data-out="37.4" data-fx="up">Vous suivez <span class="gold">tout</span>, en direct</div>
+<div class="a phone" style="top:440px;height:1000px" data-in="30.2" data-out="37.4" data-fx="rise"><div class="screen">
+  <div style="font-size:30px;font-weight:800;color:#5b6884">ESPACE PARENT</div><div style="font-size:44px;font-weight:900;margin-top:6px">Progression</div>
+  <div style="margin-top:20px;font-size:28px;font-weight:700;color:#5b6884">Compréhension</div><div class="bar"><i id="pbar" style="width:30%"></i></div>
+  <div class="item a" style="position:relative" data-in="31.8" data-out="37.4" data-fx="up">📝 Compte rendu après chaque séance</div>
+  <div class="item a" style="position:relative" data-in="33.4" data-out="37.4" data-fx="up">📊 Bilan chaque mois</div>
+  <div class="item a" style="position:relative" data-in="35.0" data-out="37.4" data-fx="up">🎯 Les points à travailler</div>
+</div></div>
+<!-- 8. Garanties -->
+<div class="a c" style="top:280px" data-in="37.5" data-out="43.4" data-fx="up"><span class="kick">Nos garanties</span></div>
+<div class="a card" style="top:420px" data-in="37.7" data-out="43.4" data-fx="left"><span class="ic">✅</span><span><b>Enseignants vérifiés</b><small>identité, diplôme, entretien</small></span></div>
+<div class="a card" style="top:660px" data-in="39.1" data-out="43.4" data-fx="right"><span class="ic">🏠</span><span><b>À domicile ou en ligne</b></span></div>
+<div class="a card" style="top:900px" data-in="40.5" data-out="43.4" data-fx="left"><span class="ic">📱</span><span><b>Paiement Mobile Money</b><small>Wave · Orange · MTN · Moov</small></span></div>
+<!-- 9. Appel à l'action -->
+<div class="a c h2" style="top:280px" data-in="43.5" data-out="52.4" data-fx="up">Ne laissez pas les difficultés <span class="gold">s’installer.</span></div>
+<div class="a c h3" style="top:600px" data-in="44.6" data-out="52.4" data-fx="up">Contactez-nous<br>dès aujourd’hui</div>
+<div class="a tel" style="top:800px" data-in="45.4" data-out="52.4" data-fx="pop" id="tel"><small>📞 Appel · WhatsApp</small><b style="font-size:100px">01 61 70 13 61</b><small style="font-size:34px;margin-top:6px">+225</small></div>
+<div class="a c" style="top:1160px;font-size:46px;font-weight:800" data-in="47.0" data-out="52.4" data-fx="up">🌐 kone-educ.vercel.app</div>
+<div class="a c" style="top:1250px;font-size:36px;font-weight:700;color:#cfdcf3;padding:0 40px" data-in="48.2" data-out="52.4" data-fx="up">Partout à Abidjan · Cocody · Yopougon · Abobo · Marcory…</div>
+<!-- 10. Carton final -->
+<div class="a c" style="top:200px" data-in="52.5" data-out="999" data-fx="zoom"><div class="logocard"><img src="file:///home/user/kone-educ/assets/logo/kone-educ-logo.jpg" alt=""></div></div>
+<div class="a c" style="top:880px;font-size:58px;font-weight:900" data-in="53.0" data-out="999" data-fx="up">La réussite, <span class="gold">ça se prépare.</span></div>
+<div class="a tel" style="top:1010px;padding:30px" data-in="53.4" data-out="999" data-fx="up"><small>Appel · WhatsApp</small><b style="font-size:92px">01 61 70 13 61</b></div>
+<div id="sub" style="display:none"></div><div id="prog"></div>
+</div>
+<script>
+const SRT = window.__SRT || [];
+const els = [...document.querySelectorAll('.a')].map(e => ({ e, i: +e.dataset.in, o: +e.dataset.out, fx: e.dataset.fx }));
+const ease = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+const back = x => { x = Math.max(0, Math.min(1, x)); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const TOTAL = window.__TOTAL || 117;
+window.render = function (t) {
+  for (const { e, i, o, fx } of els) {
+    if (t < i - 0.01 || t > o + 0.5) { e.style.opacity = 0; continue; }
+    const pin = (t - i) / 0.6, pout = (t - o) / 0.45;
+    let op = ease(pin) * (t > o ? 1 - ease(pout) : 1), tr = '';
+    const k = 1 - ease(pin), kb = back(pin);
+    if (fx === 'up') tr = 'translateY(' + (60 * k) + 'px)';
+    else if (fx === 'left') tr = 'translateX(' + (-140 * k) + 'px)';
+    else if (fx === 'right') tr = 'translateX(' + (140 * k) + 'px)';
+    else if (fx === 'zoom') tr = 'scale(' + (0.7 + 0.3 * kb) + ')';
+    else if (fx === 'pop') tr = 'scale(' + (0.6 + 0.4 * kb) + ')';
+    else if (fx === 'rise') tr = 'translateY(' + (220 * k) + 'px)';
+    if (t > o) tr += ' translateY(' + (-30 * ease(pout)) + 'px)';
+    if (e.id === 'tel' && t > i + 0.8) tr += ' scale(' + (1 + 0.025 * Math.sin((t - i) * 5)) + ')';
+    e.style.opacity = op; e.style.transform = tr;
+  }
+  // Fonds animés
+  b1.style.transform = 'translate(' + (-250 + 120 * Math.sin(t * 0.25)) + 'px,' + (-200 + 80 * Math.cos(t * 0.2)) + 'px)';
+  b2.style.transform = 'translate(' + (600 + 100 * Math.cos(t * 0.3)) + 'px,' + (1300 + 90 * Math.sin(t * 0.22)) + 'px)';
+  document.getElementById('pbar').style.width = (30 + 60 * ease((t - 31) / 4)) + '%';
+  mini.style.opacity = t > 13.3 && t < 52.4 ? Math.min(1, (t - 13.3) / 0.5, (52.4 - t) / 0.4) : 0;
+  // Sous-titres (fichier SRT)
+  const s = SRT.find(x => t >= x.a && t <= x.b + 0.15);
+  const sub = document.getElementById('sub');
+  if (s) { if (sub.dataset.k !== String(s.a)) { sub.textContent = s.text; sub.dataset.k = String(s.a); } sub.style.opacity = Math.min(1, (t - s.a) / 0.2, (s.b + 0.15 - t) / 0.15); }
+  else sub.style.opacity = 0;
+  prog.style.width = (t / TOTAL * 100) + '%';
+};
+</script></body></html>
