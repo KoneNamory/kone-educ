@@ -24,3 +24,9 @@ Pour modifier un texte ou un horaire : éditer `video-reseaux.html` (attributs `
 TOTAL=59.5 PAGE=video-presentatrice.html SRT=presentatrice.srt node render.mjs "$PWD" video "$PWD/muet.mp4" 30
 ```
 Puis mixer la voix (volume 1) et la musique (`python3 musique.py musique.wav 59.5 96`, volume 0,13) avec ffmpeg.
+
+### Version animée (lèvres et tête)
+
+1. Animer la photo avec SadTalker (logiciel libre) : `python inference.py --driven_audio voix16k.wav --source_image presentatrice.png --preprocess full --cpu --size 256` (environ 2 h sur processeur).
+2. Extraire les images dans `anim/` : `ffmpeg -i resultat_full.mp4 -q:v 3 anim/f%04d.jpg`.
+3. Monter avec `PAGE=video-presentatrice-anim.html` (même commande que ci-dessus), puis mixer la voix et la musique.
