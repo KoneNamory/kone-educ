@@ -61,6 +61,7 @@
       + '<div class="ke-account-grid">'
       + '<div class="ke-account-card"><span class="ke-account-ic">👪</span><b>Parent</b><small>Je cherche des cours pour mon enfant</small><a class="ke-btn fill" href="connexion.html?role=parent">Se connecter</a><a class="ke-btn" href="inscription.html?role=parent">Créer un compte</a></div>'
       + '<div class="ke-account-card"><span class="ke-account-ic">👩‍🏫</span><b>Enseignant</b><small>Je donne des cours</small><a class="ke-btn fill" href="connexion.html?role=teacher">Se connecter</a><a class="ke-btn" href="inscription.html?role=teacher">Créer un compte</a></div>'
+      + '<div class="ke-account-card"><span class="ke-account-ic">🏪</span><b>Vendeur</b><small>Je vends livres, cahiers, fournitures</small><a class="ke-btn fill" href="connexion.html?role=seller">Se connecter</a><a class="ke-btn" href="inscription.html?role=seller">Créer un compte</a></div>'
       + '</div>';
     document.body.appendChild(dlg);
     dlg.querySelector('.ke-account-x').onclick = function () { dlg.close(); };

@@ -2,9 +2,10 @@
 (function () {
   var client = typeof db !== 'undefined' ? db : supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
   var LINKS = {
-    parent: [['espace-parent.html', 'Mon espace'], ['planning.html', 'Planning'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['reservation.html', 'Nouvelle demande']],
-    teacher: [['espace-enseignant.html', 'Mon espace'], ['planning.html', 'Planning'], ['offres.html', 'Offres de cours'], ['versements.html', 'Mes gains'], ['ressources.html', 'Ressources']],
-    admin: [['espace-admin.html', 'Administration'], ['tableau-de-bord.html', 'Tableau de bord'], ['planning.html', 'Planning'], ['versements.html', 'Versements'], ['gestion-documents.html', 'Documents'], ['ressources.html', 'Ressources']]
+    parent: [['espace-parent.html', 'Mon espace'], ['planning.html', 'Planning'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['mes-commandes.html', 'Mes commandes'], ['reservation.html', 'Nouvelle demande']],
+    teacher: [['espace-enseignant.html', 'Mon espace'], ['planning.html', 'Planning'], ['offres.html', 'Offres de cours'], ['versements.html', 'Mes gains'], ['ressources.html', 'Ressources'], ['mes-commandes.html', 'Mes commandes']],
+    seller: [['espace-vendeur.html', 'Ma boutique'], ['boutique.html', 'Voir la boutique en ligne'], ['mes-commandes.html', 'Mes achats']],
+    admin: [['espace-admin.html', 'Administration'], ['tableau-de-bord.html', 'Tableau de bord'], ['planning.html', 'Planning'], ['versements.html', 'Versements'], ['gestion-documents.html', 'Documents'], ['espace-admin.html#shops', 'Boutiques'], ['ressources.html', 'Ressources']]
   };
   var page = location.pathname.split('/').pop() || 'index.html';
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -23,7 +24,7 @@
       user.innerHTML = '<span class="ke-app-avatar" aria-hidden="true">' + esc(name.trim().charAt(0).toUpperCase() || '?') + '</span><span class="ke-app-name">' + esc(name) + '</span><button type="button" class="ke-app-out">Se déconnecter</button>';
       user.querySelector('button').onclick = function () { client.auth.signOut().then(function () { location.href = 'connexion.html'; }); };
       // Cloche et messages : non-lus visibles partout, panneau au clic, chaque notification mène à sa page
-      var homes = { parent: 'espace-parent.html', teacher: 'espace-enseignant.html', admin: 'espace-admin.html' };
+      var homes = { parent: 'espace-parent.html', teacher: 'espace-enseignant.html', admin: 'espace-admin.html', seller: 'espace-vendeur.html' };
       if (!homes[prof.role]) return;
       var wrap = document.createElement('div');
       wrap.className = 'ke-notif';
