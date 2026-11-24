@@ -1,0 +1,99 @@
+% ============================================================
+% KONE.EDUC — Affiche d'offre : enseignant(e) en 3e à Bingerville
+% Compilation : pdflatex offre-3e-bingerville.tex   (donne le PDF)
+% Image PNG   : pdftoppm -png -r 150 -singlefile offre-3e-bingerville.pdf offre-3e-bingerville
+%               (ou sur Overleaf : Menu > Télécharger le PDF, puis l'exporter en image)
+% Pour une nouvelle offre, modifiez seulement la partie « À MODIFIER ».
+% ============================================================
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[scaled=1]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[paperwidth=216mm,paperheight=270mm,margin=0mm]{geometry} % format 4:5 (comme 1080 × 1350)
+\usepackage{tikz}
+\usetikzlibrary{positioning,calc}
+\usepackage{qrcode}
+\pagestyle{empty}
+
+% ---------------------------- À MODIFIER ----------------------------
+\newcommand{\Niveau}{3e}
+\newcommand{\Examen}{Préparation au BEPC}
+\newcommand{\Ville}{Abidjan}
+\newcommand{\Commune}{Bingerville}
+\newcommand{\Quartier}{Communiqué au contact}
+\newcommand{\Mensualite}{40\,000}
+\newcommand{\Telephone}{01 61 70 13 61}
+\newcommand{\Matieres}{\matiere{Mathématiques}\matiere{Physique-Chimie}\matiere{Français}\matiere{Anglais}}
+% Lien WhatsApp du QR code (message déjà écrit pour le candidat)
+\newcommand{\LienWhatsApp}{https://wa.me/2250161701361?text=Bonjour\%20KONE.EDUC\%2C\%20je\%20suis\%20int\%C3\%A9ress\%C3\%A9(e)\%20par\%20l\%20offre\%20de\%203e\%20\%C3\%A0\%20Bingerville}
+% Logo : placez kone-educ-embleme.jpg à côté de ce fichier (facultatif)
+\newcommand{\Logo}{kone-educ-embleme.jpg}
+% --------------------------------------------------------------------
+
+\definecolor{navy}{HTML}{10294F}
+\definecolor{navyfonce}{HTML}{0B1D3B}
+\definecolor{bleu}{HTML}{1D4A8C}
+\definecolor{or}{HTML}{F0B030}
+\definecolor{orfonce}{HTML}{D4911A}
+\definecolor{encre}{HTML}{0F1B37}
+\definecolor{gris}{HTML}{9FB4D8}
+\definecolor{clair}{HTML}{CFDCF3}
+
+% Une matière = une pastille blanche
+\newcommand{\matiere}[1]{\tikz[baseline=(m.base)]\node[fill=white,rounded corners=11pt,inner xsep=10pt,inner ysep=6pt,text=navy,font=\bfseries\fontsize{15}{15}\selectfont](m){#1};\hspace{6pt}}
+% Une case d'information
+\newcommand{\caseinfo}[5]{% #1 nœud, #2 position, #3 largeur, #4 titre, #5 valeur
+  \node[#2,minimum width=#3,minimum height=24mm,fill=white,fill opacity=.08,text opacity=1,draw=white,draw opacity=.15,rounded corners=12pt,anchor=north west,inner sep=0pt](#1){};
+  \node[anchor=north west,text=gris,font=\bfseries\fontsize{12}{12}\selectfont] at ($(#1.north west)+(6mm,-5mm)$) {\MakeUppercase{#4}};
+  \node[anchor=north west,text=white,font=\bfseries\fontsize{24}{26}\selectfont,text width=#3-12mm] at ($(#1.north west)+(6mm,-12mm)$) {#5};}
+
+\begin{document}
+\begin{tikzpicture}[remember picture,overlay]
+  % Fond dégradé
+  \shade[top color=bleu,bottom color=navyfonce,middle color=navy] (current page.north west) rectangle (current page.south east);
+  \coordinate (O) at ($(current page.north west)+(15mm,-11mm)$);
+
+  % Logo
+  \node[fill=white,rounded corners=24pt,anchor=north west,inner xsep=6mm,inner ysep=3mm] (logo) at (O) {%
+    \IfFileExists{\Logo}{\includegraphics[height=15mm]{\Logo}\hspace{3mm}}{}%
+    {\color{navy}\bfseries\fontsize{24}{24}\selectfont KONE}{\color{orfonce}\bfseries\fontsize{24}{24}\selectfont .EDUC}};
+  \node[fill=or,rounded corners=14pt,anchor=north east,inner xsep=5mm,inner ysep=3mm,text=encre,font=\bfseries\fontsize{16}{16}\selectfont]
+    at ($(current page.north east)+(-15mm,-15mm)$) {Abidjan};
+
+  % Bandeau « OFFRE »
+  \node[draw=or,line width=1.2pt,fill=or,fill opacity=.15,text opacity=1,rounded corners=6pt,anchor=north west,inner xsep=5mm,inner ysep=2.5mm,text=or,font=\bfseries\fontsize{18}{18}\selectfont]
+    (offre) at ($(O)+(0,-29mm)$) {O F F R E \ \ K O N E . E D U C};
+
+  % Titre
+  \node[anchor=north west,text=white,font=\bfseries\fontsize{42}{44}\selectfont,align=left] (titre) at ($(offre.south west)+(0,-3mm)$)
+    {Enseignant(e)\\recherché(e) \textcolor{or}{en \Niveau}};
+  \node[anchor=north west,text=clair,font=\fontsize{17}{17}\selectfont] (sous) at ($(titre.south west)+(0,-2mm)$) {Cours à domicile · \Examen};
+
+  % Cases d'informations
+  \coordinate (G) at ($(sous.south west)+(0,-6mm)$);
+  \caseinfo{niv}{at={(G)}}{90mm}{Niveau de classe}{\Niveau}
+  \caseinfo{vil}{at={($(G)+(96mm,0)$)}}{90mm}{Ville}{\Ville}
+  \node[at={($(G)+(0,-27mm)$)},minimum width=186mm,minimum height=25mm,fill=white,fill opacity=.08,text opacity=1,draw=white,draw opacity=.15,rounded corners=12pt,anchor=north west,inner sep=0pt](mat){};
+  \node[anchor=north west,text=gris,font=\bfseries\fontsize{12}{12}\selectfont] at ($(mat.north west)+(6mm,-5mm)$) {MATIÈRES ENSEIGNÉES};
+  \node[anchor=north west,inner sep=0pt] at ($(mat.north west)+(4mm,-12.5mm)$) {\Matieres};
+  \caseinfo{com}{at={($(G)+(0,-55mm)$)}}{90mm}{Commune}{\Commune}
+  \caseinfo{qua}{at={($(G)+(96mm,-55mm)$)}}{90mm}{Quartier}{\textcolor{gris}{\fontsize{17}{19}\selectfont\mbox{\Quartier}}}
+
+  % Mensualité
+  \node[at={($(G)+(0,-82mm)$)},anchor=north west,minimum width=186mm,minimum height=22mm,fill=or,rounded corners=16pt,inner sep=0pt](pay){};
+  \node[anchor=west,text=encre,font=\bfseries\fontsize{15}{15}\selectfont] at ($(pay.west)+(6mm,0)$) {MENSUALITÉ};
+  \node[anchor=east,text=encre] at ($(pay.east)+(-6mm,0)$) {{\bfseries\fontsize{42}{42}\selectfont \Mensualite}\ {\bfseries\fontsize{18}{18}\selectfont FCFA / mois}};
+
+  % Contact + QR code WhatsApp
+  \node[at={($(pay.south west)+(0,-4mm)$)},anchor=north west,minimum width=186mm,minimum height=40mm,fill=white,rounded corners=16pt,inner sep=0pt](cta){};
+  \node[anchor=north west,text=encre,font=\bfseries\fontsize{14}{14}\selectfont] at ($(cta.north west)+(7mm,-7mm)$) {Intéressé(e) ? Appel · WhatsApp};
+  \node[anchor=north west,text=navy,font=\bfseries\fontsize{36}{36}\selectfont] at ($(cta.north west)+(7mm,-15mm)$) {\Telephone};
+  \node[anchor=south west,text=encre,font=\fontsize{11}{11}\selectfont] at ($(cta.south west)+(7mm,6mm)$) {Scannez pour postuler sur WhatsApp};
+  \node[anchor=east,inner sep=0pt] at ($(cta.east)+(-5mm,0)$) {\color{navy}\qrcode[height=32mm,level=L]{\LienWhatsApp}};
+
+  % Pied
+  \node[anchor=north,text=clair,font=\bfseries\fontsize{14}{14}\selectfont] at ($(cta.south)+(0,-5mm)$) {Envoyez votre CV et vos disponibilités sur WhatsApp};
+\end{tikzpicture}
+\end{document}
