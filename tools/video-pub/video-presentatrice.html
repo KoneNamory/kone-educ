@@ -1,0 +1,81 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-SemiBold.otf);font-weight:600}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-Bold.otf);font-weight:700}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-ExtraBold.otf);font-weight:800}
+@font-face{font-family:I;src:url(file:///usr/share/fonts/opentype/inter/Inter-Black.otf);font-weight:900}
+:root{--navy:#10294f;--gold:#e9a92c;--ink:#0f1b37}
+*{margin:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000;font-family:I,sans-serif;color:#fff}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden}
+#photo{position:absolute;inset:-4%;background:url(presentatrice.jpg) center 20%/cover;transform-origin:50% 35%}
+#shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,16,36,.55) 0%,rgba(6,16,36,0) 18%,rgba(6,16,36,0) 46%,rgba(6,16,36,.55) 70%,rgba(6,16,36,.85) 100%)}
+#logo{position:absolute;left:46px;top:60px;display:flex;align-items:center;gap:16px;padding:12px 26px 12px 12px;border-radius:99px;background:rgba(255,255,255,.95);color:var(--navy);font-size:40px;font-weight:900;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#logo img{width:76px;height:76px;border-radius:50%;object-fit:contain;background:#fff}
+#logo span{color:var(--gold)}
+#tag{position:absolute;right:46px;top:76px;padding:12px 22px;border-radius:99px;background:var(--gold);color:var(--ink);font-size:30px;font-weight:900}
+.a{position:absolute;opacity:0;will-change:transform,opacity}
+.chip{left:70px;display:inline-flex;align-items:center;gap:18px;padding:22px 32px;border-radius:26px;background:rgba(16,41,79,.88);border:2px solid rgba(233,169,44,.6);font-size:46px;font-weight:800;box-shadow:0 16px 40px rgba(0,0,0,.35);max-width:900px}
+.chip.gold{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.chip .n{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:var(--gold);color:var(--ink);font-weight:900}
+.chip.gold .n{background:var(--ink);color:var(--gold)}
+#sub{position:absolute;left:60px;right:60px;top:1330px;min-height:150px;display:flex;align-items:center;justify-content:center;text-align:center;padding:22px 30px;border-radius:28px;background:rgba(6,16,36,.78);font-size:44px;font-weight:700;line-height:1.28;opacity:0}
+#sub b{color:var(--gold)}
+#final{position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#1d4a8c 0%,#10294f 55%,#0b1d3b 100%);opacity:0;display:flex;flex-direction:column;align-items:center;padding-top:200px}
+.logocard{width:480px;padding:24px;border-radius:44px;background:#fff;box-shadow:0 30px 80px rgba(0,0,0,.45)}.logocard img{display:block;width:100%}
+.tel{margin-top:60px;width:860px;padding:34px 30px;border-radius:40px;background:var(--gold);color:var(--ink);text-align:center}
+.tel small{display:block;font-size:40px;font-weight:800}.tel b{display:block;font-size:104px;font-weight:900;letter-spacing:-3px;line-height:1.05}
+.slogan{margin-top:50px;font-size:58px;font-weight:900}.slogan span{color:var(--gold)}
+#prog{position:absolute;left:0;bottom:0;height:10px;background:var(--gold)}
+</style></head><body><div id="stage">
+<div id="photo"></div><div id="shade"></div>
+<div id="logo"><img src="file:///home/user/kone-educ/assets/logo/kone-educ-embleme.jpg" alt=""><em style="font-style:normal">KONE<span>.EDUC</span></em></div>
+<div id="tag">📍 Abidjan</div>
+
+<div class="a chip" style="top:1010px" data-in="1.2" data-out="8.2">📉 Les notes ne suivent pas</div>
+<div class="a chip" style="top:1150px" data-in="4.6" data-out="10.2">😟 « Je ne comprends pas les maths »</div>
+<div class="a chip" style="top:870px" data-in="12.2" data-out="18.2">🧱 Des lacunes qui s’accumulent</div>
+<div class="a chip" style="top:1010px" data-in="15.7" data-out="24.4">💔 La confiance qui baisse</div>
+<div class="a chip gold" style="top:1150px" data-in="19.2" data-out="24.4">⏳ BEPC · BAC : la pression</div>
+<div class="a chip gold" style="top:1150px" data-in="25.6" data-out="29.9">🎓 Chaque enfant peut réussir</div>
+<div class="a chip" style="top:1150px" data-in="30.3" data-out="32.4">✅ Enseignant vérifié, à domicile</div>
+<div class="a chip" style="top:870px" data-in="32.9" data-out="39.6"><span class="n">1</span>Diagnostic</div>
+<div class="a chip" style="top:1010px" data-in="34.9" data-out="39.6"><span class="n">2</span>Programme adapté</div>
+<div class="a chip" style="top:1150px" data-in="37.2" data-out="39.6"><span class="n">3</span>Exercices corrigés pas à pas</div>
+<div class="a chip gold" style="top:1010px" data-in="42.4" data-out="45.8">📝 Compte rendu après chaque séance</div>
+<div class="a chip gold" style="top:1150px" data-in="44.1" data-out="45.8">📊 Bilan chaque mois</div>
+<div class="a chip gold" style="top:1060px;font-size:60px" data-in="49.6" data-out="55.8" id="phone">📞 +225 01 61 70 13 61</div>
+
+<div id="sub"></div>
+<div id="final"><div class="logocard"><img src="file:///home/user/kone-educ/assets/logo/kone-educ-logo.jpg" alt=""></div>
+<div class="slogan">La réussite, <span>ça se prépare.</span></div>
+<div class="tel"><small>📞 Appel · WhatsApp</small><b>01 61 70 13 61</b></div>
+<div style="margin-top:34px;font-size:44px;font-weight:800">🌐 kone-educ.vercel.app</div></div>
+<div id="prog"></div>
+</div>
+<script>
+const SRT = window.__SRT || [], TOTAL = window.__TOTAL || 60;
+const els = [...document.querySelectorAll('.a')].map(e => ({ e, i: +e.dataset.in, o: +e.dataset.out }));
+const ease = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+const back = x => { x = Math.max(0, Math.min(1, x)); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const hl = s => s.replace(/(KONE\.EDUC|BEPC|BAC|enseignant vérifié|diagnostic|compte rendu|bilan|01 61 70 13 61)/g, '<b>$1</b>');
+window.render = function (t) {
+  // Mouvement de caméra lent (zoom + léger balancement)
+  photo.style.transform = 'scale(' + (1.02 + 0.06 * (t / TOTAL)) + ') translate(' + (6 * Math.sin(t * 0.35)) + 'px,' + (4 * Math.cos(t * 0.3)) + 'px)';
+  for (const { e, i, o } of els) {
+    if (t < i - 0.01 || t > o + 0.45) { e.style.opacity = 0; continue; }
+    const pin = (t - i) / 0.5, pout = (t - o) / 0.4;
+    e.style.opacity = ease(pin) * (t > o ? 1 - ease(pout) : 1);
+    let tr = 'translateX(' + (-120 * (1 - ease(pin))) + 'px) scale(' + (0.85 + 0.15 * back(pin)) + ')';
+    if (e.id === 'phone' && t > i + 0.6) tr += ' scale(' + (1 + 0.03 * Math.sin((t - i) * 5)) + ')';
+    e.style.transform = tr;
+  }
+  const s = SRT.find(x => t >= x.a - 0.05 && t <= x.b + 0.2);
+  if (s) { if (sub.dataset.k !== String(s.a)) { sub.innerHTML = '<span>' + hl(s.text) + '</span>'; sub.dataset.k = String(s.a); } sub.style.opacity = Math.min(1, (t - s.a + 0.05) / 0.15, (s.b + 0.2 - t) / 0.15); }
+  else sub.style.opacity = 0;
+  const f = Math.max(0, Math.min(1, (t - 55.9) / 0.5));
+  final.style.opacity = f; final.style.transform = 'scale(' + (1.04 - 0.04 * ease(f)) + ')';
+  sub.style.visibility = f > 0.5 ? 'hidden' : 'visible';
+  prog.style.width = (t / TOTAL * 100) + '%';
+};
+</script></body></html>
