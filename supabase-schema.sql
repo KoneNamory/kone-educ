@@ -168,10 +168,12 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
 $$;
 
--- À l'inscription, seuls les rôles Parent et Enseignant peuvent être choisis
+-- À l'inscription, seuls les rôles Parent, Enseignant et Vendeur peuvent être choisis
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check check (role in ('parent','teacher','admin','seller'));
 drop policy if exists "Users create own profile" on public.profiles;
 create policy "Users create own profile" on public.profiles for insert to authenticated
-  with check (auth.uid() = id and role in ('parent','teacher'));
+  with check (auth.uid() = id and role in ('parent','teacher','seller'));
 
 -- Le rôle ne peut être modifié que par un administrateur (ou depuis le tableau de bord Supabase)
 create or replace function public.protect_profile_role() returns trigger
@@ -521,7 +523,7 @@ declare
 begin
   if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Adresse e-mail invalide'; end if;
   if length(coalesce(p_password, '')) < 6 then raise exception 'Le mot de passe doit contenir au moins 6 caractères'; end if;
-  if p_role not in ('parent', 'teacher') then raise exception 'Type de compte invalide'; end if;
+  if p_role not in ('parent', 'teacher', 'seller') then raise exception 'Type de compte invalide'; end if;
   if length(trim(coalesce(p_full_name, ''))) < 2 or length(p_full_name) > 120 then raise exception 'Nom invalide'; end if;
   if length(trim(coalesce(p_phone, ''))) < 8 or length(p_phone) > 30 then raise exception 'Numéro de téléphone invalide'; end if;
   if exists (select 1 from auth.users where lower(email) = v_email) then
@@ -693,7 +695,7 @@ create or replace function public.admin_set_profile(p_id uuid, p_role text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
-  if p_role not in ('parent','teacher') then raise exception 'Type de compte invalide'; end if;
+  if p_role not in ('parent','teacher','seller') then raise exception 'Type de compte invalide'; end if;
   insert into public.profiles (id, full_name, role)
   select u.id, coalesce(nullif(u.raw_user_meta_data->>'full_name',''), split_part(u.email, '@', 1)), p_role
   from auth.users u where u.id = p_id
@@ -792,6 +794,7 @@ begin
     when new.title in ('Nouvel inscrit') then 'espace-admin.html#users'
     when new.title in ('Nouvelle demande de cours', 'Nouvelle candidature enseignant') then 'espace-admin.html'
     when v_role = 'teacher' then 'espace-enseignant.html'
+    when v_role = 'seller' then 'espace-vendeur.html'
     when v_role = 'admin' then 'espace-admin.html'
     else 'espace-parent.html' end;
   return new;
@@ -833,7 +836,7 @@ language plpgsql security definer set search_path = public as $$
 begin
   if new.role = 'admin' then return new; end if;
   insert into public.notifications (recipient_id, title, body)
-  select a.id, 'Nouvel inscrit', coalesce(new.full_name, 'Un utilisateur') || ' vient de créer un compte ' || case new.role when 'teacher' then 'Enseignant' else 'Parent' end || coalesce(' · ' || new.phone, '') || '.'
+  select a.id, 'Nouvel inscrit', coalesce(new.full_name, 'Un utilisateur') || ' vient de créer un compte ' || case new.role when 'teacher' then 'Enseignant' when 'seller' then 'Vendeur' else 'Parent' end || coalesce(' · ' || new.phone, '') || '.'
   from public.profiles a where a.role = 'admin';
   return new;
 end;
@@ -1533,6 +1536,457 @@ end;
 $$;
 revoke execute on function public.answer_first_feedback(bigint, text, text, boolean) from public;
 grant execute on function public.answer_first_feedback(bigint, text, text, boolean) to authenticated;
+
+-- ============================================================
+-- Boutique : des vendeurs (librairies, papeteries…) vendent livres, cahiers,
+-- documents et fournitures aux parents et aux enseignants.
+-- Commande en ligne, paiement à la livraison ou par mobile money, livraison par le vendeur.
+-- ============================================================
+create table if not exists public.shops (
+  id bigint generated always as identity primary key,
+  owner_id uuid not null unique references public.profiles(id) on delete cascade,
+  name text not null check (length(trim(name)) between 2 and 80),
+  description text check (length(description) <= 600),
+  phone text not null check (length(trim(phone)) between 8 and 30),
+  whatsapp text check (length(whatsapp) <= 30),
+  commune text not null check (length(commune) <= 80),
+  quartier text check (length(quartier) <= 80),
+  address text check (length(address) <= 200),
+  logo_url text,
+  status text not null default 'pending' check (status in ('pending','approved','suspended')),
+  is_open boolean not null default true,
+  pickup boolean not null default true,
+  delivery_fees jsonb not null default '{}'::jsonb,
+  default_delivery_fee integer check (default_delivery_fee is null or default_delivery_fee between 0 and 100000),
+  delivery_delay text check (length(delivery_delay) <= 80),
+  min_order integer not null default 0 check (min_order between 0 and 1000000),
+  pay_cod boolean not null default true,
+  pay_momo boolean not null default false,
+  momo_wave text check (length(momo_wave) <= 30),
+  momo_orange text check (length(momo_orange) <= 30),
+  momo_mtn text check (length(momo_mtn) <= 30),
+  momo_moov text check (length(momo_moov) <= 30),
+  commission_rate numeric(5,2) not null default 0 check (commission_rate between 0 and 50),
+  created_at timestamptz not null default now(),
+  approved_at timestamptz,
+  check (jsonb_typeof(delivery_fees) = 'object'),
+  check (pay_cod or pay_momo)
+);
+
+create table if not exists public.products (
+  id bigint generated always as identity primary key,
+  shop_id bigint not null references public.shops(id) on delete cascade,
+  name text not null check (length(trim(name)) between 2 and 120),
+  description text check (length(description) <= 1000),
+  category text not null check (category in ('livres','manuels','cahiers','fournitures','documents','annales','autres')),
+  level text check (length(level) <= 40),
+  subject text check (length(subject) <= 60),
+  price integer not null check (price between 0 and 10000000),
+  stock integer check (stock is null or stock >= 0),
+  photo_url text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists products_shop_idx on public.products (shop_id);
+
+create table if not exists public.orders (
+  id bigint generated always as identity primary key,
+  ref text not null unique default upper(substr(md5(gen_random_uuid()::text), 1, 6)),
+  shop_id bigint not null references public.shops(id) on delete restrict,
+  buyer_id uuid not null references public.profiles(id) on delete cascade,
+  buyer_name text not null,
+  buyer_phone text not null,
+  delivery_mode text not null check (delivery_mode in ('delivery','pickup')),
+  commune text, quartier text, address text,
+  subtotal integer not null check (subtotal >= 0),
+  delivery_fee integer not null default 0 check (delivery_fee >= 0),
+  total integer not null check (total >= 0),
+  commission integer not null default 0,
+  payment_method text not null check (payment_method in ('cod','momo')),
+  payment_status text not null default 'unpaid' check (payment_status in ('unpaid','declared','paid')),
+  payment_ref text,
+  status text not null default 'new' check (status in ('new','accepted','ready','delivering','delivered','cancelled','refused')),
+  note text, seller_note text, cancel_reason text,
+  rating smallint check (rating between 1 and 5), review text,
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz, ready_at timestamptz, delivering_at timestamptz, delivered_at timestamptz, cancelled_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+create index if not exists orders_shop_idx on public.orders (shop_id, created_at desc);
+create index if not exists orders_buyer_idx on public.orders (buyer_id, created_at desc);
+
+create table if not exists public.order_items (
+  id bigint generated always as identity primary key,
+  order_id bigint not null references public.orders(id) on delete cascade,
+  product_id bigint references public.products(id) on delete set null,
+  name text not null,
+  unit_price integer not null check (unit_price >= 0),
+  qty integer not null check (qty between 1 and 100),
+  line_total integer not null
+);
+create index if not exists order_items_order_idx on public.order_items (order_id);
+
+alter table public.shops enable row level security;
+alter table public.products enable row level security;
+alter table public.orders enable row level security;
+alter table public.order_items enable row level security;
+
+grant select on public.shops, public.products to anon, authenticated;
+grant insert, update on public.shops to authenticated;
+grant insert, update, delete on public.products to authenticated;
+grant select on public.orders, public.order_items to authenticated;
+
+create or replace function public.my_shop_id() returns bigint
+language sql stable security definer set search_path = public as $$
+  select id from public.shops where owner_id = auth.uid();
+$$;
+grant execute on function public.my_shop_id() to authenticated;
+
+drop policy if exists "Shops visible" on public.shops;
+create policy "Shops visible" on public.shops for select to anon, authenticated
+  using (status = 'approved' or owner_id = auth.uid() or public.is_admin());
+drop policy if exists "Sellers create own shop" on public.shops;
+create policy "Sellers create own shop" on public.shops for insert to authenticated
+  with check (owner_id = auth.uid() and status = 'pending'
+              and exists (select 1 from public.profiles where id = auth.uid() and role = 'seller'));
+drop policy if exists "Sellers update own shop" on public.shops;
+create policy "Sellers update own shop" on public.shops for update to authenticated
+  using (owner_id = auth.uid() or public.is_admin()) with check (owner_id = auth.uid() or public.is_admin());
+
+-- Le vendeur ne peut pas valider sa boutique ni changer sa commission
+create or replace function public.protect_shop() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null and not public.is_admin() then
+    if new.status is distinct from old.status or new.commission_rate is distinct from old.commission_rate
+       or new.approved_at is distinct from old.approved_at or new.owner_id is distinct from old.owner_id then
+      raise exception 'Modification réservée à l’équipe KONE.EDUC';
+    end if;
+  end if;
+  if new.status = 'approved' and old.status is distinct from 'approved' then new.approved_at := now(); end if;
+  return new;
+end;
+$$;
+drop trigger if exists protect_shop on public.shops;
+create trigger protect_shop before update on public.shops for each row execute function public.protect_shop();
+
+drop policy if exists "Products visible" on public.products;
+create policy "Products visible" on public.products for select to anon, authenticated
+  using ((active and exists (select 1 from public.shops s where s.id = shop_id and s.status = 'approved'))
+         or shop_id = public.my_shop_id() or public.is_admin());
+drop policy if exists "Sellers manage own products" on public.products;
+create policy "Sellers manage own products" on public.products for all to authenticated
+  using (shop_id = public.my_shop_id() or public.is_admin())
+  with check (shop_id = public.my_shop_id() or public.is_admin());
+
+create or replace function public.touch_product() returns trigger
+language plpgsql as $$ begin new.updated_at := now(); return new; end; $$;
+drop trigger if exists touch_product on public.products;
+create trigger touch_product before update on public.products for each row execute function public.touch_product();
+
+drop policy if exists "Orders visible to parties" on public.orders;
+create policy "Orders visible to parties" on public.orders for select to authenticated
+  using (buyer_id = auth.uid() or shop_id = public.my_shop_id() or public.is_admin());
+drop policy if exists "Order items visible to parties" on public.order_items;
+create policy "Order items visible to parties" on public.order_items for select to authenticated
+  using (exists (select 1 from public.orders o where o.id = order_id
+                 and (o.buyer_id = auth.uid() or o.shop_id = public.my_shop_id() or public.is_admin())));
+
+-- Photos des produits et logos : dossier public « shop-images », chacun dans son propre dossier
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('shop-images', 'shop-images', true, 3145728, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "Sellers upload shop images" on storage.objects;
+drop policy if exists "Sellers update shop images" on storage.objects;
+drop policy if exists "Sellers delete shop images" on storage.objects;
+create policy "Sellers upload shop images" on storage.objects for insert to authenticated
+  with check (bucket_id = 'shop-images' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Sellers update shop images" on storage.objects for update to authenticated
+  using (bucket_id = 'shop-images' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "Sellers delete shop images" on storage.objects for delete to authenticated
+  using (bucket_id = 'shop-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Boutiques publiques avec leur note moyenne et le nombre de commandes livrées
+create or replace function public.public_shops()
+returns table (id bigint, name text, description text, commune text, quartier text, logo_url text, is_open boolean,
+               pickup boolean, delivery_fees jsonb, default_delivery_fee integer, delivery_delay text, min_order integer,
+               pay_cod boolean, pay_momo boolean, phone text, whatsapp text, rating numeric, ratings_count bigint, delivered_count bigint, products_count bigint)
+language sql stable security definer set search_path = public as $$
+  select s.id, s.name, s.description, s.commune, s.quartier, s.logo_url, s.is_open, s.pickup, s.delivery_fees, s.default_delivery_fee,
+         s.delivery_delay, s.min_order, s.pay_cod, s.pay_momo, s.phone, s.whatsapp,
+         round(avg(o.rating)::numeric, 1), count(o.rating), count(o.id) filter (where o.status = 'delivered'),
+         (select count(*) from public.products p where p.shop_id = s.id and p.active)
+  from public.shops s left join public.orders o on o.shop_id = s.id
+  where s.status = 'approved'
+  group by s.id order by count(o.id) filter (where o.status = 'delivered') desc, s.name;
+$$;
+grant execute on function public.public_shops() to anon, authenticated;
+
+-- Numéros mobile money : visibles seulement par l'acheteur d'une commande payée par mobile money
+create or replace function public.order_momo_numbers(p_order bigint)
+returns table (wave text, orange text, mtn text, moov text)
+language sql stable security definer set search_path = public as $$
+  select s.momo_wave, s.momo_orange, s.momo_mtn, s.momo_moov
+  from public.orders o join public.shops s on s.id = o.shop_id
+  where o.id = p_order and (o.buyer_id = auth.uid() or public.is_admin());
+$$;
+grant execute on function public.order_momo_numbers(bigint) to authenticated;
+
+-- Passer une commande : prix, stock et frais de livraison calculés par le serveur (jamais par le navigateur)
+create or replace function public.place_order(p_shop bigint, p_items jsonb, p_mode text, p_commune text, p_quartier text,
+  p_address text, p_payment text, p_name text, p_phone text, p_note text)
+returns table (order_id bigint, order_ref text, order_total integer)
+language plpgsql security definer set search_path = public as $$
+declare v_shop public.shops; v_order public.orders; v_it jsonb; v_p public.products; v_qty integer;
+  v_sub integer := 0; v_fee integer := 0; v_lines jsonb := '[]'::jsonb; v_count integer;
+begin
+  if auth.uid() is null then raise exception 'Connectez-vous pour commander'; end if;
+  select * into v_shop from public.shops where id = p_shop;
+  if v_shop.id is null or v_shop.status <> 'approved' then raise exception 'Boutique indisponible'; end if;
+  if not v_shop.is_open then raise exception 'Cette boutique est fermée pour le moment'; end if;
+  if v_shop.owner_id = auth.uid() then raise exception 'Vous ne pouvez pas commander dans votre propre boutique'; end if;
+  if length(trim(coalesce(p_name, ''))) < 2 then raise exception 'Indiquez votre nom'; end if;
+  if length(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g')) < 8 then raise exception 'Numéro de téléphone invalide'; end if;
+  select count(*) into v_count from public.orders where buyer_id = auth.uid() and created_at > now() - interval '1 hour';
+  if v_count >= 10 then raise exception 'Trop de commandes en peu de temps. Réessayez plus tard.'; end if;
+  if p_payment = 'cod' and not v_shop.pay_cod then raise exception 'Cette boutique n’accepte pas le paiement à la livraison';
+  elsif p_payment = 'momo' and not v_shop.pay_momo then raise exception 'Cette boutique n’accepte pas le mobile money';
+  elsif p_payment not in ('cod','momo') then raise exception 'Mode de paiement invalide'; end if;
+  if p_mode = 'pickup' then
+    if not v_shop.pickup then raise exception 'Le retrait en boutique n’est pas proposé'; end if;
+  elsif p_mode = 'delivery' then
+    if coalesce(trim(p_commune), '') = '' then raise exception 'Indiquez la commune de livraison'; end if;
+    if v_shop.delivery_fees ? p_commune then v_fee := (v_shop.delivery_fees ->> p_commune)::integer;
+    elsif v_shop.default_delivery_fee is not null then v_fee := v_shop.default_delivery_fee;
+    else raise exception 'Cette boutique ne livre pas à %', p_commune; end if;
+  else raise exception 'Mode de livraison invalide'; end if;
+  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then raise exception 'Panier vide'; end if;
+  if jsonb_array_length(p_items) > 50 then raise exception 'Trop d’articles différents'; end if;
+  for v_it in select * from jsonb_array_elements(p_items) loop
+    v_qty := (v_it ->> 'qty')::integer;
+    if v_qty is null or v_qty < 1 or v_qty > 100 then raise exception 'Quantité invalide'; end if;
+    select * into v_p from public.products where id = (v_it ->> 'product_id')::bigint and shop_id = p_shop for update;
+    if v_p.id is null or not v_p.active then raise exception 'Un article n’est plus disponible'; end if;
+    if v_p.stock is not null and v_p.stock < v_qty then
+      raise exception 'Stock insuffisant pour « % » (reste %)', v_p.name, v_p.stock;
+    end if;
+    if v_p.stock is not null then update public.products set stock = stock - v_qty where id = v_p.id; end if;
+    v_sub := v_sub + v_p.price * v_qty;
+    v_lines := v_lines || jsonb_build_object('pid', v_p.id, 'name', v_p.name, 'price', v_p.price, 'qty', v_qty);
+  end loop;
+  if v_sub < v_shop.min_order then raise exception 'Commande minimum : % FCFA', v_shop.min_order; end if;
+  insert into public.orders (shop_id, buyer_id, buyer_name, buyer_phone, delivery_mode, commune, quartier, address,
+    subtotal, delivery_fee, total, commission, payment_method, note)
+  values (p_shop, auth.uid(), left(trim(p_name), 120), left(trim(p_phone), 30), p_mode,
+    case when p_mode = 'delivery' then left(trim(p_commune), 80) end, case when p_mode = 'delivery' then left(trim(p_quartier), 80) end,
+    case when p_mode = 'delivery' then left(trim(p_address), 200) end,
+    v_sub, v_fee, v_sub + v_fee, round(v_sub * v_shop.commission_rate / 100), p_payment, nullif(left(trim(coalesce(p_note, '')), 500), ''))
+  returning * into v_order;
+  insert into public.order_items (order_id, product_id, name, unit_price, qty, line_total)
+  select v_order.id, (l ->> 'pid')::bigint, l ->> 'name', (l ->> 'price')::integer, (l ->> 'qty')::integer,
+         (l ->> 'price')::integer * (l ->> 'qty')::integer
+  from jsonb_array_elements(v_lines) l;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_shop.owner_id, '🛒 Nouvelle commande',
+    'Commande ' || v_order.ref || ' de ' || v_order.buyer_name || ' : ' || v_order.total || ' FCFA ('
+    || case when p_mode = 'pickup' then 'retrait en boutique' else 'livraison à ' || v_order.commune end || '). Acceptez-la vite !',
+    'espace-vendeur.html'),
+    (auth.uid(), 'Commande envoyée',
+    'Votre commande ' || v_order.ref || ' chez ' || v_shop.name || ' (' || v_order.total || ' FCFA) a bien été envoyée. Le vendeur va la confirmer.',
+    'mes-commandes.html');
+  return query select v_order.id, v_order.ref, v_order.total;
+end;
+$$;
+revoke execute on function public.place_order(bigint, jsonb, text, text, text, text, text, text, text, text) from public;
+grant execute on function public.place_order(bigint, jsonb, text, text, text, text, text, text, text, text) to authenticated;
+
+-- Remise en stock des articles d'une commande annulée ou refusée
+create or replace function public.restock_order(p_order bigint) returns void
+language sql security definer set search_path = public as $$
+  update public.products p set stock = p.stock + i.qty
+  from public.order_items i where i.order_id = p_order and i.product_id = p.id and p.stock is not null;
+$$;
+revoke execute on function public.restock_order(bigint) from public, anon, authenticated;
+
+-- Le vendeur fait avancer la commande : acceptée → prête → en livraison → livrée (ou refusée / annulée)
+create or replace function public.seller_update_order(p_order bigint, p_status text, p_note text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_shop public.shops; v_ok boolean; v_msg text;
+begin
+  select * into v_o from public.orders where id = p_order for update;
+  select * into v_shop from public.shops where id = v_o.shop_id;
+  if v_o.id is null or (v_shop.owner_id is distinct from auth.uid() and not public.is_admin()) then raise exception 'Commande introuvable'; end if;
+  v_ok := case v_o.status
+    when 'new' then p_status in ('accepted','refused')
+    when 'accepted' then p_status in ('ready','delivering','delivered','cancelled')
+    when 'ready' then p_status in ('delivering','delivered','cancelled')
+    when 'delivering' then p_status in ('delivered','cancelled')
+    else false end;
+  if not v_ok then raise exception 'Changement impossible : la commande est déjà « % »', v_o.status; end if;
+  if p_status in ('refused','cancelled') and length(trim(coalesce(p_note, ''))) < 3 then
+    raise exception 'Indiquez la raison au client';
+  end if;
+  update public.orders set status = p_status, updated_at = now(),
+    seller_note = coalesce(nullif(left(trim(coalesce(p_note, '')), 300), ''), seller_note),
+    cancel_reason = case when p_status in ('refused','cancelled') then left(trim(p_note), 300) else cancel_reason end,
+    accepted_at = case when p_status = 'accepted' then now() else accepted_at end,
+    ready_at = case when p_status = 'ready' then now() else ready_at end,
+    delivering_at = case when p_status = 'delivering' then now() else delivering_at end,
+    delivered_at = case when p_status = 'delivered' then now() else delivered_at end,
+    cancelled_at = case when p_status in ('refused','cancelled') then now() else cancelled_at end,
+    payment_status = case when p_status = 'delivered' and payment_method = 'cod' then 'paid' else payment_status end
+  where id = p_order;
+  if p_status in ('refused','cancelled') then perform public.restock_order(p_order); end if;
+  v_msg := case p_status
+    when 'accepted' then 'Bonne nouvelle : ' || v_shop.name || ' a accepté votre commande ' || v_o.ref || coalesce(' (' || v_shop.delivery_delay || ')', '') || '.'
+    when 'ready' then 'Votre commande ' || v_o.ref || ' est prête' || case when v_o.delivery_mode = 'pickup' then ' : vous pouvez la retirer chez ' || v_shop.name || coalesce(', ' || v_shop.address, '') || '.' else ' et va bientôt partir en livraison.' end
+    when 'delivering' then 'Votre commande ' || v_o.ref || ' est en route ! Gardez votre téléphone près de vous.'
+    when 'delivered' then 'Commande ' || v_o.ref || ' livrée. Merci ! Donnez une note à ' || v_shop.name || ' pour aider les autres familles.'
+    when 'refused' then v_shop.name || ' ne peut pas honorer votre commande ' || v_o.ref || ' : ' || trim(p_note)
+    when 'cancelled' then 'Votre commande ' || v_o.ref || ' a été annulée par ' || v_shop.name || ' : ' || trim(p_note) end;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_o.buyer_id, case p_status when 'accepted' then 'Commande acceptée ✅' when 'ready' then 'Commande prête 📦'
+    when 'delivering' then 'Commande en route 🛵' when 'delivered' then 'Commande livrée 🎉' else 'Commande annulée' end, v_msg, 'mes-commandes.html');
+end;
+$$;
+revoke execute on function public.seller_update_order(bigint, text, text) from public;
+grant execute on function public.seller_update_order(bigint, text, text) to authenticated;
+
+-- Le vendeur confirme avoir reçu le paiement mobile money
+create or replace function public.seller_confirm_payment(p_order bigint)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_shop public.shops;
+begin
+  select * into v_o from public.orders where id = p_order for update;
+  select * into v_shop from public.shops where id = v_o.shop_id;
+  if v_o.id is null or (v_shop.owner_id is distinct from auth.uid() and not public.is_admin()) then raise exception 'Commande introuvable'; end if;
+  if v_o.status in ('refused','cancelled') then raise exception 'Commande annulée'; end if;
+  update public.orders set payment_status = 'paid', updated_at = now() where id = p_order;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_o.buyer_id, 'Paiement reçu', v_shop.name || ' confirme la réception de votre paiement pour la commande ' || v_o.ref || '.', 'mes-commandes.html');
+end;
+$$;
+revoke execute on function public.seller_confirm_payment(bigint) from public;
+grant execute on function public.seller_confirm_payment(bigint) to authenticated;
+
+-- L'acheteur annule tant que le vendeur n'a pas encore accepté
+create or replace function public.buyer_cancel_order(p_order bigint, p_reason text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_owner uuid;
+begin
+  select * into v_o from public.orders where id = p_order and buyer_id = auth.uid() for update;
+  if v_o.id is null then raise exception 'Commande introuvable'; end if;
+  if v_o.status <> 'new' then raise exception 'Le vendeur a déjà accepté la commande : contactez-le pour l’annuler'; end if;
+  update public.orders set status = 'cancelled', cancelled_at = now(), updated_at = now(),
+    cancel_reason = coalesce(nullif(left(trim(coalesce(p_reason, '')), 300), ''), 'Annulée par le client') where id = p_order;
+  perform public.restock_order(p_order);
+  select owner_id into v_owner from public.shops where id = v_o.shop_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_owner, 'Commande annulée par le client', 'Le client a annulé la commande ' || v_o.ref || coalesce(' : ' || nullif(trim(p_reason), ''), '.'), 'espace-vendeur.html');
+end;
+$$;
+revoke execute on function public.buyer_cancel_order(bigint, text) from public;
+grant execute on function public.buyer_cancel_order(bigint, text) to authenticated;
+
+-- L'acheteur signale son paiement mobile money (avec la référence de la transaction)
+create or replace function public.buyer_declare_payment(p_order bigint, p_ref text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_owner uuid;
+begin
+  select * into v_o from public.orders where id = p_order and buyer_id = auth.uid() for update;
+  if v_o.id is null then raise exception 'Commande introuvable'; end if;
+  if v_o.payment_method <> 'momo' or v_o.payment_status <> 'unpaid' or v_o.status in ('refused','cancelled') then
+    raise exception 'Paiement déjà signalé ou commande annulée';
+  end if;
+  if length(trim(coalesce(p_ref, ''))) < 4 then raise exception 'Indiquez la référence de la transaction'; end if;
+  update public.orders set payment_status = 'declared', payment_ref = left(trim(p_ref), 60), updated_at = now() where id = p_order;
+  select owner_id into v_owner from public.shops where id = v_o.shop_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_owner, 'Paiement à vérifier 💰', 'Le client de la commande ' || v_o.ref || ' dit avoir payé ' || v_o.total || ' FCFA (réf. ' || left(trim(p_ref), 60) || '). Vérifiez puis confirmez.', 'espace-vendeur.html');
+end;
+$$;
+revoke execute on function public.buyer_declare_payment(bigint, text) from public;
+grant execute on function public.buyer_declare_payment(bigint, text) to authenticated;
+
+-- L'acheteur confirme la réception (utile si le vendeur oublie de la marquer « livrée »)
+create or replace function public.buyer_confirm_received(p_order bigint)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_owner uuid;
+begin
+  select * into v_o from public.orders where id = p_order and buyer_id = auth.uid() for update;
+  if v_o.id is null then raise exception 'Commande introuvable'; end if;
+  if v_o.status not in ('accepted','ready','delivering') then raise exception 'Cette commande ne peut pas être confirmée'; end if;
+  update public.orders set status = 'delivered', delivered_at = now(), updated_at = now(),
+    payment_status = case when payment_method = 'cod' then 'paid' else payment_status end where id = p_order;
+  select owner_id into v_owner from public.shops where id = v_o.shop_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_owner, 'Commande reçue par le client ✅', 'Le client confirme avoir reçu la commande ' || v_o.ref || '.', 'espace-vendeur.html');
+end;
+$$;
+revoke execute on function public.buyer_confirm_received(bigint) from public;
+grant execute on function public.buyer_confirm_received(bigint) to authenticated;
+
+-- Note et avis de l'acheteur, une seule fois après la livraison
+create or replace function public.rate_order(p_order bigint, p_rating integer, p_review text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_owner uuid;
+begin
+  select * into v_o from public.orders where id = p_order and buyer_id = auth.uid() for update;
+  if v_o.id is null then raise exception 'Commande introuvable'; end if;
+  if v_o.status <> 'delivered' then raise exception 'Vous pourrez noter la boutique après la livraison'; end if;
+  if v_o.rating is not null then raise exception 'Vous avez déjà noté cette commande'; end if;
+  if p_rating not between 1 and 5 then raise exception 'Note invalide'; end if;
+  update public.orders set rating = p_rating, review = nullif(left(trim(coalesce(p_review, '')), 500), ''), updated_at = now() where id = p_order;
+  select owner_id into v_owner from public.shops where id = v_o.shop_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_owner, 'Nouvel avis ' || repeat('★', p_rating), 'Commande ' || v_o.ref || coalesce(' : « ' || nullif(trim(left(p_review, 200)), '') || ' »', '.'), 'espace-vendeur.html');
+end;
+$$;
+revoke execute on function public.rate_order(bigint, integer, text) from public;
+grant execute on function public.rate_order(bigint, integer, text) to authenticated;
+
+-- Derniers avis publics d'une boutique (prénom du client seulement)
+create or replace function public.shop_reviews(p_shop bigint)
+returns table (rating smallint, review text, buyer text, at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select o.rating, o.review, split_part(trim(o.buyer_name), ' ', 1), o.delivered_at
+  from public.orders o join public.shops s on s.id = o.shop_id
+  where o.shop_id = p_shop and s.status = 'approved' and o.rating is not null
+  order by o.delivered_at desc nulls last limit 20;
+$$;
+grant execute on function public.shop_reviews(bigint) to anon, authenticated;
+
+-- Équipe prévenue d'une nouvelle boutique ; vendeur prévenu de la validation
+create or replace function public.notify_shop_events() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    insert into public.notifications (recipient_id, title, body, link)
+    select a.id, 'Nouvelle boutique à valider', new.name || ' · ' || new.commune || ' · ' || new.phone || '. Vérifiez puis validez.', 'espace-admin.html#shops'
+    from public.profiles a where a.role = 'admin';
+  elsif new.status is distinct from old.status then
+    insert into public.notifications (recipient_id, title, body, link)
+    values (new.owner_id,
+      case new.status when 'approved' then 'Boutique validée 🎉' when 'suspended' then 'Boutique suspendue' else 'Boutique en attente' end,
+      case new.status when 'approved' then 'Votre boutique « ' || new.name || ' » est en ligne : les parents et les enseignants peuvent commander.'
+                      when 'suspended' then 'Votre boutique « ' || new.name || ' » est suspendue. Contactez KONE.EDUC sur WhatsApp au 01 61 70 13 61.'
+                      else 'Votre boutique est en attente de validation.' end,
+      'espace-vendeur.html');
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_shop_events on public.shops;
+create trigger notify_shop_events after insert or update on public.shops for each row execute function public.notify_shop_events();
+
+do $$ declare t text; begin
+  foreach t in array array['shops','products','orders'] loop
+    execute format('drop trigger if exists audit_changes on public.%I', t);
+    execute format('create trigger audit_changes after insert or update or delete on public.%I for each row execute function public.audit_changes()', t);
+  end loop;
+exception when others then raise notice 'Journal de la boutique indisponible (%).', sqlerrm;
+end $$;
 
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

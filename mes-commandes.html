@@ -1,0 +1,92 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mes commandes | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+.c-order{margin-bottom:14px;padding:18px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(21,61,140,.05)}
+.c-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.c-top b{font:800 17px Manrope,sans-serif}.c-top small{display:block;color:var(--mut)}
+.bq-badge{display:inline-block;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800}
+.c-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:14px 0 6px}
+.c-steps div{position:relative;padding-top:14px;text-align:center;font-size:12px;font-weight:700;color:#9aa6bf}
+.c-steps div:before{content:"";position:absolute;left:0;right:0;top:0;height:6px;border-radius:99px;background:#e3ebf8}
+.c-steps div.on{color:var(--ink)}.c-steps div.on:before{background:var(--b)}
+.c-steps div.now{color:var(--b)}
+.c-body{margin:10px 0;padding:12px;border-radius:14px;background:var(--soft);font-size:14.5px;line-height:1.55}
+.c-body ul{margin:6px 0;padding-left:18px}
+.c-tot{display:flex;justify-content:space-between;font-weight:800;font-size:16px}
+.c-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.d-btn.wa{background:#1fa855}.d-btn.red{background:#b42318}.d-btn.green{background:#11743a}
+.c-momo{margin-top:10px;padding:12px 14px;border-radius:14px;background:#fff7ec;border:1px solid #ffd7b0;font-size:14.5px}
+.c-momo input{width:100%;margin:8px 0;padding:11px;border:1px solid #d7e1f2;border-radius:10px;box-sizing:border-box;font:inherit}
+.c-stars{display:flex;gap:4px;margin:6px 0}.c-stars button{border:0;background:none;font-size:30px;color:#c9d2e3;cursor:pointer;padding:0 2px}.c-stars button.on{color:#f5a623}
+.c-rate textarea{width:100%;padding:10px;border:1px solid #d7e1f2;border-radius:10px;box-sizing:border-box;font:inherit}
+.c-empty{padding:30px;text-align:center;color:var(--mut)}
+@media(max-width:560px){.c-steps div{font-size:10.5px}}
+</style></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Boutique</p><h1>Mes commandes</h1><p id="message">Suivez vos commandes de livres, cahiers et fournitures en temps réel.</p></div><div class="d-hero-cta"><a class="d-btn light" href="boutique.html">🛒 Aller à la boutique</a></div></section>
+<section class="card d-card" style="margin-top:18px"><div id="list"><p class="d-sub">Chargement…</p></div></section>
+</main>
+<script src="boutique-commun.js"></script>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const B = KE_BOUTIQUE, esc = B.esc;
+let user = null, orders = [], items = {}, shops = {}, notes = {};
+const ETAPES = [['new', 'Envoyée'], ['accepted', 'Acceptée'], ['delivering', 'En route'], ['delivered', 'Livrée']];
+const RANG = { new: 0, accepted: 1, ready: 1, delivering: 2, delivered: 3 };
+
+async function charger() {
+  const r = await db.from('orders').select('*').eq('buyer_id', user.id).order('created_at', { ascending: false }).limit(100);
+  if (r.error) { list.innerHTML = '<p class="d-sub">Erreur : ' + esc(r.error.message) + '</p>'; return; }
+  orders = r.data || [];
+  const ids = orders.map(o => o.id);
+  if (ids.length) {
+    const [it, sh] = await Promise.all([db.from('order_items').select('*').in('order_id', ids), db.rpc('public_shops')]);
+    items = {}; (it.data || []).forEach(i => { (items[i.order_id] = items[i.order_id] || []).push(i); });
+    shops = {}; (sh.data || []).forEach(s => { shops[s.id] = s; });
+  }
+  render();
+}
+function etapes(o) {
+  if (o.status === 'cancelled' || o.status === 'refused') return '';
+  const r = RANG[o.status], pickup = o.delivery_mode === 'pickup';
+  return '<div class="c-steps">' + ETAPES.map((e, i) => '<div class="' + (i <= r ? 'on' : '') + (i === r ? ' now' : '') + '">' + (pickup && i === 2 ? 'Prête' : pickup && i === 3 ? 'Retirée' : e[1]) + '</div>').join('') + '</div>';
+}
+function carte(o) {
+  const s = shops[o.shop_id] || {}, it = items[o.id] || [], nom = s.name || 'la boutique';
+  let acts = '';
+  if (s.phone) acts += '<a class="d-btn wa sm" target="_blank" rel="noopener" href="' + B.waLink(s.whatsapp || s.phone, 'Bonjour ' + nom + ', je vous écris au sujet de ma commande ' + o.ref + ' sur KONE.EDUC.') + '">WhatsApp</a><a class="d-btn ghost sm" href="' + B.telLink(s.phone) + '">📞 Appeler</a>';
+  if (o.status === 'new') acts += '<button class="d-btn ghost sm" style="color:#b42318!important" onclick="annuler(' + o.id + ')">Annuler la commande</button>';
+  if (['accepted', 'ready', 'delivering'].includes(o.status)) acts += '<button class="d-btn green sm" onclick="recu(' + o.id + ')">✓ J’ai reçu ma commande</button>';
+  if (['delivered', 'cancelled', 'refused'].includes(o.status) && it.some(i => i.product_id)) acts += '<button class="d-btn ghost sm" onclick="recommander(' + o.id + ')">🔁 Commander à nouveau</button>';
+  let momo = '';
+  if (o.payment_method === 'momo' && o.payment_status === 'unpaid' && !['cancelled', 'refused'].includes(o.status)) {
+    momo = '<div class="c-momo" id="m' + o.id + '"><b>📱 Paiement par mobile money</b><br>Envoyez <b>' + B.fcfa(o.total) + '</b> au vendeur, puis indiquez la référence de la transaction (reçue par SMS).<div class="nums">Chargement des numéros…</div><input id="ref' + o.id + '" placeholder="Référence de la transaction, ex. WAVE-123456" maxlength="60"><button class="d-btn orange sm" onclick="declarer(' + o.id + ')">J’ai payé</button></div>';
+    db.rpc('order_momo_numbers', { p_order: o.id }).then(n => { const x = (n.data || [])[0] || {}, l = [['Wave', x.wave], ['Orange Money', x.orange], ['MTN MoMo', x.mtn], ['Moov Money', x.moov]].filter(v => v[1]); const el = document.querySelector('#m' + o.id + ' .nums'); if (el) el.innerHTML = l.length ? l.map(v => v[0] + ' : <b>' + esc(v[1]) + '</b>').join('<br>') : 'Demandez le numéro au vendeur sur WhatsApp.'; });
+  }
+  let note = '';
+  if (o.status === 'delivered' && !o.rating) note = '<div class="c-momo c-rate" style="background:#f3f7ff;border-color:#cfe0ff"><b>⭐ Notez ' + esc(nom) + '</b><div class="c-stars" id="st' + o.id + '">' + [1, 2, 3, 4, 5].map(i => '<button type="button" aria-label="' + i + ' sur 5" onclick="etoile(' + o.id + ',' + i + ')">★</button>').join('') + '</div><textarea id="rv' + o.id + '" rows="2" maxlength="500" placeholder="Votre avis aide les autres familles (facultatif)"></textarea><button class="d-btn sm" style="margin-top:6px" onclick="noter(' + o.id + ')">Envoyer mon avis</button></div>';
+  return '<article class="c-order"><div class="c-top"><div><b>' + esc(nom) + '</b><small>Commande #' + esc(o.ref) + ' · ' + B.depuis(o.created_at) + '</small></div>' + B.badge(o.status, true) + '</div>' + etapes(o)
+    + '<div class="c-body"><ul>' + it.map(i => '<li>' + i.qty + ' × ' + esc(i.name) + ' — ' + B.fcfa(i.line_total) + '</li>').join('') + '</ul>'
+    + (o.delivery_mode === 'pickup' ? '🏪 Retrait chez ' + esc(nom) + (s.quartier || s.commune ? ' (' + esc([s.quartier, s.commune].filter(Boolean).join(', ')) + ')' : '') : '🛵 Livraison : ' + esc([o.address, o.quartier, o.commune].filter(Boolean).join(', '))) + '<br>'
+    + (o.payment_method === 'cod' ? '💵 Paiement à la livraison' : '📱 Mobile money') + ' · ' + B.PAY_STATUS[o.payment_status]
+    + (o.cancel_reason ? '<br>❗ ' + esc(o.cancel_reason) : '') + (o.rating ? '<br>Votre note : ' + B.stars(o.rating) : '')
+    + '<div class="c-tot" style="margin-top:8px"><span>Total' + (o.delivery_fee ? ' (dont livraison ' + B.fcfa(o.delivery_fee) + ')' : '') + '</span><span>' + B.fcfa(o.total) + '</span></div></div>'
+    + momo + note + '<div class="c-acts">' + acts + '</div></article>';
+}
+function render() {
+  const en = orders.filter(o => ['new', 'accepted', 'ready', 'delivering'].includes(o.status)).length;
+  message.textContent = en ? en + ' commande' + (en > 1 ? 's' : '') + ' en cours. Cette page se met à jour toute seule.' : 'Suivez vos commandes de livres, cahiers et fournitures en temps réel.';
+  list.innerHTML = orders.length ? orders.map(carte).join('') : '<div class="c-empty"><b style="display:block;font-size:18px;color:var(--ink)">Aucune commande pour le moment</b>Livres, manuels, cahiers, annales et fournitures livrés chez vous par des boutiques vérifiées.<br><br><a class="d-btn" href="boutique.html">Découvrir la boutique</a></div>';
+  Object.keys(notes).forEach(id => etoile(+id, notes[id]));
+}
+async function rpc(name, args, ok) { const r = await db.rpc(name, args); if (r.error) { alert(r.error.message); return false; } if (ok) alert(ok); await charger(); return true; }
+function annuler(id) { const why = prompt('Pourquoi annulez-vous ? (facultatif)', ''); if (why === null) return; rpc('buyer_cancel_order', { p_order: id, p_reason: why }, 'Commande annulée.'); }
+function recu(id) { if (confirm('Confirmez-vous avoir reçu votre commande ?')) rpc('buyer_confirm_received', { p_order: id }); }
+function declarer(id) { const v = document.getElementById('ref' + id).value.trim(); if (v.length < 4) { alert('Indiquez la référence de la transaction (dans le SMS de confirmation).'); return; } rpc('buyer_declare_payment', { p_order: id, p_ref: v }, 'Merci ! Le vendeur va vérifier votre paiement.'); }
+function etoile(id, n) { notes[id] = n; const el = document.getElementById('st' + id); if (el) el.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i < n)); }
+function noter(id) { if (!notes[id]) { alert('Choisissez une note de 1 à 5 étoiles.'); return; } rpc('rate_order', { p_order: id, p_rating: notes[id], p_review: document.getElementById('rv' + id).value }, 'Merci pour votre avis ! 🙏').then(ok => { if (ok) delete notes[id]; }); }
+function recommander(id) {
+  const o = orders.find(x => x.id === id); let n = 0;
+  (items[id] || []).forEach(i => { if (i.product_id) { B.ajouter({ id: i.product_id, shop_id: o.shop_id, name: i.name, price: i.unit_price, stock: null }, i.qty); n++; } });
+  location.href = 'boutique.html?shop=' + o.shop_id;
+}
+db.auth.getUser().then(r => { user = r.data && r.data.user; if (!user) { location.href = 'connexion.html?redirect=mes-commandes.html'; return; } charger(); setInterval(() => { if (!document.activeElement || !document.activeElement.closest('.c-order')) charger(); }, 30000); });
+</script><script src="app.js"></script></body></html>

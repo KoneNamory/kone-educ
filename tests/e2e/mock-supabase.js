@@ -51,7 +51,7 @@
           var keys = (opts.onConflict || '').split(',').filter(Boolean);
           var existing = op === 'upsert' && keys.length ? rows.find(function (r) { return keys.every(function (k) { return String(r[k]) === String(list[i][k]); }); }) : null;
           if (existing) Object.assign(existing, list[i]);
-          else { var row = Object.assign({ created_at: new Date().toISOString() }, list[i]); if (COLS[table].indexOf('id') >= 0 && row.id == null) row.id = nextId(db, table); if (table === 'course_requests' && !row.status) row.status = 'pending'; if (table === 'invoices' && !row.status) row.status = 'unpaid'; rows.push(row); }
+          else { var row = Object.assign({ created_at: new Date().toISOString() }, list[i]); if (COLS[table].indexOf('id') >= 0 && row.id == null) row.id = nextId(db, table); if (table === 'course_requests' && !row.status) row.status = 'pending'; if (table === 'shops') { row = Object.assign({ status: 'pending', is_open: true, commission_rate: 0, delivery_fees: {}, pickup: true, pay_cod: true, pay_momo: false, min_order: 0 }, row); if (row.id == null) row.id = nextId(db, table); } if (table === 'products' && row.active == null) row.active = true; if (table === 'invoices' && !row.status) row.status = 'unpaid'; rows.push(row); }
         }
         log([op, table, payload]); save(db); return { data: null, error: null };
       }
@@ -86,7 +86,7 @@
     from: function (bucket) {
       return {
         upload: async function (path, file) {
-          if (['avatars', 'teacher-files', 'documents'].indexOf(bucket) < 0) return { data: null, error: { message: 'Bucket not found' } };
+          if (['avatars', 'teacher-files', 'documents', 'shop-images'].indexOf(bucket) < 0) return { data: null, error: { message: 'Bucket not found' } };
           var db = load(); db.__storage = db.__storage || []; db.__storage.push({ bucket: bucket, path: path, type: file && file.type, size: file && file.size }); save(db);
           log(['upload', bucket, path]); return { data: { path: path }, error: null };
         },
@@ -98,6 +98,66 @@
     }
   };
   var rpc = async function (name, a) {
+    // ---------- Boutique (mêmes règles que les fonctions SQL)
+    var me0 = JSON.parse(localStorage.getItem('__ke_user') || 'null'), bq = load();
+    var fail = function (m) { return { data: null, error: { message: m } }; };
+    var notif = function (d, to, title, body) { d.notifications = d.notifications || []; d.notifications.push({ id: nextId(d, 'notifications'), recipient_id: to, title: title, body: body, read: false, created_at: new Date().toISOString() }); };
+    var restock = function (d, oid) { (d.order_items || []).filter(function (i) { return i.order_id === oid; }).forEach(function (i) { var pr = (d.products || []).find(function (x) { return x.id === i.product_id; }); if (pr && pr.stock != null) pr.stock += i.qty; }); };
+    if (name === 'public_shops') {
+      return { data: (bq.shops || []).filter(function (x) { return x.status === 'approved'; }).map(function (x) {
+        var os = (bq.orders || []).filter(function (o) { return o.shop_id === x.id; }), rt = os.filter(function (o) { return o.rating; });
+        return Object.assign({}, x, { rating: rt.length ? rt.reduce(function (t, o) { return t + o.rating; }, 0) / rt.length : null, ratings_count: rt.length,
+          delivered_count: os.filter(function (o) { return o.status === 'delivered'; }).length, products_count: (bq.products || []).filter(function (p) { return p.shop_id === x.id && p.active; }).length }); }), error: null };
+    }
+    if (name === 'shop_reviews') return { data: (bq.orders || []).filter(function (o) { return o.shop_id === a.p_shop && o.rating; }).map(function (o) { return { rating: o.rating, review: o.review, buyer: String(o.buyer_name).split(' ')[0], at: o.delivered_at }; }), error: null };
+    if (name === 'order_momo_numbers') {
+      var o0 = (bq.orders || []).find(function (o) { return o.id === a.p_order && me0 && o.buyer_id === me0.id; }); if (!o0) return { data: [], error: null };
+      var s0 = bq.shops.find(function (x) { return x.id === o0.shop_id; }); return { data: [{ wave: s0.momo_wave, orange: s0.momo_orange, mtn: s0.momo_mtn, moov: s0.momo_moov }], error: null };
+    }
+    if (name === 'place_order') {
+      if (!me0) return fail('Connectez-vous pour commander');
+      var sh = (bq.shops || []).find(function (x) { return x.id === a.p_shop; });
+      if (!sh || sh.status !== 'approved') return fail('Boutique indisponible');
+      if (sh.owner_id === me0.id) return fail('Vous ne pouvez pas commander dans votre propre boutique');
+      var fee = 0;
+      if (a.p_mode === 'delivery') { var f = sh.delivery_fees || {}; if (a.p_commune in f) fee = +f[a.p_commune]; else if (sh.default_delivery_fee != null) fee = sh.default_delivery_fee; else return fail('Cette boutique ne livre pas à ' + a.p_commune); }
+      else if (!sh.pickup) return fail('Le retrait en boutique n’est pas proposé');
+      if ((a.p_payment === 'cod' && !sh.pay_cod) || (a.p_payment === 'momo' && !sh.pay_momo)) return fail('Mode de paiement non accepté');
+      var sub = 0, lines = [];
+      for (var i = 0; i < a.p_items.length; i++) {
+        var it = a.p_items[i], pr = (bq.products || []).find(function (x) { return x.id === it.product_id && x.shop_id === sh.id; });
+        if (!pr || !pr.active) return fail('Un article n’est plus disponible');
+        if (pr.stock != null && pr.stock < it.qty) return fail('Stock insuffisant pour « ' + pr.name + ' » (reste ' + pr.stock + ')');
+        lines.push([pr, it.qty]); sub += pr.price * it.qty;
+      }
+      if (sub < (sh.min_order || 0)) return fail('Commande minimum : ' + sh.min_order + ' FCFA');
+      lines.forEach(function (l) { if (l[0].stock != null) l[0].stock -= l[1]; });
+      bq.orders = bq.orders || []; bq.order_items = bq.order_items || [];
+      var oid = nextId(bq, 'orders'), ref = 'R' + String(1000 + oid);
+      bq.orders.push({ id: oid, ref: ref, shop_id: sh.id, buyer_id: me0.id, buyer_name: a.p_name, buyer_phone: a.p_phone, delivery_mode: a.p_mode, commune: a.p_mode === 'delivery' ? a.p_commune : null, quartier: a.p_mode === 'delivery' ? a.p_quartier : null, address: a.p_mode === 'delivery' ? a.p_address : null,
+        subtotal: sub, delivery_fee: fee, total: sub + fee, commission: 0, payment_method: a.p_payment, payment_status: 'unpaid', payment_ref: null, status: 'new', note: a.p_note || null, rating: null, review: null, created_at: new Date().toISOString() });
+      lines.forEach(function (l) { bq.order_items.push({ id: nextId(bq, 'order_items'), order_id: oid, product_id: l[0].id, name: l[0].name, unit_price: l[0].price, qty: l[1], line_total: l[0].price * l[1] }); });
+      notif(bq, sh.owner_id, '🛒 Nouvelle commande', 'Commande ' + ref); save(bq); log(['rpc', name, oid]);
+      return { data: [{ order_id: oid, order_ref: ref, order_total: sub + fee }], error: null };
+    }
+    var ord = a && a.p_order ? (bq.orders || []).find(function (o) { return o.id === a.p_order; }) : null;
+    var shopOf = ord ? (bq.shops || []).find(function (x) { return x.id === ord.shop_id; }) : null;
+    if (name === 'seller_update_order') {
+      if (!ord || !me0 || shopOf.owner_id !== me0.id) return fail('Commande introuvable');
+      var ok = { 'new': ['accepted', 'refused'], accepted: ['ready', 'delivering', 'delivered', 'cancelled'], ready: ['delivering', 'delivered', 'cancelled'], delivering: ['delivered', 'cancelled'] }[ord.status] || [];
+      if (ok.indexOf(a.p_status) < 0) return fail('Changement impossible : la commande est déjà « ' + ord.status + ' »');
+      if ((a.p_status === 'refused' || a.p_status === 'cancelled') && String(a.p_note || '').trim().length < 3) return fail('Indiquez la raison au client');
+      ord.status = a.p_status; ord[a.p_status + '_at'] = new Date().toISOString();
+      if (a.p_status === 'refused' || a.p_status === 'cancelled') { ord.cancel_reason = a.p_note; restock(bq, ord.id); }
+      if (a.p_status === 'delivered' && ord.payment_method === 'cod') ord.payment_status = 'paid';
+      notif(bq, ord.buyer_id, 'Commande ' + a.p_status, ord.ref); save(bq); return { data: null, error: null };
+    }
+    if (name === 'seller_confirm_payment') { if (!ord || !me0 || shopOf.owner_id !== me0.id) return fail('Commande introuvable'); ord.payment_status = 'paid'; save(bq); return { data: null, error: null }; }
+    if (['buyer_cancel_order', 'buyer_declare_payment', 'buyer_confirm_received', 'rate_order'].indexOf(name) >= 0 && (!ord || !me0 || ord.buyer_id !== me0.id)) return fail('Commande introuvable');
+    if (name === 'buyer_cancel_order') { if (ord.status !== 'new') return fail('Le vendeur a déjà accepté la commande : contactez-le pour l’annuler'); ord.status = 'cancelled'; ord.cancel_reason = a.p_reason || 'Annulée par le client'; restock(bq, ord.id); save(bq); return { data: null, error: null }; }
+    if (name === 'buyer_declare_payment') { if (ord.payment_method !== 'momo' || ord.payment_status !== 'unpaid') return fail('Paiement déjà signalé ou commande annulée'); ord.payment_status = 'declared'; ord.payment_ref = a.p_ref; save(bq); return { data: null, error: null }; }
+    if (name === 'buyer_confirm_received') { if (['accepted', 'ready', 'delivering'].indexOf(ord.status) < 0) return fail('Cette commande ne peut pas être confirmée'); ord.status = 'delivered'; if (ord.payment_method === 'cod') ord.payment_status = 'paid'; save(bq); return { data: null, error: null }; }
+    if (name === 'rate_order') { if (ord.status !== 'delivered') return fail('Vous pourrez noter la boutique après la livraison'); if (ord.rating) return fail('Vous avez déjà noté cette commande'); ord.rating = a.p_rating; ord.review = a.p_review || null; save(bq); return { data: null, error: null }; }
     if (name === 'create_account') {
       var d = load(); d.__users = d.__users || []; d.profiles = d.profiles || [];
       if (d.__users.some(function (x) { return x.email === a.p_email; })) return { data: null, error: { message: 'Un compte existe déjà avec cette adresse e-mail. Connectez-vous.' } };
