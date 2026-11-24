@@ -210,7 +210,7 @@ function imprimer(id) {
 // ---------------------------------------------------------------- articles
 function vueProduits() {
   const list = products.filter(p => !pq || (p.name + ' ' + (p.subject || '')).toLowerCase().includes(pq.toLowerCase()));
-  panel.innerHTML = '<div class="d-head"><h2>Mes articles (' + products.length + ')</h2><button class="d-btn orange" onclick="editer()">+ Ajouter un article</button></div>'
+  panel.innerHTML = '<div class="d-head"><h2>Mes articles (' + products.length + ')</h2><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="d-btn ghost" onclick="mouvements()">📒 Entrées / sorties</button><button class="d-btn orange" onclick="editer()">+ Ajouter un article</button></span></div>'
     + (products.length > 5 ? '<input type="search" placeholder="Rechercher un article…" value="' + esc(pq) + '" oninput="pq=this.value;vueProduits();const i=panel.querySelector(\'input[type=search]\');i.focus();i.setSelectionRange(i.value.length,i.value.length)" style="width:100%;margin:12px 0 4px;padding:11px;border:1px solid var(--line);border-radius:10px;box-sizing:border-box">' : '')
     + (list.length ? list.map(p => '<div class="v-prod' + (p.active ? '' : ' v-off') + '">' + (p.photo_url ? '<img src="' + esc(p.photo_url) + '" alt="">' : '<span class="ph">' + B.catIcon(p.category) + '</span>') + '<div><b>' + esc(p.name) + '</b><small>' + B.fcfa(p.price) + ' · ' + esc([B.catLabel(p.category), p.level].filter(Boolean).join(' · ')) + (p.active ? '' : ' · <b>masqué</b>') + (p.stock === 0 ? ' · <b style="color:#b42318">épuisé</b>' : '') + '</small></div>'
       + '<div class="ctl">' + (p.stock == null ? '<small>Stock illimité</small>' : '<span class="v-stock"><button type="button" aria-label="Stock moins un" onclick="stock(' + p.id + ',-1)">−</button><span>' + p.stock + '</span><button type="button" aria-label="Stock plus un" onclick="stock(' + p.id + ',1)">+</button></span>')
@@ -254,6 +254,16 @@ function editer(id, dup) {
     await chargerProduits(); dlg.close(); render();
   };
   if (!dlg.open) dlg.showModal();
+}
+async function mouvements() {
+  dlgTitle.textContent = '📒 Entrées et sorties de stock'; dlgBody.innerHTML = '<p class="d-sub">Chargement…</p>'; if (!dlg.open) dlg.showModal();
+  const r = await db.from('stock_movements').select('*').eq('shop_id', shop.id).order('created_at', { ascending: false }).limit(300);
+  if (r.error) { dlgBody.innerHTML = '<p class="v-msg err">' + esc(r.error.message) + '</p>'; return; }
+  const L = { creation: 'Entrée (nouvel article)', ajustement: 'Ajustement', vente: 'Vente', annulation: 'Retour (commande annulée)', suppression: 'Article supprimé' };
+  const m = r.data || [], ref = id => (orders.find(o => o.id === id) || {}).ref;
+  const ent = m.filter(x => x.delta > 0).reduce((a, x) => a + x.delta, 0), sor = m.filter(x => x.delta < 0).reduce((a, x) => a - x.delta, 0);
+  dlgBody.innerHTML = '<div class="v-top" style="margin:10px 0"><div><span>📥 Entrées</span><b>' + ent + '</b></div><div><span>📤 Sorties</span><b>' + sor + '</b></div></div>'
+    + (m.length ? m.map(x => '<div class="v-prod" style="grid-template-columns:40px 1fr auto"><span class="ph" style="width:40px;height:40px;font-size:20px">' + (x.delta > 0 ? '📥' : '📤') + '</span><div><b>' + esc(x.product_name) + '</b><small>' + new Date(x.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' · ' + (L[x.reason] || x.reason) + (x.order_id && ref(x.order_id) ? ' · #' + esc(ref(x.order_id)) : '') + '</small></div><b style="color:' + (x.delta > 0 ? '#11743a' : '#b42318') + '">' + (x.delta > 0 ? '+' : '') + x.delta + '<small style="display:block;color:var(--mut);font-weight:600">reste ' + (x.stock_after ?? '—') + '</small></b></div>').join('') : '<p class="d-sub">Aucun mouvement pour le moment. Les articles à stock illimité n’apparaissent pas ici.</p>');
 }
 async function supprimer(id) {
   if (!confirm('Supprimer définitivement cet article ? (Astuce : « Masquer » le retire de la boutique sans le supprimer.)')) return;

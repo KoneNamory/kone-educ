@@ -585,7 +585,8 @@ create policy "Teachers withdraw pending applications" on public.course_applicat
 
 -- Offres visibles par un enseignant validé : demandes en attente (sans le nom de l'élève ni les précisions)
 -- et demandes auxquelles il a déjà postulé, avec l'état de sa candidature
-create or replace function public.teacher_offers()
+drop function if exists public.teacher_offers(); -- (redéfinie plus bas avec la préparation)
+create function public.teacher_offers()
 returns table (id bigint, subject text, school_level text, location text, format text, availability text,
                created_at timestamptz, request_status text, applicants bigint, my_status text, my_message text)
 language sql stable security definer set search_path = public as $$
@@ -793,6 +794,8 @@ begin
     when new.title in ('Nouvelle offre de cours', 'Offre pourvue') then 'offres.html'
     when new.title in ('Nouvel inscrit') then 'espace-admin.html#users'
     when new.title in ('Nouvelle demande de cours', 'Nouvelle candidature enseignant') then 'espace-admin.html'
+    when new.title in ('Nouvelle demande d’une école', 'Enseignant intéressé par une école') then 'espace-admin.html#schools'
+    when new.title in ('Mise en relation avec une école', 'Nouvelle offre d’école') then 'offres.html'
     when v_role = 'teacher' then 'espace-enseignant.html'
     when v_role = 'seller' then 'espace-vendeur.html'
     when v_role = 'admin' then 'espace-admin.html'
@@ -1771,7 +1774,6 @@ begin
     if v_p.stock is not null and v_p.stock < v_qty then
       raise exception 'Stock insuffisant pour « % » (reste %)', v_p.name, v_p.stock;
     end if;
-    if v_p.stock is not null then update public.products set stock = stock - v_qty where id = v_p.id; end if;
     v_sub := v_sub + v_p.price * v_qty;
     v_lines := v_lines || jsonb_build_object('pid', v_p.id, 'name', v_p.name, 'price', v_p.price, 'qty', v_qty);
   end loop;
@@ -1783,6 +1785,11 @@ begin
     case when p_mode = 'delivery' then left(trim(p_address), 200) end,
     v_sub, v_fee, v_sub + v_fee, round(v_sub * v_shop.commission_rate / 100), p_payment, nullif(left(trim(coalesce(p_note, '')), 500), ''))
   returning * into v_order;
+  -- Sorties de stock, rattachées à la commande dans le journal des mouvements
+  perform set_config('kone.stock_reason', 'vente', true); perform set_config('kone.stock_order', v_order.id::text, true);
+  update public.products p set stock = p.stock - (l ->> 'qty')::integer
+  from jsonb_array_elements(v_lines) l where p.id = (l ->> 'pid')::bigint and p.stock is not null;
+  perform set_config('kone.stock_reason', '', true); perform set_config('kone.stock_order', '', true);
   insert into public.order_items (order_id, product_id, name, unit_price, qty, line_total)
   select v_order.id, (l ->> 'pid')::bigint, l ->> 'name', (l ->> 'price')::integer, (l ->> 'qty')::integer,
          (l ->> 'price')::integer * (l ->> 'qty')::integer
@@ -1803,9 +1810,13 @@ grant execute on function public.place_order(bigint, jsonb, text, text, text, te
 
 -- Remise en stock des articles d'une commande annulée ou refusée
 create or replace function public.restock_order(p_order bigint) returns void
-language sql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
+begin
+  perform set_config('kone.stock_reason', 'annulation', true); perform set_config('kone.stock_order', p_order::text, true);
   update public.products p set stock = p.stock + i.qty
   from public.order_items i where i.order_id = p_order and i.product_id = p.id and p.stock is not null;
+  perform set_config('kone.stock_reason', '', true); perform set_config('kone.stock_order', '', true);
+end;
 $$;
 revoke execute on function public.restock_order(bigint) from public, anon, authenticated;
 
@@ -1987,6 +1998,254 @@ do $$ declare t text; begin
   end loop;
 exception when others then raise notice 'Journal de la boutique indisponible (%).', sqlerrm;
 end $$;
+
+-- ============================================================
+-- Préparations aux examens et concours (CEPE, BEPC, BAC, ENSEA, INPHB…)
+-- ============================================================
+alter table public.course_requests add column if not exists preparation text check (preparation is null or length(preparation) <= 60);
+alter table public.teacher_profiles add column if not exists preparations text check (preparations is null or length(preparations) <= 400);
+
+drop function if exists public.teacher_offers();
+create function public.teacher_offers()
+returns table (id bigint, subject text, school_level text, location text, format text, availability text,
+               created_at timestamptz, request_status text, applicants bigint, my_status text, my_message text, preparation text)
+language sql stable security definer set search_path = public as $$
+  select r.id, r.subject, r.school_level, r.location, r.format, r.availability, r.created_at, r.status,
+         (select count(*) from public.course_applications a where a.course_request_id = r.id),
+         mine.status, mine.message, r.preparation
+  from public.course_requests r
+  left join public.course_applications mine on mine.course_request_id = r.id and mine.teacher_id = auth.uid()
+  where public.is_approved_teacher()
+    and ((r.status = 'pending' and r.teacher_id is null) or mine.id is not null)
+  order by r.created_at desc;
+$$;
+revoke execute on function public.teacher_offers() from public;
+grant execute on function public.teacher_offers() to authenticated;
+
+-- Nouvelle demande : enseignants de la même matière, ou préparant au même examen/concours, prévenus
+create or replace function public.notify_new_offer() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (recipient_id, title, body)
+  select tp.id, 'Nouvelle offre de cours', new.subject || ' · ' || new.school_level || coalesce(' · ' || new.preparation, '') || ' · ' || new.location || '. Postulez depuis « Offres de cours ».'
+  from public.teacher_profiles tp join public.profiles p on p.id = tp.id
+  where tp.approved and p.role = 'teacher'
+    and (lower(trim(tp.subject)) = lower(trim(new.subject))
+         or (new.preparation is not null and position(lower(new.preparation) in lower(coalesce(tp.preparations, ''))) > 0));
+  return new;
+end;
+$$;
+
+-- ============================================================
+-- Écoles qui cherchent un enseignant qualifié : KONE.EDUC fait la mise en relation
+-- ============================================================
+create table if not exists public.school_requests (
+  id bigint generated always as identity primary key,
+  school_name text not null check (length(trim(school_name)) between 2 and 120),
+  school_type text check (length(school_type) <= 60),
+  contact_name text not null check (length(trim(contact_name)) between 2 and 120),
+  phone text not null check (length(trim(phone)) between 8 and 30),
+  email text check (length(email) <= 160),
+  commune text not null check (length(commune) <= 80),
+  quartier text check (length(quartier) <= 80),
+  subjects text not null check (length(subjects) <= 300),
+  levels text check (length(levels) <= 200),
+  preparation text check (length(preparation) <= 60),
+  contract text check (contract in ('Vacation','Temps partiel','Temps plein','Remplacement','Cours de soutien')),
+  hours_per_week text check (length(hours_per_week) <= 60),
+  salary text check (length(salary) <= 80),
+  start_date date,
+  requirements text check (length(requirements) <= 600),
+  details text check (length(details) <= 1000),
+  status text not null default 'open' check (status in ('open','matched','closed')),
+  matched_teacher_id uuid references public.profiles(id) on delete set null,
+  matched_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.school_interests (
+  id bigint generated always as identity primary key,
+  request_id bigint not null references public.school_requests(id) on delete cascade,
+  teacher_id uuid not null references public.profiles(id) on delete cascade,
+  message text check (length(message) <= 600),
+  created_at timestamptz not null default now(),
+  unique (request_id, teacher_id)
+);
+alter table public.school_requests enable row level security;
+alter table public.school_interests enable row level security;
+grant select, update, delete on public.school_requests to authenticated;
+grant select on public.school_interests to authenticated;
+drop policy if exists "Admins manage school requests" on public.school_requests;
+create policy "Admins manage school requests" on public.school_requests for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "School interests visible" on public.school_interests;
+create policy "School interests visible" on public.school_interests for select to authenticated
+  using (teacher_id = auth.uid() or public.is_admin());
+
+-- Dépôt d'une demande par une école, sans compte (limité pour éviter les abus)
+create or replace function public.submit_school_request(p_school text, p_type text, p_contact text, p_phone text, p_email text,
+  p_commune text, p_quartier text, p_subjects text, p_levels text, p_preparation text, p_contract text, p_hours text,
+  p_salary text, p_start date, p_requirements text, p_details text)
+returns bigint language plpgsql security definer set search_path = public as $$
+declare v_id bigint; v_n integer;
+begin
+  if length(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g')) < 8 then raise exception 'Numéro de téléphone invalide'; end if;
+  if coalesce(trim(p_subjects), '') = '' then raise exception 'Indiquez au moins une matière'; end if;
+  select count(*) into v_n from public.school_requests
+  where regexp_replace(phone, '\D', '', 'g') = regexp_replace(p_phone, '\D', '', 'g') and created_at > now() - interval '1 day';
+  if v_n >= 5 then raise exception 'Trop de demandes aujourd’hui avec ce numéro. Contactez-nous sur WhatsApp au 01 61 70 13 61.'; end if;
+  insert into public.school_requests (school_name, school_type, contact_name, phone, email, commune, quartier, subjects, levels,
+    preparation, contract, hours_per_week, salary, start_date, requirements, details)
+  values (trim(p_school), nullif(trim(coalesce(p_type, '')), ''), trim(p_contact), trim(p_phone), nullif(lower(trim(coalesce(p_email, ''))), ''),
+    trim(p_commune), nullif(trim(coalesce(p_quartier, '')), ''), trim(p_subjects), nullif(trim(coalesce(p_levels, '')), ''),
+    nullif(trim(coalesce(p_preparation, '')), ''), nullif(p_contract, ''), nullif(trim(coalesce(p_hours, '')), ''), nullif(trim(coalesce(p_salary, '')), ''),
+    p_start, nullif(trim(coalesce(p_requirements, '')), ''), nullif(trim(coalesce(p_details, '')), ''))
+  returning id into v_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, 'Nouvelle demande d’une école', trim(p_school) || ' (' || trim(p_commune) || ') cherche un enseignant : ' || trim(p_subjects)
+    || coalesce(' · ' || nullif(trim(coalesce(p_levels, '')), ''), '') || '. Contact : ' || trim(p_contact) || ' · ' || trim(p_phone) || '.', 'espace-admin.html#schools'
+  from public.profiles a where a.role = 'admin';
+  -- Les enseignants validés de la matière sont prévenus (sans les coordonnées de l'école)
+  insert into public.notifications (recipient_id, title, body, link)
+  select tp.id, 'Nouvelle offre d’école', 'Une école à ' || trim(p_commune) || ' cherche un enseignant : ' || trim(p_subjects) || '. Manifestez votre intérêt depuis « Offres de cours ».', 'offres.html'
+  from public.teacher_profiles tp join public.profiles p on p.id = tp.id
+  where tp.approved and p.role = 'teacher' and position(lower(trim(tp.subject)) in lower(p_subjects)) > 0;
+  return v_id;
+end;
+$$;
+revoke execute on function public.submit_school_request(text, text, text, text, text, text, text, text, text, text, text, text, text, date, text, text) from public;
+grant execute on function public.submit_school_request(text, text, text, text, text, text, text, text, text, text, text, text, text, date, text, text) to anon, authenticated;
+
+-- Offres des écoles vues par les enseignants validés (sans le nom ni les coordonnées de l'école)
+create or replace function public.school_offers()
+returns table (id bigint, school_type text, commune text, subjects text, levels text, preparation text, contract text,
+               hours_per_week text, salary text, start_date date, requirements text, details text, created_at timestamptz,
+               status text, interested bigint, my_interest boolean, matched_me boolean)
+language sql stable security definer set search_path = public as $$
+  select r.id, r.school_type, r.commune, r.subjects, r.levels, r.preparation, r.contract, r.hours_per_week, r.salary, r.start_date,
+         r.requirements, r.details, r.created_at, r.status,
+         (select count(*) from public.school_interests i where i.request_id = r.id),
+         exists (select 1 from public.school_interests i where i.request_id = r.id and i.teacher_id = auth.uid()),
+         r.matched_teacher_id = auth.uid()
+  from public.school_requests r
+  where public.is_approved_teacher() and (r.status = 'open' or r.matched_teacher_id = auth.uid())
+  order by r.created_at desc;
+$$;
+revoke execute on function public.school_offers() from public;
+grant execute on function public.school_offers() to authenticated;
+
+create or replace function public.express_school_interest(p_request bigint, p_message text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_r public.school_requests; v_name text;
+begin
+  if not public.is_approved_teacher() then raise exception 'Réservé aux enseignants validés par KONE.EDUC'; end if;
+  select * into v_r from public.school_requests where id = p_request;
+  if v_r.id is null or v_r.status <> 'open' then raise exception 'Cette offre n’est plus disponible'; end if;
+  insert into public.school_interests (request_id, teacher_id, message)
+  values (p_request, auth.uid(), nullif(left(trim(coalesce(p_message, '')), 600), ''))
+  on conflict (request_id, teacher_id) do update set message = excluded.message;
+  select full_name into v_name from public.profiles where id = auth.uid();
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, 'Enseignant intéressé par une école', coalesce(v_name, 'Un enseignant') || ' est intéressé(e) par l’offre de ' || v_r.school_name || ' (' || v_r.subjects || ').', 'espace-admin.html#schools'
+  from public.profiles a where a.role = 'admin';
+end;
+$$;
+revoke execute on function public.express_school_interest(bigint, text) from public;
+grant execute on function public.express_school_interest(bigint, text) to authenticated;
+
+-- L'équipe met l'école et l'enseignant choisi en relation : l'enseignant reçoit les coordonnées
+create or replace function public.admin_match_school(p_request bigint, p_teacher uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_r public.school_requests;
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  select * into v_r from public.school_requests where id = p_request for update;
+  if v_r.id is null then raise exception 'Demande introuvable'; end if;
+  if not exists (select 1 from public.teacher_profiles tp join public.profiles p on p.id = tp.id where tp.id = p_teacher and tp.approved and p.role = 'teacher') then
+    raise exception 'Choisissez un enseignant validé';
+  end if;
+  update public.school_requests set status = 'matched', matched_teacher_id = p_teacher, matched_at = now() where id = p_request;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (p_teacher, 'Mise en relation avec une école',
+    'KONE.EDUC vous a choisi(e) pour ' || v_r.school_name || ' (' || v_r.commune || ') : ' || v_r.subjects
+    || '. Contactez ' || v_r.contact_name || ' au ' || v_r.phone || coalesce(' ou ' || v_r.email, '') || ' de la part de KONE.EDUC.', 'offres.html');
+end;
+$$;
+revoke execute on function public.admin_match_school(bigint, uuid) from public;
+grant execute on function public.admin_match_school(bigint, uuid) to authenticated;
+
+-- Offres publiques (sans coordonnées) : page « Offres pour enseignants », partageable et lisible par Google
+create or replace function public.public_offers()
+returns table (kind text, id bigint, title text, subjects text, levels text, preparation text, commune text, format text, contract text, salary text, created_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select 'cours', r.id, 'Cours à domicile : ' || r.subject || ' (' || r.school_level || ')', r.subject, r.school_level, r.preparation,
+         split_part(r.location, ' · ', 1), r.format, null::text, null::text, r.created_at
+  from public.course_requests r where r.status = 'pending' and r.teacher_id is null and r.created_at > now() - interval '90 days'
+  union all
+  select 'ecole', s.id, coalesce(s.school_type, 'École') || ' : enseignant de ' || s.subjects, s.subjects, s.levels, s.preparation,
+         s.commune, null, s.contract, s.salary, s.created_at
+  from public.school_requests s where s.status = 'open' and s.created_at > now() - interval '120 days'
+  order by created_at desc limit 200;
+$$;
+grant execute on function public.public_offers() to anon, authenticated;
+
+do $$ declare t text; begin
+  foreach t in array array['school_requests','school_interests'] loop
+    execute format('drop trigger if exists audit_changes on public.%I', t);
+    execute format('create trigger audit_changes after insert or update or delete on public.%I for each row execute function public.audit_changes()', t);
+  end loop;
+exception when others then raise notice 'Journal des écoles indisponible (%).', sqlerrm;
+end $$;
+
+-- ============================================================
+-- Boutique : journal de toutes les entrées et sorties de stock
+-- ============================================================
+create table if not exists public.stock_movements (
+  id bigint generated always as identity primary key,
+  shop_id bigint references public.shops(id) on delete cascade,
+  product_id bigint references public.products(id) on delete set null,
+  product_name text,
+  delta integer not null,
+  stock_after integer,
+  reason text not null check (reason in ('creation','vente','annulation','ajustement','suppression')),
+  order_id bigint references public.orders(id) on delete set null,
+  actor_id uuid,
+  created_at timestamptz not null default now()
+);
+create index if not exists stock_movements_shop_idx on public.stock_movements (shop_id, created_at desc);
+alter table public.stock_movements enable row level security;
+grant select on public.stock_movements to authenticated;
+drop policy if exists "Stock movements visible" on public.stock_movements;
+create policy "Stock movements visible" on public.stock_movements for select to authenticated
+  using (shop_id = public.my_shop_id() or public.is_admin());
+
+create or replace function public.log_stock_movement() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_reason text := nullif(current_setting('kone.stock_reason', true), ''); v_order bigint := nullif(current_setting('kone.stock_order', true), '')::bigint;
+begin
+  if tg_op = 'INSERT' then
+    if new.stock is not null and new.stock > 0 then
+      insert into public.stock_movements (shop_id, product_id, product_name, delta, stock_after, reason, actor_id)
+      values (new.shop_id, new.id, new.name, new.stock, new.stock, 'creation', auth.uid());
+    end if;
+    return new;
+  elsif tg_op = 'UPDATE' then
+    if new.stock is distinct from old.stock and new.stock is not null then
+      insert into public.stock_movements (shop_id, product_id, product_name, delta, stock_after, reason, order_id, actor_id)
+      values (new.shop_id, new.id, new.name, new.stock - coalesce(old.stock, 0), new.stock, coalesce(v_reason, 'ajustement'), v_order, auth.uid());
+    end if;
+    return new;
+  else
+    if old.stock is not null and old.stock > 0 and exists (select 1 from public.shops where id = old.shop_id) then
+      insert into public.stock_movements (shop_id, product_id, product_name, delta, stock_after, reason, actor_id)
+      values (old.shop_id, null, old.name, -old.stock, 0, 'suppression', auth.uid());
+    end if;
+    return old;
+  end if;
+end;
+$$;
+drop trigger if exists log_stock_movement on public.products;
+create trigger log_stock_movement after insert or update or delete on public.products
+  for each row execute function public.log_stock_movement();
 
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

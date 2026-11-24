@@ -88,6 +88,7 @@ async function loadDossier() {
     if (data.bio) f.bio.value = data.bio;
     const split = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
     split(data.levels).forEach(v => { const c = teacherForm.querySelector('input[name="levels"][value="' + v + '"]'); if (c) c.checked = true; });
+    if (window.fillPreparationChecks && document.getElementById('prepChecks')) fillPreparationChecks(document.getElementById('prepChecks'), 'preparations', data.preparations);
     split(data.availability).forEach(v => { const c = teacherForm.querySelector('input[name="days"][value="' + v + '"]'); if (c) c.checked = true; });
     // Documents déjà fournis : facultatifs (à renvoyer seulement pour les remplacer)
     Object.keys(FILES).forEach((name) => {
@@ -132,7 +133,7 @@ teacherForm.addEventListener('submit', async function (event) {
     if (profileSave.error) throw new Error('enregistrement de votre profil refusé (' + profileSave.error.message + ')');
     if (existing && existing.role !== 'teacher') throw new Error('ce compte est enregistré comme ' + (existing.role === 'parent' ? 'Parent' : existing.role) + ' : utilisez un compte Enseignant');
 
-    const row = { id: user.id, degree, subject, experience: form.get('experience'), availability: days.join(', '), location: form.get('location'), levels: levels.join(', '), format: form.get('format'), bio: form.get('bio') };
+    const row = { id: user.id, degree, subject, experience: form.get('experience'), availability: days.join(', '), location: form.get('location'), levels: levels.join(', '), format: form.get('format'), bio: form.get('bio'), preparations: Array.from(document.querySelectorAll('input[name="preparations"]:checked')).map(x => x.value).join(', ') || null };
     // Envoi des documents : la photo dans « avatars » (public), le reste dans « teacher-files » (privé)
     for (const name of Object.keys(FILES)) {
       const file = form.get(name);

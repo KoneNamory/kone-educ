@@ -294,6 +294,30 @@ await p.click('.v-order.new button:has-text("Refuser")');await p.waitForTimeout(
 step('Vendeur : refus avec raison, client prévenu',d.orders[1].status==='refused'&&!!d.orders[1].cancel_reason);
 await p.click('.v-tabs button:has-text("Statistiques")');await p.waitForTimeout(300);step('Vendeur : statistiques (ventes, meilleurs articles, avis)',(await p.textContent('#panel')).includes('7 500')||(await p.textContent('#panel')).includes('6 500'));
 await p.click('.v-tabs button:has-text("Ma boutique")');await p.waitForTimeout(300);step('Vendeur : lien de partage de la boutique',(await p.inputValue('.v-share input')).includes('boutique.html?shop='));
+// 9 sexies. Préparations, écoles qui recrutent, offres publiques, journal de la boutique
+await loginAs('parent','mariam@test.ci');await go('reservation.html?preparation='+encodeURIComponent('ENSEA – ISE Maths'));
+step('Réservation : préparation ENSEA présélectionnée (9 préparations proposées)',(await p.inputValue('#preparation'))==='ENSEA – ISE Maths'&&(await p.locator('#preparation option').count())===10);
+await go('services.html');step('Services : section examens et concours (CEPE → INPHB)',(await p.locator('#preparations a[href^="reservation.html?preparation="]').count())===9);
+await logout();await go('ecoles.html');
+await p.fill('#eSchool','Lycée Les Pionniers');await p.selectOption('#eType','Collège / Lycée');await p.selectOption('#eCommune','Bingerville');await p.selectOption('#eQuartier',{index:1});
+await p.fill('#eContact','M. Bamba');await p.fill('#ePhone','0707070707');await tick('#eSubjects input[value="Mathématiques"]');await p.fill('#eLevels','Terminale');await p.selectOption('#ePrep','BAC');await p.selectOption('#eContract','Vacation');await p.fill('#eSalary','5 000 F / heure');
+await p.click('#eBtn');await p.waitForTimeout(800);d=await db();
+step('École : demande déposée sans compte',(d.school_requests||[]).length===1&&d.school_requests[0].subjects==='Mathématiques'&&d.school_requests[0].preparation==='BAC'&&await p.locator('#ecOk').isVisible());
+await go('offres-enseignants.html');await p.waitForTimeout(800);
+step('Offres publiques : offre d’école visible, partage WhatsApp et données Google',(await p.locator('.of-card .of-kind.ecole').count())===1&&(await p.locator('.of-card a.wa').count())>=1&&(await p.locator('script[type="application/ld+json"]').evaluateAll(x=>x.some(e=>e.textContent.includes('JobPosting')))));
+await loginAs('teacher','yao@test.ci');await go('candidature-enseignant.html');await p.waitForTimeout(600);step('Candidature : 9 préparations à cocher',(await p.locator('#prepChecks input').count())===9);
+await go('offres.html#ecoles');await p.waitForTimeout(900);
+const schoolCards=await p.locator('.o-card:has-text("Mathématiques")').count();
+step('Enseignant : onglet « Offres d’écoles » sans coordonnées de l’école',schoolCards>=1&&!(await p.textContent('#offers')).includes('0707070707'));
+await p.click('button:has-text("Je suis intéressé(e)")');await p.waitForTimeout(700);d=await db();step('Enseignant : intérêt envoyé',(d.school_interests||[]).length===1);
+await loginAs('admin','admin@kone.ci');await go('espace-admin.html#schools');await p.waitForTimeout(1200);
+step('Admin : demande d’école avec l’enseignant intéressé en tête',(await p.textContent('#schoolList')).includes('Lycée Les Pionniers')&&(await p.locator('#schoolList select option').nth(1).textContent()).includes('🙋'));
+await p.selectOption('#schoolList select',{index:1});await p.click('#schoolList button:has-text("Mettre en relation")');await p.waitForTimeout(800);d=await db();
+step('Admin : mise en relation, l’enseignant reçoit le contact',d.school_requests[0].status==='matched'&&(d.notifications||[]).some(n=>n.title==='Mise en relation avec une école'&&n.body.includes('0707070707')));
+step('Admin : journal boutique (commandes, entrées/sorties)',(await p.textContent('#logList')).includes('#R10')&&(await p.textContent('#logKpis')).includes('livrée'));
+await p.click('#shoplog button:has-text("Entrées / sorties")');await p.waitForTimeout(200);step('Admin : mouvements de stock (ventes)',(await p.textContent('#logList')).includes('Sortie (vente)'));
+await loginAs('seller','awa@test.ci');await go('espace-vendeur.html');await p.waitForTimeout(1000);await p.click('.v-tabs button:has-text("Mes articles")');await p.waitForTimeout(200);await p.click('button:has-text("Entrées / sorties")');await p.waitForTimeout(600);
+step('Vendeur : historique des entrées et sorties',(await p.textContent('#dlgBody')).includes('Vente'));
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');
