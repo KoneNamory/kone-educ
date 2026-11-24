@@ -391,3 +391,123 @@ faq_ld = '<script type="application/ld+json">' + __import__('json').dumps({'@con
 page('devenir-vendeur.html', 'Vendre des fournitures scolaires à Abidjan : ouvrez votre boutique | KONE.EDUC',
      'Libraires et papetiers : ouvrez gratuitement votre boutique sur KONE.EDUC, recevez des commandes de parents et d’enseignants, soyez payé directement. 0 % de commission au lancement.',
      DV_CSS, DV_MAIN, '', faq_ld)
+
+# ---------------------------------------------------------------- ecoles.html (écoles qui recrutent)
+EC_CSS = DV_CSS + r"""
+.ec-form{margin:0 auto;max-width:820px;padding:26px;border:1px solid #e3ebf8;border-radius:24px;background:#fff;box-shadow:0 18px 50px rgba(21,61,140,.08)}
+.ec-form fieldset{margin:0 0 14px;padding:16px;border:1px solid #e3ebf8;border-radius:16px}.ec-form legend{padding:0 6px;font:800 17px Manrope,sans-serif}
+.ec-form .g{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.ec-form label{display:block;margin-top:10px;font-weight:700;font-size:14.5px}
+.ec-form input,.ec-form select,.ec-form textarea{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #d7e1f2;border-radius:11px;font:500 15px "DM Sans",sans-serif;box-sizing:border-box;background:#fff;color:#102149}
+.ec-form .full{grid-column:1/-1}.ec-form .conditional{display:none}.ec-form .conditional.show{display:block}
+.ec-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.ec-chips label{display:flex;align-items:center;gap:6px;margin:0;padding:8px 12px;border:1px solid #d7e1f2;border-radius:99px;font-weight:700;cursor:pointer}
+.ec-chips input{width:auto;margin:0}.ec-chips label:has(input:checked){background:#eaf1ff;border-color:#1559eb;color:#1559eb}
+.ec-msg{min-height:22px;font-weight:700}.ec-msg.err{color:#b42318}
+.ec-ok{display:none;text-align:center;padding:30px}.ec-ok.show{display:block}.ec-ok .big{font-size:56px}
+@media(max-width:640px){.ec-form{padding:16px}.ec-form .g{grid-template-columns:1fr}}
+"""
+SUBJ = ['Mathématiques', 'Physique-Chimie', 'SVT', 'Français', 'Anglais', 'Philosophie', 'Histoire-Géographie', 'Espagnol', 'Allemand', 'Économie', 'Comptabilité', 'Informatique', 'EPS', 'Instituteur (primaire)']
+EC_MAIN = """<main class="dv">
+<section class="dv-hero"><div><h1>Votre école cherche un enseignant qualifié ?</h1><p>Écoles primaires, collèges, lycées, universités, centres de formation et de préparation aux concours : décrivez le poste, KONE.EDUC vous met en relation avec un enseignant vérifié.</p>
+<div class="tags"><span>Gratuit pour les écoles</span><span>Enseignants vérifiés</span><span>Réponse sous 48 h</span></div><a class="dv-btn" href="#demande">Déposer ma demande →</a></div>
+<div class="dv-phone" aria-hidden="true"><div class="n"><span style="font-size:28px">🏫</span><div><b>Lycée · Bingerville</b><small>Mathématiques · Terminale · BAC</small></div></div><div class="n"><span style="font-size:28px">✅</span><div><b>3 enseignants intéressés</b><small>Diplôme, identité et entretien vérifiés</small></div></div><div class="acts"><span>Mise en relation</span><span style="background:#1559eb">Sous 48 h</span></div></div></section>
+<h2>Comment ça marche ?</h2>
+<div class="dv-steps">
+<div class="dv-step"><b>Décrivez le poste</b><p>Matières, niveaux, volume horaire, type de contrat, rémunération. 2 minutes, sans créer de compte.</p></div>
+<div class="dv-step"><b>Nous sélectionnons</b><p>Les enseignants validés de la matière sont prévenus ; notre équipe étudie leurs profils.</p></div>
+<div class="dv-step"><b>Mise en relation</b><p>Nous vous présentons le ou les meilleurs profils et transmettons vos coordonnées à l’enseignant choisi.</p></div>
+<div class="dv-step"><b>Vous recrutez</b><p>Vous rencontrez l’enseignant et convenez ensemble des conditions.</p></div>
+</div>
+<h2 id="demande">Déposer une demande</h2>
+<form class="ec-form" id="ecForm"><div id="ecFields">
+<fieldset><legend>Votre établissement</legend><div class="g">
+<label>Nom de l’établissement *<input id="eSchool" required maxlength="120" placeholder="Ex. Lycée Les Pionniers"></label>
+<label>Type *<select id="eType" required><option value="">Choisir</option><option>École primaire</option><option>Collège / Lycée</option><option>Université / Grande école</option><option>Centre de formation</option><option>Centre de préparation aux concours</option></select></label>
+<label>Commune *<select id="eCommune" required></select></label><label>Quartier *<select id="eQuartier"></select></label>
+<label>Nom du responsable *<input id="eContact" required maxlength="120" autocomplete="name"></label><label>Téléphone / WhatsApp *<input id="ePhone" type="tel" required maxlength="30" autocomplete="tel"></label>
+<label class="full">E-mail<input id="eEmail" type="email" maxlength="160" autocomplete="email"></label></div></fieldset>
+<fieldset><legend>Le poste</legend>
+<label>Matières *</label><div class="ec-chips" id="eSubjects">""" + ''.join('<label><input type="checkbox" value="' + html.escape(x) + '"> ' + html.escape(x) + '</label>' for x in SUBJ) + """</div>
+<div class="g"><label>Autre matière<input id="eOther" maxlength="80" placeholder="Si absente de la liste"></label><label>Niveaux / classes<input id="eLevels" maxlength="200" placeholder="Ex. 3e, Terminale D"></label>
+<label>Préparation à un examen ou concours<select id="ePrep"></select></label>
+<label>Type de contrat *<select id="eContract" required><option value="">Choisir</option><option>Vacation</option><option>Temps partiel</option><option>Temps plein</option><option>Remplacement</option><option>Cours de soutien</option></select></label>
+<label>Volume horaire<input id="eHours" maxlength="60" placeholder="Ex. 6 h par semaine"></label><label>Rémunération proposée<input id="eSalary" maxlength="80" placeholder="Ex. 5 000 F / heure"></label>
+<label>Date de début<input id="eStart" type="date"></label>
+<label class="full">Profil demandé<textarea id="eReq" rows="2" maxlength="600" placeholder="Ex. Licence minimum, expérience en classe d’examen"></textarea></label>
+<label class="full">Informations complémentaires<textarea id="eDetails" rows="3" maxlength="1000"></textarea></label></div></fieldset>
+<p class="ec-msg" id="eMsg" role="status"></p><button class="dv-btn" style="width:100%;border:0;cursor:pointer" id="eBtn">Envoyer ma demande</button>
+<p style="text-align:center;color:#5b6884;font-size:14px">Vos coordonnées ne sont jamais publiées : seul l’enseignant retenu les reçoit, de la part de KONE.EDUC.</p></div>
+<div class="ec-ok" id="ecOk"><div class="big">🎉</div><h3 style="font:800 24px Manrope,sans-serif">Demande envoyée !</h3><p>Notre équipe vous contacte sous 48 h avec un ou plusieurs profils d’enseignants.</p><a class="dv-btn wa" href="https://wa.me/2250161701361" target="_blank" rel="noopener">Nous écrire sur WhatsApp</a></div></form>
+<section class="dv-final"><h2 style="margin-top:0">Vous êtes enseignant ?</h2><p>Les écoles partenaires recrutent aussi des vacataires et des remplaçants. Inscrivez-vous et faites valider votre dossier pour recevoir leurs offres.</p><div class="row"><a class="dv-btn" href="candidature-enseignant.html">Devenir enseignant KONE.EDUC</a><a class="dv-btn light" style="border:1px solid #e3ebf8" href="offres-enseignants.html">Voir les offres</a></div></section>
+</main>"""
+EC_JS = r"""<script src="abidjan-locations.js"></script><script src="preparations.js"></script><script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+setupAbidjanLocation('eCommune', 'eQuartier'); fillPreparations(ePrep, 'Aucune');
+ecForm.onsubmit = async e => {
+  e.preventDefault(); eMsg.className = 'ec-msg'; eMsg.textContent = '';
+  const subj = Array.from(eSubjects.querySelectorAll('input:checked')).map(x => x.value).concat(eOther.value.trim() ? [eOther.value.trim()] : []);
+  if (!subj.length) { eMsg.className = 'ec-msg err'; eMsg.textContent = 'Choisissez au moins une matière.'; return; }
+  const loc = getAbidjanLocation('eCommune', 'eQuartier');
+  eBtn.disabled = true; eBtn.textContent = 'Envoi…';
+  const r = await db.rpc('submit_school_request', { p_school: eSchool.value, p_type: eType.value, p_contact: eContact.value, p_phone: ePhone.value, p_email: eEmail.value,
+    p_commune: loc.commune, p_quartier: loc.quartier, p_subjects: subj.join(', '), p_levels: eLevels.value, p_preparation: ePrep.value, p_contract: eContract.value,
+    p_hours: eHours.value, p_salary: eSalary.value, p_start: eStart.value || null, p_requirements: eReq.value, p_details: eDetails.value });
+  if (r.error) { eMsg.className = 'ec-msg err'; eMsg.textContent = r.error.message; eBtn.disabled = false; eBtn.textContent = 'Envoyer ma demande'; return; }
+  ecFields.hidden = true; ecOk.classList.add('show'); ecForm.scrollIntoView({ behavior: 'smooth' });
+};
+</script>"""
+page('ecoles.html', 'Écoles : recrutez un enseignant qualifié à Abidjan | KONE.EDUC',
+     'Écoles, lycées, universités et centres de formation : décrivez le poste, KONE.EDUC vous met en relation avec un enseignant vérifié. Gratuit pour les écoles.',
+     EC_CSS, EC_MAIN, SUPA + EC_JS)
+
+# ---------------------------------------------------------------- offres-enseignants.html (offres publiques)
+OF_CSS = DV_CSS + r"""
+.of-bar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}.of-bar button,.of-bar select{padding:10px 14px;border:1px solid #e3ebf8;border-radius:99px;background:#fff;font:700 14px "DM Sans",sans-serif;color:#102149;cursor:pointer}
+.of-bar button.on{background:#102149;color:#fff;border-color:#102149}
+.of-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.of-card{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e3ebf8;border-radius:20px;background:#fff;box-shadow:0 10px 30px rgba(21,61,140,.06)}
+.of-card h3{margin:0;font:800 17px/1.3 Manrope,sans-serif}.of-kind{align-self:flex-start;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800;background:#eaf1ff;color:#1559eb}.of-kind.ecole{background:#fff0dc;color:#9a5900}
+.of-meta{display:flex;flex-wrap:wrap;gap:6px}.of-meta span{padding:5px 9px;border-radius:99px;background:#f4f7fc;font-size:13px;font-weight:700}
+.of-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:6px}.of-acts a{flex:1;text-align:center;padding:10px;border-radius:12px;font-weight:800;text-decoration:none;font-size:14px}
+.of-acts .go{background:#1559eb;color:#fff}.of-acts .wa{background:#1fa855;color:#fff}.of-acts .fb{background:#f4f7fc;color:#102149}
+.of-empty{padding:30px;border:1px dashed #cbd7ee;border-radius:18px;text-align:center;color:#5b6884;background:#fff}
+"""
+OF_MAIN = """<main class="dv">
+<section class="dv-hero"><div><h1>Offres pour enseignants à Abidjan</h1><p>Cours à domicile demandés par des familles et postes proposés par des écoles : préparation au CEPE, BEPC, BAC et aux concours ENSEA et INPHB. Mis à jour en temps réel.</p>
+<div class="tags"><span>Familles vérifiées</span><span>Écoles partenaires</span><span>Partagez une offre en 1 clic</span></div><a class="dv-btn" href="candidature-enseignant.html">Postuler comme enseignant →</a></div>
+<div class="dv-phone" aria-hidden="true"><div class="n"><span style="font-size:28px">📚</span><div><b>Mathématiques · Terminale</b><small>Préparation ENSEA – ISE Maths · Cocody</small></div></div><div class="n"><span style="font-size:28px">🏫</span><div><b>Collège / Lycée · Bingerville</b><small>Physique-Chimie · Vacation</small></div></div></div></section>
+<h2>Offres en cours</h2>
+<div class="of-bar" id="bar"></div><div id="list"><div class="of-empty">Chargement des offres…</div></div>
+<section class="dv-final"><h2 style="margin-top:0">Une école ? Une famille ?</h2><p>Déposez votre demande, nous trouvons l’enseignant qualifié.</p><div class="row"><a class="dv-btn" href="reservation.html">Famille : réserver un enseignant</a><a class="dv-btn light" style="border:1px solid #e3ebf8" href="ecoles.html">École : recruter un enseignant</a></div></section>
+</main>"""
+OF_JS = r"""<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let offres = [], f = { kind: '', prep: '', commune: '' };
+const lien = o => location.origin + location.pathname + '#' + o.kind + '-' + o.id;
+function partage(o) { return o.title + (o.preparation ? ' · Préparation ' + o.preparation : '') + ' · ' + o.commune + '. Offre KONE.EDUC : ' + lien(o); }
+function render() {
+  const uniq = k => [...new Set(offres.map(o => o[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  bar.innerHTML = [['', 'Toutes (' + offres.length + ')'], ['cours', '🏠 Cours à domicile'], ['ecole', '🏫 Écoles']].map(x => '<button type="button" class="' + (f.kind === x[0] ? 'on' : '') + '" onclick="f.kind=\'' + x[0] + '\';render()">' + x[1] + '</button>').join('')
+    + '<select aria-label="Préparation" onchange="f.prep=this.value;render()"><option value="">🎯 Toutes les préparations</option>' + uniq('preparation').map(p => '<option' + (f.prep === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('') + '</select>'
+    + '<select aria-label="Commune" onchange="f.commune=this.value;render()"><option value="">📍 Toutes les communes</option>' + uniq('commune').map(p => '<option' + (f.commune === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('') + '</select>';
+  const l = offres.filter(o => (!f.kind || o.kind === f.kind) && (!f.prep || o.preparation === f.prep) && (!f.commune || o.commune === f.commune));
+  list.innerHTML = l.length ? '<div class="of-list">' + l.map(o => '<article class="of-card" id="' + o.kind + '-' + o.id + '"><span class="of-kind ' + o.kind + '">' + (o.kind === 'ecole' ? '🏫 École' : '🏠 Cours à domicile') + '</span><h3>' + esc(o.title) + '</h3><div class="of-meta"><span>📍 ' + esc(o.commune) + '</span>' + (o.preparation ? '<span>🎯 ' + esc(o.preparation) + '</span>' : '') + (o.levels && o.kind === 'ecole' ? '<span>🎓 ' + esc(o.levels) + '</span>' : '') + (o.format ? '<span>' + esc(o.format) + '</span>' : '') + (o.contract ? '<span>📄 ' + esc(o.contract) + '</span>' : '') + (o.salary ? '<span>💰 ' + esc(o.salary) + '</span>' : '') + '</div><small style="color:#5b6884">Publiée le ' + new Date(o.created_at).toLocaleDateString('fr-FR') + '</small>'
+    + '<div class="of-acts"><a class="go" href="' + (o.kind === 'ecole' ? 'offres.html#ecoles' : 'offres.html') + '">Postuler</a><a class="wa" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(partage(o)) + '">Partager</a><a class="fb" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(lien(o)) + '">Facebook</a></div></article>').join('') + '</div>'
+    : '<div class="of-empty"><b style="display:block;color:#102149;font-size:17px">Aucune offre ouverte pour ces critères</b>Inscrivez-vous comme enseignant : vous serez prévenu(e) dès qu’une nouvelle offre arrive.</div>';
+}
+// Offres d'emploi lisibles par Google (Google pour l'emploi)
+function jsonld() {
+  const s = document.createElement('script'); s.type = 'application/ld+json';
+  s.textContent = JSON.stringify({ '@context': 'https://schema.org', '@graph': offres.map(o => ({ '@type': 'JobPosting', title: o.title, description: o.title + (o.preparation ? '. Préparation ' + o.preparation : '') + (o.levels ? '. Niveaux : ' + o.levels : '') + '. Offre transmise par KONE.EDUC.',
+    datePosted: String(o.created_at).slice(0, 10), validThrough: new Date(new Date(o.created_at).getTime() + 60 * 864e5).toISOString().slice(0, 10), employmentType: o.kind === 'ecole' ? (o.contract === 'Temps plein' ? 'FULL_TIME' : 'PART_TIME') : 'CONTRACTOR',
+    hiringOrganization: { '@type': 'Organization', name: 'KONE.EDUC', sameAs: location.origin, logo: location.origin + '/assets/icons/icon-512.png' },
+    jobLocation: { '@type': 'Place', address: { '@type': 'PostalAddress', addressLocality: o.commune || 'Abidjan', addressRegion: 'Abidjan', addressCountry: 'CI' } },
+    url: lien(o), identifier: { '@type': 'PropertyValue', name: 'KONE.EDUC', value: o.kind + '-' + o.id } })) });
+  document.head.appendChild(s);
+}
+db.rpc('public_offers').then(r => { offres = r.data || []; render(); if (offres.length) jsonld(); const h = location.hash && document.querySelector(location.hash); if (h) h.scrollIntoView(); });
+</script>"""
+page('offres-enseignants.html', 'Offres pour enseignants : cours à domicile et écoles à Abidjan | KONE.EDUC',
+     'Offres de cours à domicile et postes en écoles à Abidjan : préparation CEPE, BEPC, BAC, concours ENSEA (AS, ISE) et INPHB (A2GP, classes préparatoires, ITA). Postulez avec KONE.EDUC.',
+     OF_CSS, OF_MAIN, SUPA + OF_JS)

@@ -30,7 +30,7 @@ const norm = v => String(v || '').trim().toLowerCase();
 const commune = loc => String(loc || '').split(/\s[–-]\s/)[0].trim();
 const ago = d => { const h = Math.round((Date.now() - new Date(d)) / 36e5); return h < 1 ? 'à l’instant' : h < 24 ? 'il y a ' + h + ' h' : 'il y a ' + Math.round(h / 24) + ' j'; };
 const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
-let user, mySubject = '', offers = [], tab = 'open', openForm = null;
+let user, mySubject = '', offers = [], schools = [], tab = location.hash === '#ecoles' ? 'ecoles' : 'open', openForm = null;
 
 function lock(title, text, link, label) {
   content.innerHTML = '<section class="card d-card o-lock" style="margin-top:18px"><h2>' + title + '</h2><p class="d-sub" style="margin:8px 0 16px">' + text + '</p>' + (link ? '<a class="d-btn" href="' + link + '">' + label + '</a>' : '') + '</section>';
@@ -54,6 +54,7 @@ async function load() {
   const r = await db.rpc('teacher_offers');
   if (r.error) { message.textContent = 'Les offres seront disponibles prochainement.'; return lock('Offres indisponibles', 'Réessayez dans quelques instants.', '', ''); }
   offers = r.data;
+  const sc = await db.rpc('school_offers'); schools = sc.error ? [] : (sc.data || []);
   render();
 }
 
@@ -67,12 +68,13 @@ function render() {
   const opts = (list, val) => '<option value="">' + list[0] + '</option>' + list.slice(1).map(x => '<option' + (x === val ? ' selected' : '') + '>' + safe(x) + '</option>').join('');
   const uniq = f => [...new Set(open.map(f).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
   content.innerHTML = '<div class="d-kpis">' + kpi('📢', open.length, 'Offre(s) ouverte(s)') + kpi('🎯', match.length, 'Dans votre matière') + kpi('⏳', mine.filter(o => o.my_status === 'pending' && o.request_status === 'pending').length, 'Candidature(s) en cours') + kpi('🏆', mine.filter(o => o.my_status === 'accepted').length, 'Candidature(s) retenue(s)') + '</div>'
-    + '<div class="o-bar"><div class="o-tabs" role="tablist"><button role="tab" aria-selected="' + (tab === 'open') + '" onclick="tab=\'open\';render()">Offres ouvertes (' + open.length + ')</button><button role="tab" aria-selected="' + (tab === 'mine') + '" onclick="tab=\'mine\';render()">Mes candidatures (' + mine.length + ')</button></div>'
+    + '<div class="o-bar"><div class="o-tabs" role="tablist"><button role="tab" aria-selected="' + (tab === 'open') + '" onclick="tab=\'open\';render()">Offres ouvertes (' + open.length + ')</button><button role="tab" aria-selected="' + (tab === 'mine') + '" onclick="tab=\'mine\';render()">Mes candidatures (' + mine.length + ')</button><button role="tab" aria-selected="' + (tab === 'ecoles') + '" onclick="tab=\'ecoles\';render()">🏫 Offres d’écoles (' + schools.filter(x => x.status === 'open').length + ')</button></div>'
     + (tab === 'open' ? '<div class="o-filters"><select id="fSubject" aria-label="Matière" onchange="render()">' + opts(['Toutes les matières'].concat(uniq(o => o.subject)), prev.s) + '</select><select id="fCommune" aria-label="Commune" onchange="render()">' + opts(['Toutes les communes'].concat(uniq(o => commune(o.location))), prev.c) + '</select><select id="fFormat" aria-label="Format" onchange="render()">' + opts(['Tous les formats'].concat(uniq(o => o.format)), prev.f) + '</select><label><input type="checkbox" id="fMine" onchange="render()"' + (prev.m ? ' checked' : '') + '> Ma matière</label></div>' : '') + '</div><div id="offers"></div>';
   const list = tab === 'open'
     ? open.filter(o => (!prev.s || o.subject === prev.s) && (!prev.c || commune(o.location) === prev.c) && (!prev.f || o.format === prev.f) && (!prev.m || norm(o.subject) === mySubject))
         .sort((a, b) => (norm(b.subject) === mySubject) - (norm(a.subject) === mySubject))
     : mine;
+  if (tab === 'ecoles') { document.getElementById('offers').innerHTML = schools.length ? '<div class="o-list">' + schools.map(schoolCard).join('') + '</div>' : '<section class="card d-card"><div class="d-empty"><span class="big">🏫</span><p>Aucune offre d’école pour le moment. Les écoles déposent leurs demandes sur la page « Écoles » de KONE.EDUC : vous serez prévenu(e).</p></div></section>'; return; }
   document.getElementById('offers').innerHTML = list.length ? '<div class="o-list">' + list.map(card).join('') + '</div>'
     : '<section class="card d-card"><div class="d-empty"><span class="big">' + (tab === 'open' ? '📭' : '📝') + '</span><p>' + (tab === 'open' ? 'Aucune offre ne correspond à ces filtres.' : 'Vous n’avez pas encore postulé. Consultez les offres ouvertes.') + '</p></div></section>';
 }
@@ -86,10 +88,26 @@ function card(o) {
   else if (o.my_status && o.request_status === 'cancelled') { pill = '<span class="d-pill bad">Demande annulée</span>'; action = ''; }
   else if (o.my_status === 'pending') { pill = '<span class="d-pill wait">⏳ En cours d’étude</span>'; action = '<button type="button" class="cancel" onclick="withdraw(' + o.id + ')">Retirer ma candidature</button>'; }
   const form = openForm === o.id && !o.my_status ? '<form class="o-apply" onsubmit="apply(event,' + o.id + ')"><label class="d-sub" for="msg-' + o.id + '">Message pour l’équipe KONE.EDUC (facultatif)</label><textarea id="msg-' + o.id + '" maxlength="500" placeholder="Ex. Disponible le mercredi après-midi, expérience avec des élèves de 3e…"></textarea><div class="d-actions"><button class="d-btn sm">Envoyer ma candidature</button><button type="button" class="d-link" onclick="openForm=null;render()">Annuler</button></div></form>' : '';
-  return '<article class="o-card' + (isMatch && !o.my_status ? ' match' : '') + '"><div class="o-top"><div><h3>' + safe(o.subject) + '</h3><p class="d-sub">' + safe(o.school_level) + '</p></div>' + pill + '</div>'
+  return '<article class="o-card' + (isMatch && !o.my_status ? ' match' : '') + '"><div class="o-top"><div><h3>' + safe(o.subject) + '</h3><p class="d-sub">' + safe(o.school_level) + (o.preparation ? ' · 🎯 Préparation ' + safe(o.preparation) : '') + '</p></div>' + pill + '</div>'
     + '<div class="d-meta"><span>📍 ' + safe(o.location) + '</span><span>' + safe(o.format) + '</span><span>🗓 ' + safe(o.availability) + '</span></div>'
     + (o.my_message ? '<p class="d-sub">Votre message : « ' + safe(o.my_message) + ' »</p>' : '') + form
     + '<div class="o-foot"><small>Publiée ' + ago(o.created_at) + ' · ' + o.applicants + ' candidat(s)</small>' + (form ? '' : action) + '</div></article>';
+}
+
+function schoolCard(x) {
+  const pill = x.matched_me ? '<span class="d-pill ok">✅ Vous avez été choisi(e)</span>' : x.my_interest ? '<span class="d-pill wait">⏳ Intérêt envoyé</span>' : '';
+  const action = x.matched_me ? '<small>Les coordonnées de l’école sont dans vos notifications 🔔</small>' : x.my_interest ? '<small>L’équipe KONE.EDUC étudie votre profil.</small>' : '<button type="button" class="d-btn sm" onclick="interet(' + x.id + ')">Je suis intéressé(e)</button>';
+  return '<article class="o-card"><div class="o-top"><div><h3>🏫 ' + safe(x.subjects) + '</h3><p class="d-sub">' + safe([x.school_type, x.levels, x.preparation ? 'Préparation ' + x.preparation : ''].filter(Boolean).join(' · ')) + '</p></div>' + pill + '</div>'
+    + '<div class="d-meta"><span>📍 ' + safe(x.commune) + '</span>' + (x.contract ? '<span>📄 ' + safe(x.contract) + '</span>' : '') + (x.hours_per_week ? '<span>⏱ ' + safe(x.hours_per_week) + '</span>' : '') + (x.salary ? '<span>💰 ' + safe(x.salary) + '</span>' : '') + (x.start_date ? '<span>🗓 Début ' + new Date(x.start_date).toLocaleDateString('fr-FR') + '</span>' : '') + '</div>'
+    + (x.requirements ? '<p class="d-sub">Profil demandé : ' + safe(x.requirements) + '</p>' : '') + (x.details ? '<p class="d-sub">' + safe(x.details) + '</p>' : '')
+    + '<div class="o-foot"><small>Publiée ' + ago(x.created_at) + ' · ' + x.interested + ' enseignant(s) intéressé(s)</small>' + action + '</div></article>';
+}
+async function interet(id) {
+  const m = prompt('Un mot pour l’équipe KONE.EDUC (disponibilités, expérience avec ce niveau…) :', '');
+  if (m === null) return;
+  const r = await db.rpc('express_school_interest', { p_request: id, p_message: m });
+  if (r.error) { alert(r.error.message); return; }
+  alert('Merci ! L’équipe KONE.EDUC vous recontacte si votre profil est retenu.'); load();
 }
 
 async function apply(e, id) {

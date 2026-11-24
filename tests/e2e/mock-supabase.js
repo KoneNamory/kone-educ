@@ -98,6 +98,34 @@
     }
   };
   var rpc = async function (name, a) {
+    // ---------- Écoles et offres publiques
+    var meT = JSON.parse(localStorage.getItem('__ke_user') || 'null'), sx = load();
+    var approvedT = function () { return meT && (sx.teacher_profiles || []).some(function (t) { return t.id === meT.id && t.approved; }); };
+    if (name === 'submit_school_request') {
+      if (String(a.p_phone || '').replace(/\D/g, '').length < 8) return { data: null, error: { message: 'Numéro de téléphone invalide' } };
+      sx.school_requests = sx.school_requests || []; var sid = nextId(sx, 'school_requests');
+      sx.school_requests.push({ id: sid, school_name: a.p_school, school_type: a.p_type, contact_name: a.p_contact, phone: a.p_phone, email: a.p_email || null, commune: a.p_commune, quartier: a.p_quartier, subjects: a.p_subjects, levels: a.p_levels, preparation: a.p_preparation || null, contract: a.p_contract, hours_per_week: a.p_hours, salary: a.p_salary, start_date: a.p_start, requirements: a.p_requirements, details: a.p_details, status: 'open', matched_teacher_id: null, created_at: new Date().toISOString() });
+      save(sx); return { data: sid, error: null };
+    }
+    if (name === 'school_offers') {
+      if (!approvedT()) return { data: [], error: null };
+      return { data: (sx.school_requests || []).filter(function (r) { return r.status === 'open' || r.matched_teacher_id === meT.id; }).map(function (r) {
+        var ints = (sx.school_interests || []).filter(function (i) { return i.request_id === r.id; });
+        return { id: r.id, school_type: r.school_type, commune: r.commune, subjects: r.subjects, levels: r.levels, preparation: r.preparation, contract: r.contract, hours_per_week: r.hours_per_week, salary: r.salary, start_date: r.start_date, requirements: r.requirements, details: r.details, created_at: r.created_at, status: r.status, interested: ints.length, my_interest: ints.some(function (i) { return i.teacher_id === meT.id; }), matched_me: r.matched_teacher_id === meT.id }; }), error: null };
+    }
+    if (name === 'express_school_interest') {
+      if (!approvedT()) return { data: null, error: { message: 'Réservé aux enseignants validés par KONE.EDUC' } };
+      sx.school_interests = sx.school_interests || []; sx.school_interests.push({ id: nextId(sx, 'school_interests'), request_id: a.p_request, teacher_id: meT.id, message: a.p_message || null, created_at: new Date().toISOString() }); save(sx); return { data: null, error: null };
+    }
+    if (name === 'admin_match_school') {
+      var rq = (sx.school_requests || []).find(function (r) { return r.id === a.p_request; }); if (!rq) return { data: null, error: { message: 'Demande introuvable' } };
+      rq.status = 'matched'; rq.matched_teacher_id = a.p_teacher; sx.notifications = sx.notifications || []; sx.notifications.push({ id: nextId(sx, 'notifications'), recipient_id: a.p_teacher, title: 'Mise en relation avec une école', body: 'Contactez ' + rq.contact_name + ' au ' + rq.phone, read: false, created_at: new Date().toISOString() });
+      save(sx); return { data: null, error: null };
+    }
+    if (name === 'public_offers') {
+      return { data: (sx.course_requests || []).filter(function (r) { return r.status === 'pending' && !r.teacher_id; }).map(function (r) { return { kind: 'cours', id: r.id, title: 'Cours à domicile : ' + r.subject + ' (' + r.school_level + ')', subjects: r.subject, levels: r.school_level, preparation: r.preparation || null, commune: String(r.location).split(' · ')[0], format: r.format, contract: null, salary: null, created_at: r.created_at || new Date().toISOString() }; })
+        .concat((sx.school_requests || []).filter(function (r) { return r.status === 'open'; }).map(function (r) { return { kind: 'ecole', id: r.id, title: (r.school_type || 'École') + ' : enseignant de ' + r.subjects, subjects: r.subjects, levels: r.levels, preparation: r.preparation, commune: r.commune, format: null, contract: r.contract, salary: r.salary, created_at: r.created_at }; })), error: null };
+    }
     // ---------- Boutique (mêmes règles que les fonctions SQL)
     var me0 = JSON.parse(localStorage.getItem('__ke_user') || 'null'), bq = load();
     var fail = function (m) { return { data: null, error: { message: m } }; };
@@ -131,9 +159,9 @@
         lines.push([pr, it.qty]); sub += pr.price * it.qty;
       }
       if (sub < (sh.min_order || 0)) return fail('Commande minimum : ' + sh.min_order + ' FCFA');
-      lines.forEach(function (l) { if (l[0].stock != null) l[0].stock -= l[1]; });
-      bq.orders = bq.orders || []; bq.order_items = bq.order_items || [];
+      bq.orders = bq.orders || []; bq.order_items = bq.order_items || []; bq.stock_movements = bq.stock_movements || [];
       var oid = nextId(bq, 'orders'), ref = 'R' + String(1000 + oid);
+      lines.forEach(function (l) { if (l[0].stock != null) { l[0].stock -= l[1]; bq.stock_movements.push({ id: nextId(bq, 'stock_movements'), shop_id: sh.id, product_id: l[0].id, product_name: l[0].name, delta: -l[1], stock_after: l[0].stock, reason: 'vente', order_id: oid, created_at: new Date().toISOString() }); } });
       bq.orders.push({ id: oid, ref: ref, shop_id: sh.id, buyer_id: me0.id, buyer_name: a.p_name, buyer_phone: a.p_phone, delivery_mode: a.p_mode, commune: a.p_mode === 'delivery' ? a.p_commune : null, quartier: a.p_mode === 'delivery' ? a.p_quartier : null, address: a.p_mode === 'delivery' ? a.p_address : null,
         subtotal: sub, delivery_fee: fee, total: sub + fee, commission: 0, payment_method: a.p_payment, payment_status: 'unpaid', payment_ref: null, status: 'new', note: a.p_note || null, rating: null, review: null, created_at: new Date().toISOString() });
       lines.forEach(function (l) { bq.order_items.push({ id: nextId(bq, 'order_items'), order_id: oid, product_id: l[0].id, name: l[0].name, unit_price: l[0].price, qty: l[1], line_total: l[0].price * l[1] }); });
@@ -204,7 +232,7 @@
         var mine = apps.find(function (a) { return a.course_request_id === r.id && a.teacher_id === me.id; });
         if (!((r.status === 'pending' && !r.teacher_id) || mine)) return null;
         return { id: r.id, subject: r.subject, school_level: r.school_level, location: r.location, format: r.format, availability: r.availability, created_at: r.created_at || new Date().toISOString(), request_status: r.status,
-          applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null };
+          applicants: apps.filter(function (a) { return a.course_request_id === r.id; }).length, my_status: mine ? (mine.status || 'pending') : null, my_message: mine ? mine.message : null, preparation: r.preparation || null };
       }).filter(Boolean), error: null };
     }
     if (name === 'answer_first_feedback') {
