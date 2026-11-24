@@ -229,8 +229,10 @@ await logout();await go('connexion.html');step('Connexion : aucun accès adminis
 await logout();await go('cours-particuliers-a-domicile-cocody.html');await p.waitForTimeout(600);
 step('Page locale Cocody : titre, quartiers et FAQ',(await p.textContent('h1')).includes('Cocody')&&(await p.textContent('main')).includes('Riviera')&&(await p.locator('.faq details').count())>=5&&(await p.locator('script[type="application/ld+json"]').count())===1);
 await p.click('.l-cta a.l-btn');await p.waitForTimeout(600);step('Page locale → réservation : commune présélectionnée',(await p.inputValue('#commune'))==='Cocody'&&!(await p.locator('#quartier').isDisabled()));
-await p.selectOption('#commune','Autre commune (à vérifier)');await p.fill('#commune-autre','Grand-Bassam');await p.fill('#quartier-autre','Mockeyville');
+await p.selectOption('#commune','Autre commune (à préciser)');await p.fill('#commune-autre','Grand-Bassam');await p.fill('#quartier-autre','Mockeyville');
 step('Réservation : autre commune saisie et marquée à vérifier',(await p.locator('#quartier').isHidden())&&(await p.evaluate(()=>getAbidjanLocation('commune','quartier').text))==='Grand-Bassam · Mockeyville (à vérifier)');
+await p.selectOption('#commune','Cocody');await p.selectOption('#quartier','Autre quartier');await p.fill('#quartier-autre','Palmeraie');
+await p.selectOption('#commune','Grand-Bassam');step('Réservation : commune des environs (Grand-Bassam) avec ses quartiers',(await p.$$eval('#quartier option',o=>o.map(x=>x.value))).includes('Mockeyville'));
 await p.selectOption('#commune','Cocody');await p.selectOption('#quartier','Autre quartier');await p.fill('#quartier-autre','Palmeraie');
 step('Réservation : autre quartier précisé',(await p.locator('#commune-autre').isHidden())&&(await p.evaluate(()=>getAbidjanLocation('commune','quartier').text))==='Cocody · Palmeraie');
 await go('cours-de-mathematiques-a-domicile-abidjan.html');await p.waitForTimeout(800);step('Page matière : enseignants de mathématiques affichés',(await p.locator('#teachers .t').count())>=1);

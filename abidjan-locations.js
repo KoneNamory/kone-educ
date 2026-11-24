@@ -13,8 +13,16 @@ window.KONE_EDUC_ABIDJAN={
   'Treichville':['Arras','Biafra','Belleville','Treichville Centre','Autre quartier'],
   'Yopougon':['Andokoi','Ananeraie','Banco','Ficgayo','Gesco','Koweït','Niangon','Selmer','Sideci','Toits-Rouges','Wassakara','Autre quartier']
 };
+// Communes proches d’Abidjan
+window.KONE_EDUC_ENVIRONS={
+  'Azaguié':['Azaguié Centre','Autre quartier'],
+  'Bonoua':['Bonoua Centre','Samo','Yaou','Autre quartier'],
+  'Dabou':['Dabou Centre','Débrimou','Lopou','Autre quartier'],
+  'Grand-Bassam':['Azuretti','Impérial','Mockeyville','Moossou','Petit Paris','Quartier France','Autre quartier'],
+  'Jacqueville':['Jacqueville Centre','Autre quartier']
+};
 // Choix « Autre commune » : la commune est saisie à la main et marquée « à vérifier » pour l’équipe.
-window.KONE_EDUC_OTHER_COMMUNE='Autre commune (à vérifier)';
+window.KONE_EDUC_OTHER_COMMUNE='Autre commune (à préciser)';
 window.setupAbidjanLocation=(communeId,quartierId)=>{
   const commune=document.getElementById(communeId),quartier=document.getElementById(quartierId),OTHER=KONE_EDUC_OTHER_COMMUNE;
   const field=(id,label,ph)=>{const l=document.createElement('label');l.className='conditional full';l.id=id+'-field';l.innerHTML=label+' <span>*</span><input id="'+id+'" autocomplete="off" maxlength="80" placeholder="'+ph+'">';return l};
@@ -23,12 +31,13 @@ window.setupAbidjanLocation=(communeId,quartierId)=>{
   const anchor=quartier.closest('label')||quartier;anchor.after(cLab);cLab.after(qLab);
   const cIn=cLab.querySelector('input'),qIn=qLab.querySelector('input');
   const note=document.createElement('small');note.className='full';note.style.cssText='display:block;color:#8a5a00;margin-top:4px';note.textContent='Nous vérifions que nous avons un enseignant près de chez vous, puis nous vous rappelons.';cLab.appendChild(note);
-  commune.innerHTML='<option value="">Choisir une commune</option>'+Object.keys(KONE_EDUC_ABIDJAN).map(x=>'<option>'+x+'</option>').join('')+'<option value="'+OTHER+'">'+OTHER+'</option>';
+  const ALL=Object.assign({},KONE_EDUC_ABIDJAN,KONE_EDUC_ENVIRONS),o=x=>'<option>'+x+'</option>';
+  commune.innerHTML='<option value="">Choisir une commune</option><optgroup label="Abidjan">'+Object.keys(KONE_EDUC_ABIDJAN).map(o).join('')+'</optgroup><optgroup label="Environs d’Abidjan">'+Object.keys(KONE_EDUC_ENVIRONS).map(o).join('')+'</optgroup><optgroup label="Ailleurs"><option value="'+OTHER+'">'+OTHER+'</option></optgroup>';
   const sync=()=>{const isOther=commune.value===OTHER,isOtherQ=isOther||quartier.value==='Autre quartier';
     cLab.classList.toggle('show',isOther);cIn.required=isOther;if(!isOther)cIn.value='';
     qLab.classList.toggle('show',isOtherQ);qIn.required=isOtherQ;if(!isOtherQ)qIn.value='';
     const ql=quartier.closest('label');if(ql)ql.style.display=isOther?'none':'';quartier.required=!isOther};
-  const fill=()=>{quartier.innerHTML='<option value="">Choisir un quartier</option>'+(KONE_EDUC_ABIDJAN[commune.value]||[]).map(x=>'<option>'+x+'</option>').join('');quartier.disabled=!commune.value||commune.value===OTHER;sync()};
+  const fill=()=>{quartier.innerHTML='<option value="">Choisir un quartier</option>'+(ALL[commune.value]||[]).map(x=>'<option>'+x+'</option>').join('');quartier.disabled=!commune.value||commune.value===OTHER;sync()};
   commune.addEventListener('change',fill);quartier.addEventListener('change',sync);fill();
 };
 // Lieu à enregistrer : « Commune · Quartier », avec « (à vérifier) » pour une commune hors liste.
