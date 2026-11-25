@@ -83,7 +83,7 @@ const METHOD = { wave: 'Wave', orange_money: 'Orange Money', moov_money: 'Moov M
     + '<div class="total"><div><span>Total ' + (paid ? 'payé' : 'à payer') + '</span><span>' + fcfa(i.amount) + '</span></div></div>'
     + (paid
       ? '<div class="pay"><h2>Paiement reçu</h2><p style="margin:0">Réglé' + (i.payment_method ? ' par ' + METHOD[i.payment_method] : '') + (i.payment_reference ? ' · référence ' + safe(i.payment_reference) : '') + '. Merci pour votre confiance !</p></div>'
-      : '<div class="pay"><h2>Comment payer ?</h2><ul>' + pay.methods.map(x => '<li><b>' + safe(x.label) + '</b> : ' + safe(x.number) + '</li>').join('') + '</ul><p style="margin:8px 0 0">Envoyez le montant exact, puis indiquez la référence de la transaction dans <b>« Mes paiements »</b> sur kone-educ.vercel.app.</p></div>')
+      : '<div class="pay"><h2>Comment payer ?</h2><ul>' + pay.methods.map(x => '<li><b>' + safe(x.label) + '</b> : ' + safe(x.number) + '</li>').join('') + '</ul><p style="margin:8px 0 0">Envoyez le montant exact, puis indiquez la référence de la transaction dans <b>« Mes paiements »</b> sur kone-educ.com.</p></div>')
     + '<div class="foot">KONE.EDUC — L’excellence à domicile · Document généré le ' + dateFr(new Date().toISOString()) + '</div>';
   msg.hidden = true; sheet.hidden = false;
 })();

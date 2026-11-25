@@ -22,7 +22,7 @@ VERSION = 'Version du 25 novembre 2026'
 REGLEMENT = [
   ('Article 1 – Objet et champ d’application', [
     'Le présent règlement intérieur fixe les règles que doivent respecter toutes les personnes qui utilisent les services de KONE.EDUC : les enseignants, les parents et familles, les élèves, les vendeurs de la boutique en ligne et les écoles partenaires.',
-    'Toute inscription sur le site kone-educ.vercel.app, toute demande de cours, toute candidature et toute ouverture de boutique vaut acceptation du présent règlement.',
+    'Toute inscription sur le site kone-educ.com, toute demande de cours, toute candidature et toute ouverture de boutique vaut acceptation du présent règlement.',
   ]),
   ('Article 2 – Définitions', [
     '- <b>KONE.EDUC</b> : la structure qui met en relation les familles et les enseignants, assure le suivi pédagogique, encaisse les mensualités et rémunère les enseignants.',
@@ -179,7 +179,7 @@ p{margin:4px 0}ul{margin:4px 0 4px 18px;padding:0}li{margin:2px 0}
 .foot{margin-top:16px;font-size:8.5pt;color:#5b6884;text-align:center}
 '''
 reg_pdf = ('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Règlement intérieur KONE.EDUC</title><style>' + PDF_CSS + '</style></head><body>'
-  + '<div class="head"><img src="' + LOGO + '" alt="KONE.EDUC"><div>KONE.EDUC – Cours à domicile<br>Abidjan, Côte d’Ivoire<br>WhatsApp : ' + NUMERO + '<br>kone-educ.vercel.app</div></div>'
+  + '<div class="head"><img src="' + LOGO + '" alt="KONE.EDUC"><div>KONE.EDUC – Cours à domicile<br>Abidjan, Côte d’Ivoire<br>WhatsApp : ' + NUMERO + '<br>kone-educ.com</div></div>'
   + '<h1>Règlement intérieur</h1><p class="sub">Enseignants · Parents et familles · Vendeurs · ' + VERSION + '</p>'
   + '<div class="cle"><b>L’essentiel :</b> mensualité payée au plus tard le ' + str(JOUR_LIMITE) + ' du mois, uniquement au ' + NUMERO + ' (KONE.EDUC) · ' + (str(TAUX) + ' % de frais de service, ' + str(PART_ENS) + ' % versés à l’enseignant · ' if INTERNE else '') + 'aucun paiement direct à l’enseignant · absence prévenue 24 h à l’avance · compte rendu après chaque séance.</div>'
   + corps_reglement()
@@ -227,7 +227,7 @@ fiche = ('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fich
   + '<h2>6. Engagements</h2><div class="eng"><div><b>La famille s’engage à :</b><ul><li>payer la mensualité avant le ' + str(JOUR_LIMITE) + ' du mois sur le numéro officiel ;</li><li>assurer la présence d’un adulte pendant les cours d’un mineur ;</li><li>prévenir 24 h à l’avance en cas d’annulation (sinon la séance est due) ;</li><li>prévenir 15 jours avant la fin du mois pour arrêter les cours.</li></ul></div>'
   + '<div><b>L’enseignant s’engage à :</b><ul><li>être ponctuel et prévenir 24 h à l’avance de toute absence ;</li><li>rattraper chaque séance manquée dans le mois ;</li><li>remplir le compte rendu après chaque séance ;</li><li>ne recevoir aucun paiement direct de la famille et ne pas la démarcher hors KONE.EDUC.</li></ul></div></div>'
   + '<p style="margin:6px 0 0"><b>KONE.EDUC s’engage à</b> suivre les cours, remplacer l’enseignant en cas de besoin, envoyer un bilan mensuel et verser à l’enseignant sa rémunération au plus tard le ' + str(JOUR_VERSEMENT) + ' du mois suivant.</p>'
-  + '<p style="margin:4px 0 0">Les signataires déclarent avoir lu et accepté le <b>règlement intérieur de KONE.EDUC</b> (kone-educ.vercel.app/reglement-interieur.html), dont la présente fiche fait partie.</p>'
+  + '<p style="margin:4px 0 0">Les signataires déclarent avoir lu et accepté le <b>règlement intérieur de KONE.EDUC</b> (kone-educ.com/reglement-interieur.html), dont la présente fiche fait partie.</p>'
   + '<div class="sign"><div><b>Le parent / tuteur</b>« Lu et approuvé », date et signature</div><div><b>L’enseignant</b>« Lu et approuvé », date et signature</div><div><b>Pour KONE.EDUC</b>Nom, date, signature et cachet</div></div>'
   + '<p class="note">Fiche établie en trois exemplaires : un pour la famille, un pour l’enseignant, un pour KONE.EDUC · ' + VERSION + '</p></body></html>')
 (OUT / 'fiche-accord.html').write_text(fiche, encoding='utf-8')
@@ -242,8 +242,8 @@ desc = 'Règlement intérieur KONE.EDUC : règles des enseignants, des parents e
 for k in ('name="description"', 'property="og:description"'):
     head = re.sub(r'<meta ' + k + r' content="[^"]*">', '<meta ' + k + ' content="' + desc + '">', head)
 head = re.sub(r'<meta property="og:title" content="[^"]*">', '<meta property="og:title" content="Règlement intérieur | KONE.EDUC">', head)
-head = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="https://kone-educ.vercel.app/reglement-interieur.html">', head)
-head = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="https://kone-educ.vercel.app/reglement-interieur.html">', head)
+head = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="https://www.kone-educ.com/reglement-interieur.html">', head)
+head = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="https://www.kone-educ.com/reglement-interieur.html">', head)
 body_start = base[base.index('<body'):base.index('<main')].replace(' aria-current="page"', '')
 footer = base[base.index('<footer'):base.index('<script src="site.js">')]
 SITE_CSS = '''.ri{max-width:860px;margin:0 auto;padding:26px 20px 70px;font-family:"DM Sans",Arial,sans-serif;color:#0f1b37;line-height:1.65}

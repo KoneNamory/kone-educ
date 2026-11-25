@@ -12,7 +12,7 @@ Chaque amélioration du site apparaît donc aussitôt dans l’application, sans
 
 ## 2. Générer l’application avec PWABuilder
 
-1. Sur un ordinateur, ouvrez https://www.pwabuilder.com et saisissez `https://kone-educ.vercel.app`.
+1. Sur un ordinateur, ouvrez https://www.pwabuilder.com et saisissez `https://www.kone-educ.com`.
 2. Cliquez sur **Package for stores**, puis sur **Android** et **Generate Package**.
 3. Réglages conseillés :
    - Package ID : `com.koneeduc.app`. Il est définitif : ne plus jamais le changer.
@@ -27,7 +27,7 @@ Chaque amélioration du site apparaît donc aussitôt dans l’application, sans
 ## 3. Relier l’application au site (supprime la barre d’adresse)
 
 Envoyez le contenu du fichier `assetlinks.json` à l’équipe technique (ou à Claude).
-Il sera publié à l’adresse `https://kone-educ.vercel.app/.well-known/assetlinks.json`.
+Il sera publié à l’adresse `https://www.kone-educ.com/.well-known/assetlinks.json`.
 
 Après le premier envoi sur la Play Console, Google ajoute sa propre clé de signature :
 allez dans **Configuration → Intégrité de l’application → Signature de l’application**,
@@ -44,9 +44,9 @@ Images (dossier `assets/store/` et fichiers fournis) :
 - Captures d’écran du téléphone : `1-accueil.png`, `2-fiche-enseignant.png`, `4-bilan.png`, `5-planning.png` (1080 × 1920)
 
 Liens à renseigner :
-- Politique de confidentialité : `https://kone-educ.vercel.app/mentions-legales.html#confidentialite`
-- Suppression du compte : `https://kone-educ.vercel.app/suppression-compte.html`
-- Site web : `https://kone-educ.vercel.app`
+- Politique de confidentialité : `https://www.kone-educ.com/mentions-legales.html#confidentialite`
+- Suppression du compte : `https://www.kone-educ.com/suppression-compte.html`
+- Site web : `https://www.kone-educ.com`
 
 Questionnaires :
 - **Accès à l’application** : l’application demande une connexion. Donnez un compte Parent de test (e-mail + mot de passe) pour l’examen de Google.

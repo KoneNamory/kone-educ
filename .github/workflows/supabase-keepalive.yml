@@ -26,7 +26,7 @@ jobs:
           URL=$(grep -o "url: '[^']*'" supabase-config.js | cut -d"'" -f2)
           KEY=$(grep -o "publishableKey: '[^']*'" supabase-config.js | cut -d"'" -f2)
           MISSING=0
-          for T in profiles course_requests teacher_profiles notifications documents messages contact_messages invoices session_reports reviews course_applications sessions audit_log monthly_assessments teacher_rates teacher_payouts first_lesson_feedback shops products orders order_items stock_movements school_requests school_interests; do
+          for T in profiles course_requests teacher_profiles notifications documents messages contact_messages invoices session_reports reviews course_applications sessions audit_log monthly_assessments teacher_rates teacher_payouts first_lesson_feedback shops products orders order_items stock_movements school_requests school_interests order_disputes product_reports job_offers job_applications; do
             BODY=$(curl -s "$URL/rest/v1/$T?select=*&limit=0" -H "apikey: $KEY")
             if echo "$BODY" | grep -q 'PGRST205\|does not exist'; then echo "❌ $T : table absente"; MISSING=1; else echo "✅ $T"; fi
           done
@@ -59,8 +59,8 @@ jobs:
       - name: Vérifier le sitemap et robots.txt en ligne
         run: |
           for U in sitemap.xml robots.txt; do
-            echo "== https://kone-educ.vercel.app/$U"
-            curl -s -o /dev/null -w 'HTTP %{http_code} · %{content_type}\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1)' "https://kone-educ.vercel.app/$U"
+            echo "== https://www.kone-educ.com/$U"
+            curl -s -o /dev/null -w 'HTTP %{http_code} · %{content_type}\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1)' "https://www.kone-educ.com/$U"
           done
-          curl -s https://kone-educ.vercel.app/sitemap.xml | head -5
-          curl -s https://kone-educ.vercel.app/ | grep -o 'google-site-verification[^>]*' || echo "balise Google absente"
+          curl -s https://www.kone-educ.com/sitemap.xml | head -5
+          curl -s https://www.kone-educ.com/ | grep -o 'google-site-verification[^>]*' || echo "balise Google absente"
