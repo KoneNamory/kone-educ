@@ -59,8 +59,8 @@ jobs:
       - name: Vérifier le sitemap et robots.txt en ligne
         run: |
           for U in sitemap.xml robots.txt; do
-            echo "== https://kone-educ.vercel.app/$U"
-            curl -s -o /dev/null -w 'HTTP %{http_code} · %{content_type}\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1)' "https://kone-educ.vercel.app/$U"
+            echo "== https://www.kone-educ.com/$U"
+            curl -s -o /dev/null -w 'HTTP %{http_code} · %{content_type}\n' -A 'Mozilla/5.0 (compatible; Googlebot/2.1)' "https://www.kone-educ.com/$U"
           done
-          curl -s https://kone-educ.vercel.app/sitemap.xml | head -5
-          curl -s https://kone-educ.vercel.app/ | grep -o 'google-site-verification[^>]*' || echo "balise Google absente"
+          curl -s https://www.kone-educ.com/sitemap.xml | head -5
+          curl -s https://www.kone-educ.com/ | grep -o 'google-site-verification[^>]*' || echo "balise Google absente"

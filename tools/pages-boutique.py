@@ -5,7 +5,7 @@ Usage : python3 tools/pages-boutique.py"""
 import re, html, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SITE = 'https://kone-educ.vercel.app'
+SITE = 'https://www.kone-educ.com'
 base = (ROOT / 'services.html').read_text(encoding='utf-8')
 HEAD = base[:base.index('<style>')]
 BODY_START = base[base.index('<body'):base.index('<main')].replace(' aria-current="page"', '')

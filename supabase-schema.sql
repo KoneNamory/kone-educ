@@ -758,7 +758,7 @@ begin
     || '<p>Bonjour ' || replace(replace(coalesce(v_name, ''), '<', '&lt;'), '>', '&gt;') || ',</p>'
     || '<h2 style="font-size:19px;margin:18px 0 8px">' || replace(replace(new.title, '<', '&lt;'), '>', '&gt;') || '</h2>'
     || '<p style="font-size:15px;line-height:1.6">' || replace(replace(new.body, '<', '&lt;'), '>', '&gt;') || '</p>'
-    || '<p style="margin:24px 0"><a href="https://kone-educ.vercel.app/connexion.html" style="background:#1559eb;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Ouvrir mon espace</a></p>'
+    || '<p style="margin:24px 0"><a href="https://www.kone-educ.com/connexion.html" style="background:#1559eb;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700">Ouvrir mon espace</a></p>'
     || '<p style="color:#5b6884;font-size:13px">Une question ? WhatsApp : 01 61 70 13 61<br>KONE.EDUC — L’excellence à domicile</p></div>';
   perform net.http_post(
     url := 'https://api.brevo.com/v3/smtp/email',

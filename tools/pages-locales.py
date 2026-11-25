@@ -12,7 +12,7 @@ from urllib.parse import quote
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SITE = 'https://kone-educ.vercel.app'
+SITE = 'https://www.kone-educ.com'
 
 
 def slug(s):
