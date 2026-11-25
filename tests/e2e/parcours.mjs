@@ -247,7 +247,7 @@ d=await db();step('Inscription vendeur → espace vendeur',p.url().includes('esp
 step('Espace vendeur : formulaire d’ouverture de boutique',await p.locator('#sf').isVisible()&&(await p.locator('.v-zone').count())>=15);
 await p.fill('#sName','Librairie Awa');await p.fill('#sAddr','Face à la pharmacie');await p.selectOption('#sCommune','Cocody');await p.selectOption('#sQuartier','Angré');
 await p.fill('#sAll','1000');await p.click('button:has-text("Appliquer à toutes les communes")');
-await tick('#sMomo');await p.fill('#sWave','0701010101');await p.click('#sBtn');await p.waitForTimeout(1200);
+await tick('#sMomo');await p.fill('#sWave','0701010101');await tick('#sTerms');await p.click('#sBtn');await p.waitForTimeout(1200);
 d=await db();const shopRow=(d.shops||[])[0]||{};
 step('Boutique créée en attente, frais de livraison enregistrés',shopRow.name==='Librairie Awa'&&shopRow.status==='pending'&&shopRow.delivery_fees&&shopRow.delivery_fees.Yopougon===1000&&shopRow.pay_momo===true&&shopRow.commune==='Cocody');
 step('Après ouverture : formulaire du premier article ouvert',await p.locator('#pf').isVisible()&&(await p.textContent('#statusBox')).includes('vérification'));
@@ -320,6 +320,25 @@ await loginAs('seller','awa@test.ci');await go('espace-vendeur.html');await p.wa
 step('Vendeur : historique des entrées et sorties',(await p.textContent('#dlgBody')).includes('Vente'));
 await logout();await go('reglement-interieur.html');step('Règlement intérieur : 20 articles, 18 % et numéro de dépôt',(await p.locator('.art').count())===20&&(await p.textContent('main')).includes('18 %')&&(await p.textContent('main')).includes('01 61 70 13 61'));
 step('Pied de page : lien vers le règlement intérieur',(await p.locator('footer a[href="reglement-interieur.html"]').count())===1);
+// 9 septies. Ordre et traçabilité : règlement vendeur, litige, signalement, cohérence, relevé
+d=await db();step('Vendeur : acceptation du règlement enregistrée à l’ouverture',!!d.shops[0].terms_accepted_at);
+await loginAs('parent','mariam@test.ci');await go('mes-commandes.html');await p.waitForTimeout(900);
+const firstOrd=(await db()).orders[0];
+await p.locator('.c-order').filter({hasText:firstOrd.ref}).locator('button:has-text("Signaler un problème")').click();await p.waitForTimeout(900);
+d=await db();step('Client : problème signalé sur une commande livrée',(d.order_disputes||[]).length===1&&(await p.textContent('#list')).includes('Problème signalé'));
+await go('boutique.html?shop='+d.shops[0].id);await p.waitForTimeout(800);await p.locator('.bq-card .img').first().click();await p.waitForTimeout(300);
+await p.evaluate(()=>{window.prompt=()=>'Prix abusif'});await p.click('button:has-text("Signaler cet article")');await p.waitForTimeout(600);
+d=await db();step('Client : article signalé',(d.product_reports||[]).length===1);
+await loginAs('seller','awa@test.ci');await go('espace-vendeur.html');await p.waitForTimeout(1000);await p.click('.v-chips button:has-text("Toutes")');await p.waitForTimeout(200);
+step('Vendeur : litige visible sur la commande',(await p.textContent('#panel')).includes('Le client signale un problème'));
+await p.click('.v-tabs button:has-text("Statistiques")');await p.waitForTimeout(300);step('Vendeur : relevé mensuel disponible',(await p.locator('#relMois').count())===1&&(await p.locator('button:has-text("Imprimer le relevé")').count())===1);
+await loginAs('admin','admin@kone.ci');await go('espace-admin.html#shoplog');await p.waitForTimeout(1300);
+step('Admin : indicateurs de sérieux des boutiques',(await p.textContent('#shopList')).includes('délai moyen de réponse')&&(await p.textContent('#shopList')).includes('règlement accepté'));
+await p.click('#shoplog button:has-text("Litiges")');await p.waitForTimeout(200);await p.click('#logList button:has-text("Traiter le litige")');await p.waitForTimeout(900);
+d=await db();step('Admin : litige traité',d.order_disputes[0].status==='resolved'&&!!d.order_disputes[0].resolution);
+await p.click('#shoplog button:has-text("Articles signalés")');await p.waitForTimeout(200);await p.click('#logList button:has-text("Masquer l’article")');await p.waitForTimeout(900);
+d=await db();step('Admin : article signalé masqué',d.products.find(x=>x.id===d.product_reports[0].product_id).active===false&&d.product_reports[0].handled===true);
+await p.click('#shoplog button:has-text("Contrôle de cohérence")');await p.waitForTimeout(700);step('Admin : contrôle de cohérence',(await p.textContent('#cohBox')).includes('Tout est cohérent'));
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

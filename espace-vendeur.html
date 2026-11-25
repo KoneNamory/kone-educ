@@ -69,7 +69,7 @@ dialog.v-dlg::backdrop{background:rgba(10,20,45,.55)}
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 const B = KE_BOUTIQUE, esc = B.esc;
 const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {}));
-let user = null, prof = null, shop = null, products = [], orders = [], items = {}, tab = 'orders', ofilter = 'todo', known = null, pq = '';
+let user = null, prof = null, shop = null, products = [], orders = [], items = {}, litiges = {}, tab = 'orders', ofilter = 'todo', known = null, pq = '';
 const MONTH0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 function msg(el, t, ok) { el.className = 'v-msg ' + (ok ? 'ok' : 'err'); el.textContent = t; }
@@ -115,6 +115,7 @@ async function chargerCommandes(first) {
   if (ids.length) {
     const it = await db.from('order_items').select('*').in('order_id', ids);
     items = {}; (it.data || []).forEach(i => { (items[i.order_id] = items[i.order_id] || []).push(i); });
+    const dp = await db.from('order_disputes').select('*').in('order_id', ids); litiges = {}; (dp.data || []).forEach(x => { (litiges[x.order_id] = litiges[x.order_id] || []).push(x); });
   }
   const nouvelles = list.filter(o => o.status === 'new' && known && !known.has(o.id));
   known = new Set(list.map(o => o.id)); orders = list; titre();
@@ -181,6 +182,8 @@ function carteCommande(o) {
   const confirmPay = o.payment_method === 'momo' && o.payment_status !== 'paid' && !['cancelled', 'refused'].includes(o.status) ? '<button class="d-btn orange" onclick="paye(' + o.id + ')">💰 J’ai reçu le paiement</button>' : '';
   return '<article class="v-order' + (o.status === 'new' ? ' new' : '') + '" id="o' + o.id + '"><div class="top"><div><span class="ref">#' + esc(o.ref) + '</span> ' + B.badge(o.status) + '<div class="when">' + B.depuis(o.created_at) + '</div></div><b style="font-size:18px">' + B.fcfa(o.total) + '</b></div>'
     + '<div class="cl">👤 <b>' + esc(o.buyer_name) + '</b> · <a href="' + B.telLink(o.buyer_phone) + '">' + esc(o.buyer_phone) + '</a><br>' + (pickup ? '🏪 <b>Retrait en boutique</b>' : '🛵 <b>Livraison</b> : ' + esc([o.address, o.quartier, o.commune].filter(Boolean).join(', '))) + '<br>' + pay + (o.note ? '<br>💬 « ' + esc(o.note) + ' »' : '') + (o.cancel_reason ? '<br>❗ ' + esc(o.cancel_reason) : '') + (o.rating ? '<br>⭐ ' + B.stars(o.rating) + (o.review ? ' « ' + esc(o.review) + ' »' : '') : '') + '</div>'
+    + (litiges[o.id] || []).map(x => '<div class="v-status ' + (x.status === 'open' ? 'bad' : 'ok') + '" style="margin:8px 0">' + (x.status === 'open' ? '⚠️ Le client signale un problème' : '✅ Litige traité') + (x.message ? ' : « ' + esc(x.message) + ' »' : '') + (x.resolution ? '<br>Décision KONE.EDUC : ' + esc(x.resolution) : '<br><small>Contactez le client rapidement ; KONE.EDUC suit le dossier.</small>') + '</div>').join('')
+    + (o.auto_closed ? '<div class="d-sub" style="margin:4px 0">🤖 ' + (o.status === 'cancelled' ? 'Annulée automatiquement (pas de réponse sous 24 h)' : 'Clôturée automatiquement après 7 jours') + '</div>' : '')
     + '<ul>' + it.map(i => '<li>' + i.qty + ' × ' + esc(i.name) + ' — ' + B.fcfa(i.line_total) + '</li>').join('') + '</ul>'
     + '<div class="v-tot"><span>Articles ' + B.fcfa(o.subtotal) + (o.delivery_fee ? ' + livraison ' + B.fcfa(o.delivery_fee) : '') + '</span><span>' + B.fcfa(o.total) + '</span></div>'
     + '<div class="v-acts">' + next + confirmPay + '<a class="d-btn wa sm" target="_blank" rel="noopener" href="' + waClient(o, o.status) + '">WhatsApp</a><a class="d-btn ghost sm" href="' + B.telLink(o.buyer_phone) + '">📞 Appeler</a><button class="d-btn ghost sm" onclick="imprimer(' + o.id + ')">🖨 Bon</button>' + annuler + '</div></article>';
@@ -292,7 +295,7 @@ function formulaireBoutique(s, nouveau) {
     + '<label class="chk"><input type="checkbox" id="sMomo"' + (s.pay_momo ? ' checked' : '') + '> 📱 Mobile money avant la livraison</label>'
     + '<div id="sMomoBox"' + (s.pay_momo ? '' : ' hidden') + '><p class="hint">Vos numéros, montrés seulement aux clients qui ont commandé chez vous :</p><div class="two"><label>Wave<input id="sWave" maxlength="30" value="' + esc(s.momo_wave || '') + '"></label><label>Orange Money<input id="sOrange" maxlength="30" value="' + esc(s.momo_orange || '') + '"></label><label>MTN MoMo<input id="sMtn" maxlength="30" value="' + esc(s.momo_mtn || '') + '"></label><label>Moov Money<input id="sMoov" maxlength="30" value="' + esc(s.momo_moov || '') + '"></label></div></div></fieldset>'
     + '<p class="v-msg" id="sMsg"></p><button class="d-btn orange" style="width:100%;justify-content:center;margin-top:8px" id="sBtn">' + (nouveau ? 'Ouvrir ma boutique 🚀' : 'Enregistrer les modifications') + '</button>'
-    + (nouveau ? '<p class="hint" style="text-align:center">En ouvrant votre boutique, vous vous engagez à vendre des articles conformes à leur description et à respecter vos prix et délais.</p>' : '') + '</form>';
+    + (nouveau ? '<label class="chk" style="margin-top:12px;align-items:flex-start"><input type="checkbox" id="sTerms" required style="margin-top:3px"> <span>J’accepte le <a href="reglement-interieur.html" target="_blank">règlement intérieur de KONE.EDUC</a> (titre III – vendeurs) : articles conformes, réponse sous 24 h (sinon annulation automatique), livraison dans le délai annoncé, pas de contrefaçon.</span></label>' : '') + '</form>';
 }
 function toutCocher() {
   const v = sAll.value; if (v === '') { alert('Indiquez d’abord le prix de livraison.'); sAll.focus(); return; }
@@ -323,7 +326,7 @@ function brancherFormulaire(s, nouveau) {
     const row = { name: sName.value.trim(), description: sDesc.value.trim() || null, phone: sPhone.value.trim(), whatsapp: sWa.value.trim() || null, commune: loc.commune, quartier: loc.quartier || null, address: sAddr.value.trim() || null, logo_url: logo,
       delivery_fees: fees, default_delivery_fee: sElse.checked ? Math.max(0, parseInt(sDefault.value, 10)) : null, delivery_delay: sDelay.value, min_order: Math.max(0, parseInt(sMin.value || '0', 10)), pickup: sPickup.checked,
       pay_cod: sCod.checked, pay_momo: sMomo.checked, momo_wave: sWave.value.trim() || null, momo_orange: sOrange.value.trim() || null, momo_mtn: sMtn.value.trim() || null, momo_moov: sMoov.value.trim() || null };
-    const r = nouveau ? await db.from('shops').insert(Object.assign({ owner_id: user.id }, row)).select().maybeSingle() : await db.from('shops').update(row).eq('id', shop.id).select().maybeSingle();
+    const r = nouveau ? await db.from('shops').insert(Object.assign({ owner_id: user.id, terms_accepted_at: new Date().toISOString() }, row)).select().maybeSingle() : await db.from('shops').update(row).eq('id', shop.id).select().maybeSingle();
     if (r.error) { msg(sMsg, r.error.message); sBtn.disabled = false; sBtn.textContent = 'Réessayer'; return; }
     if (nouveau) { await chargerBoutique(); tab = 'products'; render(); editer(); return; }
     shop = r.data || Object.assign(shop, row); msg(sMsg, 'Modifications enregistrées ✓', true); sBtn.disabled = false; sBtn.textContent = 'Enregistrer les modifications'; entete();
@@ -355,8 +358,26 @@ function vueStats() {
   panel.innerHTML = '<h2>Statistiques</h2><div class="d-kpis" style="margin-top:14px"><div class="d-kpi"><b>' + B.fcfa(sum(month)) + '</b><span>Ventes livrées ce mois</span></div><div class="d-kpi"><b>' + B.fcfa(sum(done)) + '</b><span>Ventes livrées au total</span></div><div class="d-kpi"><b>' + (done.length ? B.fcfa(sum(done) / done.length) : '—') + '</b><span>Panier moyen</span></div><div class="d-kpi"><b>' + (orders.length ? Math.round(annul * 100 / orders.length) + ' %' : '—') + '</b><span>Commandes annulées ou refusées</span></div></div>'
     + '<h3>🏆 Articles les plus vendus</h3><div class="v-top">' + (topList.length ? topList.map(t => '<div><span>' + esc(t[0]) + ' (' + t[1][0] + ')</span><b>' + B.fcfa(t[1][1]) + '</b></div>').join('') : '<p class="d-sub">Vos meilleures ventes apparaîtront ici.</p>') + '</div>'
     + '<h3>⭐ Derniers avis</h3><div class="v-top">' + (avis.length ? avis.map(o => '<div><span>' + B.stars(o.rating) + ' ' + esc(o.buyer_name.split(' ')[0]) + (o.review ? ' : « ' + esc(o.review) + ' »' : '') + '</span></div>').join('') : '<p class="d-sub">Les avis de vos clients apparaîtront ici après la livraison.</p>') + '</div>'
+    + '<h3>🧾 Relevé mensuel</h3><div class="v-share"><input type="month" id="relMois" value="' + new Date().toISOString().slice(0, 7) + '" style="flex:0 1 200px"><button class="d-btn sm" onclick="releve()">🖨 Imprimer le relevé</button></div>'
     + '<p class="d-sub" style="margin-top:16px">' + (shop.commission_rate > 0 ? 'Commission KONE.EDUC (' + shop.commission_rate + ' %) sur les ventes livrées ce mois : <b>' + B.fcfa(commission) + '</b>.' : '✅ Aucune commission KONE.EDUC pendant le lancement : vous gardez 100 % de vos ventes.') + '</p>';
 }
 
+function releve() {
+  const m = document.getElementById('relMois').value; if (!m) return;
+  const d0 = new Date(m + '-01T00:00:00'), d1 = new Date(d0); d1.setMonth(d1.getMonth() + 1);
+  const dans = o => { const t = new Date(o.created_at); return t >= d0 && t < d1; };
+  const L = orders.filter(dans).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const liv = L.filter(o => o.status === 'delivered'), ann = L.filter(o => ['cancelled', 'refused'].includes(o.status));
+  const sum = (l, k) => l.reduce((a, o) => a + (o[k] || 0), 0);
+  const mois = d0.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const w = window.open('', '_blank'); if (!w) { alert('Autorisez les fenêtres pour imprimer le relevé.'); return; }
+  w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Relevé ' + esc(shop.name) + ' ' + mois + '</title><style>body{font-family:Arial,sans-serif;color:#0f1b37;margin:24px}h1{margin:0;font-size:22px}table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid #dde5f2;text-align:left}th{background:#f1f5fd}td.n{text-align:right}.k{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.k div{padding:10px 14px;border:1px solid #dde5f2;border-radius:10px}.k b{display:block;font-size:18px}small{color:#5b6884}</style></head><body>'
+    + '<h1>Relevé mensuel – ' + esc(shop.name) + '</h1><small>' + mois + ' · édité le ' + new Date().toLocaleString('fr-FR') + ' · KONE.EDUC</small>'
+    + '<div class="k"><div><b>' + L.length + '</b>commandes</div><div><b>' + liv.length + '</b>livrées</div><div><b>' + ann.length + '</b>annulées / refusées</div><div><b>' + B.fcfa(sum(liv, 'subtotal')) + '</b>ventes livrées (articles)</div><div><b>' + B.fcfa(sum(liv, 'delivery_fee')) + '</b>frais de livraison</div><div><b>' + B.fcfa(sum(liv, 'commission')) + '</b>commission KONE.EDUC (' + shop.commission_rate + ' %)</div></div>'
+    + '<table><thead><tr><th>Date</th><th>Réf.</th><th>Client</th><th>Statut</th><th>Paiement</th><th class="n">Articles</th><th class="n">Livraison</th><th class="n">Total</th></tr></thead><tbody>'
+    + L.map(o => '<tr><td>' + new Date(o.created_at).toLocaleDateString('fr-FR') + '</td><td>' + esc(o.ref) + '</td><td>' + esc(o.buyer_name) + '</td><td>' + esc(B.STATUTS[o.status][0]) + (o.auto_closed ? ' (auto)' : '') + '</td><td>' + (o.payment_method === 'cod' ? 'À la livraison' : 'Mobile money') + ' · ' + esc(B.PAY_STATUS[o.payment_status]) + '</td><td class="n">' + B.fcfa(o.subtotal) + '</td><td class="n">' + B.fcfa(o.delivery_fee) + '</td><td class="n">' + B.fcfa(o.total) + '</td></tr>').join('')
+    + '</tbody></table><p><small>Document établi à partir de l’historique horodaté de la plateforme KONE.EDUC.</small></p><script>window.onload=()=>window.print()<\/script></body></html>');
+  w.document.close();
+}
 init();
 </script><script src="app.js"></script></body></html>

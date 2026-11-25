@@ -98,6 +98,17 @@
     }
   };
   var rpc = async function (name, a) {
+    // ---------- Litiges, signalements, contrôle de cohérence
+    if (name === 'open_dispute' || name === 'resolve_dispute' || name === 'report_product' || name === 'integrity_check') {
+      var dz = load(), meD = JSON.parse(localStorage.getItem('__ke_user') || 'null'); dz.order_disputes = dz.order_disputes || []; dz.product_reports = dz.product_reports || [];
+      if (name === 'integrity_check') return { data: (dz.orders || []).filter(function (o) { return o.total !== o.subtotal + o.delivery_fee; }).map(function (o) { return { domaine: 'Boutique', reference: o.ref, probleme: 'Total incohérent' }; }), error: null };
+      if (name === 'open_dispute') { var od = (dz.orders || []).find(function (o) { return o.id === a.p_order && meD && o.buyer_id === meD.id; }); if (!od) return { data: null, error: { message: 'Commande introuvable' } };
+        if (dz.order_disputes.some(function (x) { return x.order_id === od.id && x.status === 'open'; })) return { data: null, error: { message: 'Un signalement est déjà en cours pour cette commande' } };
+        dz.order_disputes.push({ id: nextId(dz, 'order_disputes'), order_id: od.id, buyer_id: meD.id, reason: a.p_reason, message: a.p_message || null, status: 'open', resolution: null, created_at: new Date().toISOString() }); save(dz); return { data: null, error: null }; }
+      if (name === 'resolve_dispute') { var rd = dz.order_disputes.find(function (x) { return x.id === a.p_dispute && x.status === 'open'; }); if (!rd) return { data: null, error: { message: 'Litige introuvable ou déjà traité' } }; rd.status = 'resolved'; rd.resolution = a.p_resolution; save(dz); return { data: null, error: null }; }
+      var pr0 = (dz.products || []).find(function (x) { return x.id === a.p_product; }); if (!pr0) return { data: null, error: { message: 'Article introuvable' } };
+      dz.product_reports.push({ id: nextId(dz, 'product_reports'), product_id: pr0.id, product_name: pr0.name, shop_id: pr0.shop_id, reporter_id: meD && meD.id, reason: a.p_reason, handled: false, created_at: new Date().toISOString() }); save(dz); return { data: null, error: null };
+    }
     // ---------- Écoles et offres publiques
     var meT = JSON.parse(localStorage.getItem('__ke_user') || 'null'), sx = load();
     var approvedT = function () { return meT && (sx.teacher_profiles || []).some(function (t) { return t.id === meT.id && t.approved; }); };

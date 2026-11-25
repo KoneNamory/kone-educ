@@ -28,7 +28,8 @@
 <script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 const B = KE_BOUTIQUE, esc = B.esc;
-let user = null, orders = [], items = {}, shops = {}, notes = {};
+let user = null, orders = [], items = {}, shops = {}, notes = {}, disputes = {};
+const MOTIFS = { non_recu: 'Commande non reçue', incomplet: 'Commande incomplète', different: 'Article différent de la description', abime: 'Article abîmé', paiement: 'Problème de paiement ou de monnaie', autre: 'Autre problème' };
 const ETAPES = [['new', 'Envoyée'], ['accepted', 'Acceptée'], ['delivering', 'En route'], ['delivered', 'Livrée']];
 const RANG = { new: 0, accepted: 1, ready: 1, delivering: 2, delivered: 3 };
 
@@ -41,6 +42,7 @@ async function charger() {
     const [it, sh] = await Promise.all([db.from('order_items').select('*').in('order_id', ids), db.rpc('public_shops')]);
     items = {}; (it.data || []).forEach(i => { (items[i.order_id] = items[i.order_id] || []).push(i); });
     shops = {}; (sh.data || []).forEach(s => { shops[s.id] = s; });
+    const dp = await db.from('order_disputes').select('*').in('order_id', ids); disputes = {}; (dp.data || []).forEach(x => { (disputes[x.order_id] = disputes[x.order_id] || []).push(x); });
   }
   render();
 }
@@ -63,13 +65,17 @@ function carte(o) {
   }
   let note = '';
   if (o.status === 'delivered' && !o.rating) note = '<div class="c-momo c-rate" style="background:#f3f7ff;border-color:#cfe0ff"><b>⭐ Notez ' + esc(nom) + '</b><div class="c-stars" id="st' + o.id + '">' + [1, 2, 3, 4, 5].map(i => '<button type="button" aria-label="' + i + ' sur 5" onclick="etoile(' + o.id + ',' + i + ')">★</button>').join('') + '</div><textarea id="rv' + o.id + '" rows="2" maxlength="500" placeholder="Votre avis aide les autres familles (facultatif)"></textarea><button class="d-btn sm" style="margin-top:6px" onclick="noter(' + o.id + ')">Envoyer mon avis</button></div>';
+  const ds = disputes[o.id] || [], openD = ds.find(x => x.status === 'open');
+  const canDispute = !openD && (['accepted', 'ready', 'delivering'].includes(o.status) || (o.status === 'delivered' && Date.now() - new Date(o.delivered_at || o.created_at).getTime() < 7 * 864e5));
+  if (canDispute) acts += '<button class="d-btn ghost sm" onclick="litige(' + o.id + ')">⚠️ Signaler un problème</button>';
+  const litigeHtml = ds.map(x => '<div class="c-momo" style="background:' + (x.status === 'open' ? '#fdecea;border-color:#f5b5ad' : '#e5f7ec;border-color:#a7dfbb') + '"><b>' + (x.status === 'open' ? '⚠️ Problème signalé : ' : '✅ Problème traité : ') + esc(MOTIFS[x.reason] || x.reason) + '</b>' + (x.message ? '<br>« ' + esc(x.message) + ' »' : '') + (x.resolution ? '<br>Décision de KONE.EDUC : ' + esc(x.resolution) : '<br><small>KONE.EDUC suit votre dossier et vous recontacte rapidement.</small>') + '</div>').join('');
   return '<article class="c-order"><div class="c-top"><div><b>' + esc(nom) + '</b><small>Commande #' + esc(o.ref) + ' · ' + B.depuis(o.created_at) + '</small></div>' + B.badge(o.status, true) + '</div>' + etapes(o)
     + '<div class="c-body"><ul>' + it.map(i => '<li>' + i.qty + ' × ' + esc(i.name) + ' — ' + B.fcfa(i.line_total) + '</li>').join('') + '</ul>'
     + (o.delivery_mode === 'pickup' ? '🏪 Retrait chez ' + esc(nom) + (s.quartier || s.commune ? ' (' + esc([s.quartier, s.commune].filter(Boolean).join(', ')) + ')' : '') : '🛵 Livraison : ' + esc([o.address, o.quartier, o.commune].filter(Boolean).join(', '))) + '<br>'
     + (o.payment_method === 'cod' ? '💵 Paiement à la livraison' : '📱 Mobile money') + ' · ' + B.PAY_STATUS[o.payment_status]
     + (o.cancel_reason ? '<br>❗ ' + esc(o.cancel_reason) : '') + (o.rating ? '<br>Votre note : ' + B.stars(o.rating) : '')
     + '<div class="c-tot" style="margin-top:8px"><span>Total' + (o.delivery_fee ? ' (dont livraison ' + B.fcfa(o.delivery_fee) + ')' : '') + '</span><span>' + B.fcfa(o.total) + '</span></div></div>'
-    + momo + note + '<div class="c-acts">' + acts + '</div></article>';
+    + momo + note + litigeHtml + '<div class="c-acts">' + acts + '</div></article>';
 }
 function render() {
   const en = orders.filter(o => ['new', 'accepted', 'ready', 'delivering'].includes(o.status)).length;
@@ -83,6 +89,13 @@ function recu(id) { if (confirm('Confirmez-vous avoir reçu votre commande ?')) 
 function declarer(id) { const v = document.getElementById('ref' + id).value.trim(); if (v.length < 4) { alert('Indiquez la référence de la transaction (dans le SMS de confirmation).'); return; } rpc('buyer_declare_payment', { p_order: id, p_ref: v }, 'Merci ! Le vendeur va vérifier votre paiement.'); }
 function etoile(id, n) { notes[id] = n; const el = document.getElementById('st' + id); if (el) el.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i < n)); }
 function noter(id) { if (!notes[id]) { alert('Choisissez une note de 1 à 5 étoiles.'); return; } rpc('rate_order', { p_order: id, p_rating: notes[id], p_review: document.getElementById('rv' + id).value }, 'Merci pour votre avis ! 🙏').then(ok => { if (ok) delete notes[id]; }); }
+function litige(id) {
+  const o = orders.find(x => x.id === id), cles = Object.keys(MOTIFS);
+  const choix = prompt('Quel est le problème avec la commande ' + o.ref + ' ?\n' + cles.map((k, i) => (i + 1) + '. ' + MOTIFS[k]).join('\n') + '\n\nTapez le numéro :', '1');
+  if (choix === null) return; const k = cles[parseInt(choix, 10) - 1]; if (!k) { alert('Tapez un numéro entre 1 et ' + cles.length + '.'); return; }
+  const msg = prompt('Expliquez en quelques mots (facultatif) :', ''); if (msg === null) return;
+  rpc('open_dispute', { p_order: id, p_reason: k, p_message: msg }, 'Merci. Votre signalement est transmis à KONE.EDUC et à la boutique.');
+}
 function recommander(id) {
   const o = orders.find(x => x.id === id); let n = 0;
   (items[id] || []).forEach(i => { if (i.product_id) { B.ajouter({ id: i.product_id, shop_id: o.shop_id, name: i.name, price: i.unit_price, stock: null }, i.qty); n++; } });
