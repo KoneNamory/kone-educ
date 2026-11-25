@@ -71,7 +71,7 @@ await tick('input[name=levels][value=Collège]');await tick('input[name=levels][
 await p.fill('textarea[name=bio]','Professeur de mathématiques depuis 5 ans.');await tick('input[name=days][value=Mercredi]');
 const c2=p.locator('#teacher-form input[type=checkbox]:not([name])');if(await c2.count())await tick('#teacher-form input[type=checkbox]:not([name])');
 await p.setInputFiles('input[name=photo]',FILES.photo);for(const n of ['idDoc','diploma','cv'])await p.setInputFiles('input[name='+n+']',FILES.doc);
-await p.click('#teacher-form button');await p.waitForTimeout(800);
+if(!(await p.isChecked('#acceptRI')))await tick('#acceptRI');await p.click('#teacher-form button');await p.waitForTimeout(800);
 d=await db();const tp=(d.teacher_profiles||[])[0];
 await go('reservation.html');await p.waitForTimeout(300);step('Compte Enseignant bloqué sur la réservation',(await p.textContent('.wrong-account')).includes('compte Enseignant')&&await p.locator('#booking-form button').first().isDisabled());
 await go('candidature-enseignant.html');
@@ -88,7 +88,7 @@ step('Dossier incomplet : éléments manquants listés',st.includes('CV')&&st.in
 step('Dossier incomplet : réponses préremplies',(await p.inputValue('input[name=location]'))==='Cocody, Bingerville'&&await p.isChecked('input[name=days][value=Mercredi]')&&await p.isChecked('input[name=levels][value=Lycée]')&&!(await p.getAttribute('input[name=photo]','required')!==null)&&(await p.getAttribute('input[name=cv]','required'))!==null);
 await p.fill('textarea[name=bio]','Professeur de mathématiques depuis 5 ans.');await p.setInputFiles('input[name=cv]',FILES.doc);
 if(await c2.count())await tick('#teacher-form input[type=checkbox]:not([name])');
-await p.click('#teacher-form button');await p.waitForTimeout(800);
+if(!(await p.isChecked('#acceptRI')))await tick('#acceptRI');await p.click('#teacher-form button');await p.waitForTimeout(800);
 d=await db();step('Dossier complété sans tout ressaisir',!!(d.teacher_profiles[0].cv_path&&d.teacher_profiles[0].bio&&d.teacher_profiles[0].photo_url)&&(await p.textContent('#dossier-status')).includes('complet'),(await p.textContent('#confirmation')).trim());
 await go('offres.html');await p.waitForTimeout(300);step('Offres : enseignant non validé bloqué',(await p.textContent('#content')).includes('en cours de validation')&&(await p.locator('.o-card').count())===0);
 await go('espace-enseignant.html');step('Espace enseignant : dossier complet',(await p.textContent('#profile')).includes('Dossier complet'));
@@ -318,6 +318,8 @@ step('Admin : journal boutique (commandes, entrées/sorties)',(await p.textConte
 await p.click('#shoplog button:has-text("Entrées / sorties")');await p.waitForTimeout(200);step('Admin : mouvements de stock (ventes)',(await p.textContent('#logList')).includes('Sortie (vente)'));
 await loginAs('seller','awa@test.ci');await go('espace-vendeur.html');await p.waitForTimeout(1000);await p.click('.v-tabs button:has-text("Mes articles")');await p.waitForTimeout(200);await p.click('button:has-text("Entrées / sorties")');await p.waitForTimeout(600);
 step('Vendeur : historique des entrées et sorties',(await p.textContent('#dlgBody')).includes('Vente'));
+await logout();await go('reglement-interieur.html');step('Règlement intérieur : 20 articles, 18 % et numéro de dépôt',(await p.locator('.art').count())===20&&(await p.textContent('main')).includes('18 %')&&(await p.textContent('main')).includes('01 61 70 13 61'));
+step('Pied de page : lien vers le règlement intérieur',(await p.locator('footer a[href="reglement-interieur.html"]').count())===1);
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');
