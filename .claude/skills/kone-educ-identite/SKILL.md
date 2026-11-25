@@ -17,13 +17,13 @@ description: Identité de KONE.EDUC (fondateurs, rôles, parcours, citations, co
 - Rôle : directeur général et responsable pédagogique (stratégie, sélection, accompagnement et suivi des enseignants).
 - Parcours : BTS en sciences agronomiques de l’Institut International des Affaires en Entrepreneuriat (2IAE) ; niveau Licence 2 en droit, Université Félix Houphouët-Boigny ; a enseigné en établissement scolaire ; expérience en gestion.
 - Citation : « Les enseignants qualifiés méritent un cadre sérieux pour transmettre leur savoir, et le numérique doit être mis au service de la réussite scolaire en Côte d’Ivoire. »
-- Photo : assets/fondateurs/kone-abdoul-koudouss.jpg
+- Photo : conservée par les fondateurs (retirée du site et de Google à leur demande, ne pas republier)
 
 ### Kone Namory — cofondateur
 - Rôle : relations familles, technique et digital (accompagne les parents, pilote le site et les outils numériques).
 - Parcours : master en probabilités et statistique, Université Nangui Abrogoua (UFR SFA) ; a enseigné en établissement scolaire avant l’entrepreneuriat.
 - Citation : « Chaque élève mérite un accompagnement adapté pour révéler son potentiel, et chaque parent doit pouvoir trouver facilement un enseignant de confiance près de chez lui. »
-- Photo : assets/fondateurs/kone-namory.jpg
+- Photo : conservée par les fondateurs (retirée du site et de Google à leur demande, ne pas republier)
 
 ## Paiements (numéros officiels, fichier payment-config.js)
 - Wave et Orange Money : 07 98 06 73 36
