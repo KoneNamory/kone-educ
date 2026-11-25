@@ -2492,5 +2492,158 @@ do $$ begin
 exception when others then raise notice 'Tâches automatiques indisponibles (pg_cron : %).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Offres KONE.EDUC : publiées par l'équipe, visibles par tous, candidatures des enseignants
+-- ============================================================
+create table if not exists public.job_offers (
+  id bigint generated always as identity primary key,
+  title text not null check (length(trim(title)) between 3 and 140),
+  school_level text check (length(school_level) <= 80),
+  subjects text not null check (length(subjects) <= 300),
+  preparation text check (length(preparation) <= 60),
+  commune text check (length(commune) <= 80),
+  quartier text check (length(quartier) <= 80),
+  format text check (length(format) <= 60),
+  schedule text check (length(schedule) <= 160),
+  remuneration text check (length(remuneration) <= 80),
+  requirements text check (length(requirements) <= 600),
+  details text check (length(details) <= 1500),
+  deadline date,
+  status text not null default 'open' check (status in ('open','filled','closed')),
+  selected_teacher_id uuid references public.profiles(id) on delete set null,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create table if not exists public.job_applications (
+  id bigint generated always as identity primary key,
+  offer_id bigint not null references public.job_offers(id) on delete cascade,
+  teacher_id uuid references public.profiles(id) on delete set null,
+  teacher_name text,
+  teacher_phone text,
+  message text check (length(message) <= 800),
+  status text not null default 'pending' check (status in ('pending','accepted','rejected','withdrawn')),
+  created_at timestamptz not null default now(),
+  decided_at timestamptz,
+  unique (offer_id, teacher_id)
+);
+alter table public.job_offers enable row level security;
+alter table public.job_applications enable row level security;
+grant select on public.job_offers to anon, authenticated;
+grant insert, update, delete on public.job_offers to authenticated;
+grant select on public.job_applications to authenticated;
+drop policy if exists "Job offers visible" on public.job_offers;
+create policy "Job offers visible" on public.job_offers for select to anon, authenticated using (status <> 'closed' or public.is_admin());
+drop policy if exists "Admins manage job offers" on public.job_offers;
+create policy "Admins manage job offers" on public.job_offers for all to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "Job applications visible" on public.job_applications;
+create policy "Job applications visible" on public.job_applications for select to authenticated using (teacher_id = auth.uid() or public.is_admin());
+
+create or replace function public.touch_job_offer() returns trigger language plpgsql as $$ begin new.updated_at := now(); return new; end; $$;
+drop trigger if exists touch_job_offer on public.job_offers;
+create trigger touch_job_offer before update on public.job_offers for each row execute function public.touch_job_offer();
+
+-- Nouvelle offre : tous les comptes Enseignant sont prévenus
+create or replace function public.notify_job_offer() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'open' then
+    insert into public.notifications (recipient_id, title, body, link)
+    select p.id, '📢 Nouvelle offre KONE.EDUC', new.title || coalesce(' · ' || new.commune, '') || coalesce(' · ' || new.remuneration, '') || '. Postulez avant qu’elle soit pourvue.', 'offres-enseignants.html#kone-' || new.id
+    from public.profiles p where p.role = 'teacher';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists notify_job_offer on public.job_offers;
+create trigger notify_job_offer after insert on public.job_offers for each row execute function public.notify_job_offer();
+
+-- Liste publique des offres, avec le nombre de candidats et, pour un enseignant connecté, sa candidature
+create or replace function public.public_job_offers()
+returns table (id bigint, title text, school_level text, subjects text, preparation text, commune text, quartier text, format text,
+               schedule text, remuneration text, requirements text, details text, deadline date, status text, created_at timestamptz,
+               applicants bigint, my_status text)
+language sql stable security definer set search_path = public as $$
+  select o.id, o.title, o.school_level, o.subjects, o.preparation, o.commune, o.quartier, o.format, o.schedule, o.remuneration,
+         o.requirements, o.details, o.deadline, o.status, o.created_at,
+         (select count(*) from public.job_applications a where a.offer_id = o.id and a.status <> 'withdrawn'),
+         (select a.status from public.job_applications a where a.offer_id = o.id and a.teacher_id = auth.uid())
+  from public.job_offers o
+  where o.status in ('open','filled') and o.created_at > now() - interval '180 days'
+  order by (o.status = 'open') desc, o.created_at desc;
+$$;
+grant execute on function public.public_job_offers() to anon, authenticated;
+
+create or replace function public.apply_job_offer(p_offer bigint, p_message text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.job_offers; v_p public.profiles; v_n integer;
+begin
+  select * into v_p from public.profiles where id = auth.uid();
+  if v_p.id is null or v_p.role <> 'teacher' then raise exception 'Seuls les comptes Enseignant peuvent postuler. Créez un compte Enseignant.'; end if;
+  select * into v_o from public.job_offers where id = p_offer;
+  if v_o.id is null or v_o.status <> 'open' then raise exception 'Cette offre n’est plus disponible'; end if;
+  if v_o.deadline is not null and v_o.deadline < current_date then raise exception 'La date limite de candidature est dépassée'; end if;
+  select count(*) into v_n from public.job_applications where teacher_id = auth.uid() and created_at > now() - interval '1 day';
+  if v_n >= 20 then raise exception 'Trop de candidatures aujourd’hui'; end if;
+  insert into public.job_applications (offer_id, teacher_id, teacher_name, teacher_phone, message)
+  values (p_offer, auth.uid(), v_p.full_name, v_p.phone, nullif(left(trim(coalesce(p_message, '')), 800), ''))
+  on conflict (offer_id, teacher_id) do update set status = 'pending', message = excluded.message, created_at = now(), decided_at = null
+  where public.job_applications.status = 'withdrawn';
+  if not found then raise exception 'Vous avez déjà postulé à cette offre'; end if;
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, 'Candidature à une offre KONE.EDUC', coalesce(v_p.full_name, 'Un enseignant') || ' postule à « ' || v_o.title || ' »' || coalesce(' (' || v_p.phone || ')', '') || '.', 'espace-admin.html#joboffers'
+  from public.profiles a where a.role = 'admin';
+end;
+$$;
+revoke execute on function public.apply_job_offer(bigint, text) from public;
+grant execute on function public.apply_job_offer(bigint, text) to authenticated;
+
+create or replace function public.withdraw_job_application(p_offer bigint)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  update public.job_applications set status = 'withdrawn' where offer_id = p_offer and teacher_id = auth.uid() and status = 'pending';
+  if not found then raise exception 'Aucune candidature en cours à retirer'; end if;
+end;
+$$;
+revoke execute on function public.withdraw_job_application(bigint) from public;
+grant execute on function public.withdraw_job_application(bigint) to authenticated;
+
+-- L'équipe retient un candidat : l'offre est pourvue, chaque candidat est prévenu
+create or replace function public.admin_decide_job_application(p_application bigint, p_status text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_a public.job_applications; v_o public.job_offers;
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  if p_status not in ('accepted','rejected') then raise exception 'Décision invalide'; end if;
+  update public.job_applications set status = p_status, decided_at = now() where id = p_application and status = 'pending' returning * into v_a;
+  if v_a.id is null then raise exception 'Candidature introuvable ou déjà traitée'; end if;
+  select * into v_o from public.job_offers where id = v_a.offer_id;
+  if p_status = 'accepted' then
+    update public.job_offers set status = 'filled', selected_teacher_id = v_a.teacher_id where id = v_o.id;
+    if v_a.teacher_id is not null then
+      insert into public.notifications (recipient_id, title, body, link)
+      values (v_a.teacher_id, '🎉 Candidature retenue', 'Vous êtes retenu(e) pour « ' || v_o.title || ' ». L’équipe KONE.EDUC vous contacte pour la suite (fiche d’accord, coordonnées de la famille).', 'offres-enseignants.html#kone-' || v_o.id);
+    end if;
+    insert into public.notifications (recipient_id, title, body, link)
+    select a.teacher_id, 'Offre pourvue', 'L’offre « ' || v_o.title || ' » a été pourvue. Merci pour votre candidature : d’autres offres arrivent bientôt.', 'offres-enseignants.html'
+    from public.job_applications a where a.offer_id = v_o.id and a.status = 'pending' and a.teacher_id is not null;
+    update public.job_applications set status = 'rejected', decided_at = now() where offer_id = v_o.id and status = 'pending';
+  elsif v_a.teacher_id is not null then
+    insert into public.notifications (recipient_id, title, body, link)
+    values (v_a.teacher_id, 'Candidature non retenue', 'Votre candidature pour « ' || v_o.title || ' » n’a pas été retenue cette fois. Continuez à postuler aux prochaines offres.', 'offres-enseignants.html');
+  end if;
+end;
+$$;
+revoke execute on function public.admin_decide_job_application(bigint, text) from public;
+grant execute on function public.admin_decide_job_application(bigint, text) to authenticated;
+
+do $$ declare t text; begin
+  foreach t in array array['job_offers','job_applications'] loop
+    execute format('drop trigger if exists audit_changes on public.%I', t);
+    execute format('create trigger audit_changes after insert or update or delete on public.%I for each row execute function public.audit_changes()', t);
+  end loop;
+exception when others then raise notice 'Journal des offres indisponible (%).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

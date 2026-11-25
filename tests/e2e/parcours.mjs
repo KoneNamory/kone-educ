@@ -340,6 +340,21 @@ d=await db();step('Admin : litige traité',d.order_disputes[0].status==='resolve
 await p.click('#shoplog button:has-text("Articles signalés")');await p.waitForTimeout(200);await p.click('#logList button:has-text("Masquer l’article")');await p.waitForTimeout(900);
 d=await db();step('Admin : article signalé masqué',d.products.find(x=>x.id===d.product_reports[0].product_id).active===false&&d.product_reports[0].handled===true);
 await p.click('#shoplog button:has-text("Contrôle de cohérence")');await p.waitForTimeout(700);step('Admin : contrôle de cohérence',(await p.textContent('#cohBox')).includes('Tout est cohérent'));
+// 9 octies. Offres KONE.EDUC : publiées par l'admin, visibles par tous, candidatures des enseignants
+await loginAs('admin','admin@kone.ci');await go('espace-admin.html#joboffers');await p.waitForTimeout(1200);
+await p.click('#joForm summary');await p.fill('#joTitle','Enseignant(e) en 3e à Bingerville');await p.fill('#joLevel','3e');await p.fill('#joSubjects','Maths, Physique-Chimie, Français, Anglais');await p.selectOption('#joCommune','Bingerville');await p.fill('#joRem','40 000 F / mois');await p.click('#joBtn');await p.waitForTimeout(900);
+d=await db();step('Admin : offre KONE.EDUC publiée',(d.job_offers||[]).length===1&&d.job_offers[0].status==='open'&&(await p.textContent('#joList')).includes('Bingerville'));
+await logout();await go('offres-enseignants.html');await p.waitForTimeout(900);
+step('Visiteur : offre KONE.EDUC visible avec bouton Postuler',(await p.locator('#koneList .of-kone').count())===1&&(await p.textContent('#koneList')).includes('40 000 F / mois')&&(await p.locator('#koneList button:has-text("Postuler")').count())===1);
+await loginAs('teacher','yao@test.ci');await go('offres-enseignants.html');await p.waitForTimeout(900);
+await p.evaluate(()=>{window.prompt=()=>'Professeur certifié, disponible le mercredi'});await p.click('#koneList button:has-text("Postuler")');await p.waitForTimeout(900);
+d=await db();step('Enseignant : candidature envoyée',(d.job_applications||[]).length===1&&(await p.textContent('#koneList')).includes('Candidature envoyée'));
+await go('espace-enseignant.html');await p.waitForTimeout(900);step('Enseignant : lien « Offres KONE.EDUC » dans son menu',(await p.locator('.ke-app-nav a[href="offres-enseignants.html"]').count())===1);
+await loginAs('admin','admin@kone.ci');await go('espace-admin.html#joboffers');await p.waitForTimeout(1200);
+step('Admin : candidat visible (dossier, message)',(await p.textContent('#joList')).includes('Yao Kouassi')&&(await p.textContent('#joList')).includes('disponible le mercredi'));
+await p.click('#joList button:has-text("Retenir")');await p.waitForTimeout(900);d=await db();
+step('Admin : candidat retenu, offre pourvue',d.job_offers[0].status==='filled'&&d.job_applications[0].status==='accepted');
+await loginAs('teacher','yao@test.ci');await go('offres-enseignants.html');await p.waitForTimeout(900);step('Enseignant : voit qu’il est retenu',(await p.textContent('#koneList')).includes('retenu'));
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

@@ -51,7 +51,7 @@
           var keys = (opts.onConflict || '').split(',').filter(Boolean);
           var existing = op === 'upsert' && keys.length ? rows.find(function (r) { return keys.every(function (k) { return String(r[k]) === String(list[i][k]); }); }) : null;
           if (existing) Object.assign(existing, list[i]);
-          else { var row = Object.assign({ created_at: new Date().toISOString() }, list[i]); if (COLS[table].indexOf('id') >= 0 && row.id == null) row.id = nextId(db, table); if (table === 'course_requests' && !row.status) row.status = 'pending'; if (table === 'shops') { row = Object.assign({ status: 'pending', is_open: true, commission_rate: 0, delivery_fees: {}, pickup: true, pay_cod: true, pay_momo: false, min_order: 0 }, row); if (row.id == null) row.id = nextId(db, table); } if (table === 'products' && row.active == null) row.active = true; if (table === 'invoices' && !row.status) row.status = 'unpaid'; rows.push(row); }
+          else { var row = Object.assign({ created_at: new Date().toISOString() }, list[i]); if (COLS[table].indexOf('id') >= 0 && row.id == null) row.id = nextId(db, table); if (table === 'course_requests' && !row.status) row.status = 'pending'; if (table === 'shops') { row = Object.assign({ status: 'pending', is_open: true, commission_rate: 0, delivery_fees: {}, pickup: true, pay_cod: true, pay_momo: false, min_order: 0 }, row); if (row.id == null) row.id = nextId(db, table); } if (table === 'products' && row.active == null) row.active = true; if (table === 'job_offers' && !row.status) row.status = 'open'; if (table === 'invoices' && !row.status) row.status = 'unpaid'; rows.push(row); }
         }
         log([op, table, payload]); save(db); return { data: null, error: null };
       }
@@ -98,6 +98,20 @@
     }
   };
   var rpc = async function (name, a) {
+    // ---------- Offres KONE.EDUC
+    if (['public_job_offers', 'apply_job_offer', 'withdraw_job_application', 'admin_decide_job_application'].indexOf(name) >= 0) {
+      var jz = load(), meJ = JSON.parse(localStorage.getItem('__ke_user') || 'null'); jz.job_offers = jz.job_offers || []; jz.job_applications = jz.job_applications || [];
+      if (name === 'public_job_offers') return { data: jz.job_offers.filter(function (o) { return o.status !== 'closed'; }).map(function (o) { var mine = meJ && jz.job_applications.find(function (x) { return x.offer_id === o.id && x.teacher_id === meJ.id; });
+        return Object.assign({}, o, { applicants: jz.job_applications.filter(function (x) { return x.offer_id === o.id && x.status !== 'withdrawn'; }).length, my_status: mine ? mine.status : null }); }), error: null };
+      if (name === 'apply_job_offer') { var pj = meJ && (jz.profiles || []).find(function (x) { return x.id === meJ.id; }); if (!pj || pj.role !== 'teacher') return { data: null, error: { message: 'Seuls les comptes Enseignant peuvent postuler. Créez un compte Enseignant.' } };
+        var oj = jz.job_offers.find(function (o) { return o.id === a.p_offer; }); if (!oj || oj.status !== 'open') return { data: null, error: { message: 'Cette offre n’est plus disponible' } };
+        if (jz.job_applications.some(function (x) { return x.offer_id === oj.id && x.teacher_id === meJ.id && x.status !== 'withdrawn'; })) return { data: null, error: { message: 'Vous avez déjà postulé à cette offre' } };
+        jz.job_applications.push({ id: nextId(jz, 'job_applications'), offer_id: oj.id, teacher_id: meJ.id, teacher_name: pj.full_name, teacher_phone: pj.phone, message: a.p_message || null, status: 'pending', created_at: new Date().toISOString() }); save(jz); return { data: null, error: null }; }
+      if (name === 'withdraw_job_application') { var wj = jz.job_applications.find(function (x) { return x.offer_id === a.p_offer && meJ && x.teacher_id === meJ.id && x.status === 'pending'; }); if (!wj) return { data: null, error: { message: 'Aucune candidature en cours à retirer' } }; wj.status = 'withdrawn'; save(jz); return { data: null, error: null }; }
+      var aj = jz.job_applications.find(function (x) { return x.id === a.p_application && x.status === 'pending'; }); if (!aj) return { data: null, error: { message: 'Candidature introuvable ou déjà traitée' } };
+      aj.status = a.p_status; if (a.p_status === 'accepted') { var o2 = jz.job_offers.find(function (o) { return o.id === aj.offer_id; }); o2.status = 'filled'; o2.selected_teacher_id = aj.teacher_id; jz.job_applications.forEach(function (x) { if (x.offer_id === o2.id && x.status === 'pending') x.status = 'rejected'; }); }
+      save(jz); return { data: null, error: null };
+    }
     // ---------- Litiges, signalements, contrôle de cohérence
     if (name === 'open_dispute' || name === 'resolve_dispute' || name === 'report_product' || name === 'integrity_check') {
       var dz = load(), meD = JSON.parse(localStorage.getItem('__ke_user') || 'null'); dz.order_disputes = dz.order_disputes || []; dz.product_reports = dz.product_reports || [];
