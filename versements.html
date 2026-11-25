@@ -113,12 +113,22 @@ async function loadRates() {
   const r = await db.from('teacher_rates').select('*');
   rates = {}; (r.data || []).forEach(x => rates[x.course_request_id] = x.monthly_amount);
   const active = courses.filter(x => x.status === 'assigned');
-  rates_el().innerHTML = active.length ? active.map(x => {
+  const sansTaux = active.filter(x => x.monthly_fee && !rates[x.id]);
+  rates_el().innerHTML = (sansTaux.length ? '<div class="rate-row" style="background:#fff8e9;border-radius:12px;padding:10px 12px"><div><b>Règle KONE.EDUC : 18 % de frais de service, 82 % pour l’enseignant</b><small>' + sansTaux.length + ' cours sans rémunération enregistrée.</small></div><div class="r-in"><button type="button" class="d-btn sm" onclick="appliquer82()">Appliquer 82 % à ces cours</button></div></div>' : '') + (active.length ? active.map(x => {
     const t = people[x.teacher_id] || {}, v = rates[x.id], fee = x.monthly_fee;
-    const marge = v && fee ? '<span class="marge' + (fee - v < 0 ? ' neg' : '') + '">Marge : ' + fcfa(fee - v) + ' (' + Math.round((fee - v) / fee * 100) + ' %)</span>' : '';
+    const marge = v && fee ? '<span class="marge' + (fee - v < 0 ? ' neg' : '') + '">Frais KONE.EDUC : ' + fcfa(fee - v) + ' (' + Math.round((fee - v) / fee * 100) + ' %)' + (Math.round((fee - v) / fee * 100) !== PART_FRAIS ? ' ⚠ règle : ' + PART_FRAIS + ' %' : ' ✓') + '</span>' : '';
     return '<div class="rate-row"><div><b>' + safe(t.full_name || 'Enseignant') + '</b><small>' + safe(x.subject) + ' · ' + safe(x.student_name) + ' (' + safe(x.school_level) + ')' + (fee ? ' · facturé ' + fcfa(fee) + ' / mois' : ' · tarif parent non fixé') + '</small>' + marge + '</div>'
-      + '<div class="r-in"><input type="number" min="1" id="rate-' + x.id + '" value="' + (v || '') + '" placeholder="FCFA / mois"><button type="button" class="d-btn sm ghost" onclick="saveRate(' + x.id + ')">Enregistrer</button></div></div>';
-  }).join('') : '<div class="d-empty"><p>Aucun cours en cours pour le moment.</p></div>';
+      + '<div class="r-in"><input type="number" min="1" id="rate-' + x.id + '" value="' + (v || (fee ? Math.round(fee * (100 - PART_FRAIS) / 100) : '')) + '" placeholder="FCFA / mois"><button type="button" class="d-btn sm ghost" onclick="saveRate(' + x.id + ')">Enregistrer</button></div></div>';
+  }).join('') : '<div class="d-empty"><p>Aucun cours en cours pour le moment.</p></div>');
+}
+// Frais de service KONE.EDUC sur la prestation des enseignants (règlement intérieur, article 7)
+const PART_FRAIS = 18;
+async function appliquer82() {
+  const list = courses.filter(x => x.status === 'assigned' && x.monthly_fee && !rates[x.id]);
+  if (!confirm('Enregistrer ' + (100 - PART_FRAIS) + ' % de la mensualité comme rémunération pour ' + list.length + ' cours ?')) return;
+  const r = await db.from('teacher_rates').upsert(list.map(x => ({ course_request_id: x.id, monthly_amount: Math.round(x.monthly_fee * (100 - PART_FRAIS) / 100), updated_at: new Date().toISOString() })), { onConflict: 'course_request_id' });
+  if (r.error) { alert('Erreur : ' + r.error.message); return; }
+  await loadRates(); loadMonth();
 }
 function rates_el() { return document.getElementById('rates'); }
 
