@@ -10,7 +10,7 @@ for(const m of sql.matchAll(/create table if not exists public\.(\w+) \(([\s\S]*
 for(const m of sql.matchAll(/alter table public\.(\w+)\s+add column if not exists (\w+)/g))cols[m[1]].push(m[2]);
 const MOCK='window.__KE_COLUMNS='+JSON.stringify(cols)+';'+fs.readFileSync(new URL('./mock-supabase.js',import.meta.url),'utf8');
 const b=await chromium.launch(process.env.CHROMIUM?{executablePath:process.env.CHROMIUM}:{});
-const ctx=await b.newContext({viewport:{width:1280,height:900},serviceWorkers:'block'});
+const ctx=await b.newContext({viewport:{width:1366,height:900},serviceWorkers:'block'});
 await ctx.route('**/supabase-js@2',r=>r.fulfill({contentType:'text/javascript',body:MOCK}));
 await ctx.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.abort());
 const p=await ctx.newPage();const errs=[];const issues=[];
@@ -355,6 +355,9 @@ step('Admin : candidat visible (dossier, message)',(await p.textContent('#joList
 await p.click('#joList button:has-text("Retenir")');await p.waitForTimeout(900);d=await db();
 step('Admin : candidat retenu, offre pourvue',d.job_offers[0].status==='filled'&&d.job_applications[0].status==='accepted');
 await loginAs('teacher','yao@test.ci');await go('offres-enseignants.html');await p.waitForTimeout(900);step('Enseignant : voit qu’il est retenu',(await p.textContent('#koneList')).includes('retenu'));
+await logout();await go('index.html');step('Accueil : section « Examens et concours » et lien Concours dans le menu',(await p.locator('#concours a[href^="reservation.html?preparation="]').count())===9&&(await p.locator('.ke-links a[href="preparation-concours.html"]').count())===1);
+await go('preparation-concours.html');step('Page Concours : CEPE, BEPC, BAC, ENSEA, INPHB avec réservation directe',(await p.locator('.pc-card').count())===9&&(await p.textContent('main')).includes('ISE Économie')&&(await p.textContent('main')).includes('A2GP'));
+await p.click('.pc-card:has-text("INPHB – ITA") a');await p.waitForTimeout(600);step('Concours → réservation avec la préparation choisie',(await p.inputValue('#preparation'))==='INPHB – ITA');
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');
