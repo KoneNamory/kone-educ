@@ -566,3 +566,47 @@ function jsonld() {
 page('offres-enseignants.html', 'Offres pour enseignants : cours à domicile et écoles à Abidjan | KONE.EDUC',
      'Offres de cours à domicile et postes en écoles à Abidjan : préparation CEPE, BEPC, BAC, concours ENSEA (AS, ISE) et INPHB (A2GP, classes préparatoires, ITA). Postulez avec KONE.EDUC.',
      OF_CSS, OF_MAIN, SUPA + OF_JS)
+
+# ---------------------------------------------------------------- preparation-concours.html
+import urllib.parse
+PREPS = [
+  ('Examens nationaux', '📘', 'Pour réussir l’examen du primaire, du collège et du lycée.', [
+    ('CEPE', 'Fin du primaire : français, mathématiques, éveil. Révisions du programme de CM2, dictées, problèmes et sujets des années précédentes.'),
+    ('BEPC', 'Fin du collège : mathématiques, physique-chimie, SVT, français, anglais. Révisions de 3e, annales corrigées et examens blancs.'),
+    ('BAC', 'Fin du lycée : matières principales de votre série, méthodologie de la dissertation et du commentaire, annales et épreuves blanches chronométrées.')]),
+  ('Concours ENSEA', '📊', 'Préparation aux concours de l’École nationale supérieure de statistique et d’économie appliquée.', [
+    ('ENSEA – AS', 'Concours d’Adjoint technique de la statistique : mathématiques, culture générale et entraînement sur les sujets des sessions précédentes.'),
+    ('ENSEA – ISE Maths', 'Concours d’Ingénieur statisticien économiste, option mathématiques : analyse, algèbre, probabilités, épreuves d’ordre général.'),
+    ('ENSEA – ISE Économie', 'Concours d’Ingénieur statisticien économiste, option économie : économie, mathématiques appliquées, épreuves d’ordre général.')]),
+  ('Concours INPHB', '🏗️', 'Préparation aux concours de l’Institut national polytechnique Félix Houphouët-Boigny de Yamoussoukro.', [
+    ('INPHB – A2GP', 'Préparation au concours A2GP : programme scientifique du concours, annales et entraînement en conditions réelles.'),
+    ('INPHB – Classes préparatoires', 'Préparation à l’entrée en classes préparatoires de l’INPHB : mathématiques, physique-chimie, français et sujets des années précédentes.'),
+    ('INPHB – ITA', 'Préparation au concours ITA : épreuves scientifiques, méthode et entraînement chronométré sur les sujets des sessions passées.')]),
+]
+PC_CSS = DV_CSS + r"""
+.pc-group{margin-top:30px}.pc-group h2{text-align:left;margin:0 0 6px}.pc-group>p{margin:0 0 14px;color:#5b6884}
+.pc-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.pc-card{display:flex;flex-direction:column;gap:8px;padding:20px;border:1px solid #e3ebf8;border-radius:20px;background:#fff;box-shadow:0 10px 30px rgba(21,61,140,.06)}
+.pc-card b{font:800 19px Manrope,sans-serif;color:#10294f}.pc-card p{margin:0;color:#5b6884;line-height:1.5;flex:1}
+.pc-card a{align-self:flex-start;padding:10px 16px;border-radius:12px;background:#fa7518;color:#fff;font-weight:800;text-decoration:none}
+.pc-how{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px}.pc-how div{padding:16px;border-radius:16px;background:#f4f7fc}.pc-how b{display:block;margin-bottom:4px}
+@media(max-width:860px){.pc-cards{grid-template-columns:1fr 1fr}.pc-how{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.pc-cards,.pc-how{grid-template-columns:1fr}}
+"""
+pc_groups = ''.join('<section class="pc-group" id="' + slug_g + '"><h2>' + ic + ' ' + g + '</h2><p>' + d + '</p><div class="pc-cards">'
+  + ''.join('<div class="pc-card"><b>' + html.escape(n) + '</b><p>' + html.escape(t) + '</p><a href="reservation.html?preparation=' + urllib.parse.quote(n) + '">Réserver un enseignant →</a></div>' for n, t in items)
+  + '</div></section>' for (g, ic, d, items), slug_g in zip(PREPS, ['examens', 'ensea', 'inphb']))
+PC_MAIN = ("""<main class="dv">
+<section class="dv-hero"><div><h1>Préparation aux examens et concours</h1><p>CEPE, BEPC, BAC, concours ENSEA (AS, ISE Maths, ISE Économie) et INPHB (A2GP, classes préparatoires, ITA) : un enseignant spécialisé vous prépare à domicile ou en ligne, avec annales, méthode et épreuves blanches.</p>
+<div class="tags"><a href="#examens" style="color:#fff;text-decoration:none"><span>📘 CEPE · BEPC · BAC</span></a><a href="#ensea" style="color:#fff;text-decoration:none"><span>📊 ENSEA</span></a><a href="#inphb" style="color:#fff;text-decoration:none"><span>🏗️ INPHB</span></a></div>
+<a class="dv-btn" href="reservation.html">Choisir ma préparation →</a></div>
+<div class="dv-phone" aria-hidden="true"><div class="n"><span style="font-size:28px">🎯</span><div><b>Préparation ENSEA – ISE Maths</b><small>Annales corrigées · épreuves blanches</small></div></div><div class="n"><span style="font-size:28px">📈</span><div><b>Bilan après chaque séance</b><small>Progrès suivis par la famille</small></div></div></div></section>
+<h2>Comment se passe la préparation ?</h2>
+<div class="pc-how"><div><b>1. Diagnostic</b>Le niveau de départ et les points faibles sont évalués dès la première séance.</div><div><b>2. Programme</b>Un plan de révision jusqu’à la date de l’examen ou du concours.</div><div><b>3. Entraînement</b>Annales, exercices types et épreuves blanches chronométrées.</div><div><b>4. Suivi</b>Compte rendu après chaque séance et bilan chaque mois.</div></div>"""
+  + pc_groups
+  + """<section class="dv-final"><h2 style="margin-top:0">Vous préparez un autre examen ou concours ?</h2><p>Décrivez votre objectif dans la demande : nous trouvons l’enseignant qualifié.</p><div class="row"><a class="dv-btn" href="reservation.html">Réserver un enseignant</a><a class="dv-btn wa" href="https://wa.me/2250161701361?text=""" + html.escape(urllib.parse.quote('Bonjour KONE.EDUC, je souhaite une préparation à un examen ou un concours.')) + """" target="_blank" rel="noopener">Nous écrire sur WhatsApp</a></div>
+<p style="margin-top:14px">Vous êtes enseignant et vous préparez à ces concours ? <a href="candidature-enseignant.html">Rejoignez KONE.EDUC</a> et indiquez vos préparations dans votre dossier.</p></section>
+</main>""")
+page('preparation-concours.html', 'Préparation CEPE, BEPC, BAC et concours ENSEA, INPHB à Abidjan | KONE.EDUC',
+     'Préparation au CEPE, au BEPC, au BAC et aux concours ENSEA (AS, ISE Maths, ISE Économie) et INPHB (A2GP, classes préparatoires, ITA) avec un enseignant à domicile ou en ligne à Abidjan.',
+     PC_CSS, PC_MAIN, '')

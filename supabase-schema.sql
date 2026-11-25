@@ -2645,5 +2645,146 @@ do $$ declare t text; begin
 exception when others then raise notice 'Journal des offres indisponible (%).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Paiements Wave, Orange Money, MTN MoMo, Moov Money et reçus numérotés
+-- ============================================================
+-- Les 4 moyens de paiement mobile sont acceptés pour les mensualités (avant : Wave et Orange Money seulement)
+do $$ begin
+  alter table public.invoices drop constraint if exists invoices_payment_method_check;
+  alter table public.invoices add constraint invoices_payment_method_check check (payment_method in ('wave','orange_money','mtn_money','moov_money'));
+end $$;
+alter table public.orders add column if not exists payment_operator text check (payment_operator in ('wave','orange_money','mtn_money','moov_money'));
+
+-- Reçus : un numéro unique et définitif pour chaque paiement confirmé
+create sequence if not exists public.receipt_seq;
+create table if not exists public.receipts (
+  id bigint generated always as identity primary key,
+  number text not null unique,
+  kind text not null check (kind in ('mensualite','commande','versement')),
+  source_id bigint not null,
+  amount integer not null check (amount >= 0),
+  method text,
+  reference text,
+  label text not null,
+  payer_name text,
+  payee_name text,
+  parent_id uuid references public.profiles(id) on delete set null,
+  teacher_id uuid references public.profiles(id) on delete set null,
+  shop_id bigint references public.shops(id) on delete set null,
+  confirmed_by uuid references public.profiles(id) on delete set null,
+  issued_at timestamptz not null default now(),
+  unique (kind, source_id)
+);
+create index if not exists receipts_parent_idx on public.receipts (parent_id);
+create index if not exists receipts_teacher_idx on public.receipts (teacher_id);
+create index if not exists receipts_shop_idx on public.receipts (shop_id);
+alter table public.receipts enable row level security;
+grant select on public.receipts to authenticated;
+drop policy if exists "Receipts visible to parties" on public.receipts;
+create policy "Receipts visible to parties" on public.receipts for select to authenticated
+  using (public.is_admin() or parent_id = auth.uid() or teacher_id = auth.uid() or (shop_id is not null and shop_id = public.my_shop_id()));
+
+create or replace function public.next_receipt_number() returns text
+language sql security definer set search_path = public as $$
+  select 'R-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('public.receipt_seq')::text, 6, '0');
+$$;
+revoke execute on function public.next_receipt_number() from public, anon, authenticated;
+
+-- Mensualité payée → reçu pour le parent (et l'administration)
+create or replace function public.receipt_invoice() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_parent text; v_label text;
+begin
+  if new.status = 'paid' and (tg_op = 'INSERT' or old.status is distinct from 'paid') then
+    select full_name into v_parent from public.profiles where id = new.parent_id;
+    select 'Mensualité ' || to_char(new.month, 'MM/YYYY') || coalesce(' – ' || cr.subject || ' (' || cr.student_name || ')', '') into v_label
+    from (select 1) x left join public.course_requests cr on cr.id = new.course_request_id;
+    insert into public.receipts (number, kind, source_id, amount, method, reference, label, payer_name, payee_name, parent_id, confirmed_by)
+    values (public.next_receipt_number(), 'mensualite', new.id, new.amount, new.payment_method, new.payment_reference, v_label, v_parent, 'KONE.EDUC', new.parent_id, auth.uid())
+    on conflict (kind, source_id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists receipt_invoice on public.invoices;
+create trigger receipt_invoice after insert or update of status on public.invoices for each row execute function public.receipt_invoice();
+
+-- Commande payée → reçu pour l'acheteur et le vendeur
+create or replace function public.receipt_order() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_shop text;
+begin
+  if new.payment_status = 'paid' and (tg_op = 'INSERT' or old.payment_status is distinct from 'paid') then
+    select name into v_shop from public.shops where id = new.shop_id;
+    insert into public.receipts (number, kind, source_id, amount, method, reference, label, payer_name, payee_name, parent_id, shop_id, confirmed_by)
+    values (public.next_receipt_number(), 'commande', new.id, new.total,
+      case when new.payment_method = 'cod' then coalesce(new.payment_operator, 'livraison') else coalesce(new.payment_operator, 'mobile_money') end,
+      new.payment_ref, 'Commande ' || new.ref || ' – ' || coalesce(v_shop, 'boutique'), new.buyer_name, v_shop, new.buyer_id, new.shop_id, auth.uid())
+    on conflict (kind, source_id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists receipt_order on public.orders;
+create trigger receipt_order after insert or update of payment_status on public.orders for each row execute function public.receipt_order();
+
+-- Versement payé à l'enseignant → reçu pour l'enseignant et l'administration
+create or replace function public.receipt_payout() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'paid' and (tg_op = 'INSERT' or old.status is distinct from 'paid') then
+    insert into public.receipts (number, kind, source_id, amount, method, reference, label, payer_name, payee_name, teacher_id, confirmed_by)
+    values (public.next_receipt_number(), 'versement', new.id, new.amount, new.payment_method, new.payment_reference,
+      'Versement ' || to_char(new.month, 'MM/YYYY') || ' – ' || new.label, 'KONE.EDUC', new.teacher_name, new.teacher_id, auth.uid())
+    on conflict (kind, source_id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists receipt_payout on public.teacher_payouts;
+create trigger receipt_payout after insert or update of status on public.teacher_payouts for each row execute function public.receipt_payout();
+
+-- Reçus des paiements déjà confirmés avant cette mise à jour (une seule fois, sans doublon)
+insert into public.receipts (number, kind, source_id, amount, method, reference, label, payer_name, payee_name, parent_id, issued_at)
+select public.next_receipt_number(), 'mensualite', i.id, i.amount, i.payment_method, i.payment_reference,
+       'Mensualité ' || to_char(i.month, 'MM/YYYY'), p.full_name, 'KONE.EDUC', i.parent_id, coalesce(i.paid_at, now())
+from public.invoices i left join public.profiles p on p.id = i.parent_id
+where i.status = 'paid' and not exists (select 1 from public.receipts r where r.kind = 'mensualite' and r.source_id = i.id);
+insert into public.receipts (number, kind, source_id, amount, method, reference, label, payer_name, payee_name, parent_id, shop_id, issued_at)
+select public.next_receipt_number(), 'commande', o.id, o.total, case when o.payment_method = 'cod' then 'livraison' else 'mobile_money' end, o.payment_ref,
+       'Commande ' || o.ref, o.buyer_name, s.name, o.buyer_id, o.shop_id, coalesce(o.delivered_at, o.updated_at)
+from public.orders o join public.shops s on s.id = o.shop_id
+where o.payment_status = 'paid' and not exists (select 1 from public.receipts r where r.kind = 'commande' and r.source_id = o.id);
+insert into public.receipts (number, kind, source_id, amount, method, reference, label, payer_name, payee_name, teacher_id, issued_at)
+select public.next_receipt_number(), 'versement', t.id, t.amount, t.payment_method, t.payment_reference,
+       'Versement ' || to_char(t.month, 'MM/YYYY') || ' – ' || t.label, 'KONE.EDUC', t.teacher_name, t.teacher_id, coalesce(t.paid_at, now())
+from public.teacher_payouts t
+where t.status = 'paid' and not exists (select 1 from public.receipts r where r.kind = 'versement' and r.source_id = t.id);
+
+-- Le vendeur indique l'opérateur utilisé quand il confirme un paiement mobile money
+create or replace function public.seller_confirm_payment(p_order bigint, p_operator text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_shop public.shops;
+begin
+  select * into v_o from public.orders where id = p_order for update;
+  select * into v_shop from public.shops where id = v_o.shop_id;
+  if v_o.id is null or (v_shop.owner_id is distinct from auth.uid() and not public.is_admin()) then raise exception 'Commande introuvable'; end if;
+  if v_o.status in ('refused','cancelled') then raise exception 'Commande annulée'; end if;
+  if p_operator is not null and p_operator not in ('wave','orange_money','mtn_money','moov_money') then raise exception 'Opérateur invalide'; end if;
+  update public.orders set payment_status = 'paid', payment_operator = coalesce(p_operator, payment_operator), updated_at = now() where id = p_order;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_o.buyer_id, 'Paiement reçu', v_shop.name || ' confirme la réception de votre paiement pour la commande ' || v_o.ref || '. Votre reçu est disponible.', 'mes-commandes.html');
+end;
+$$;
+drop function if exists public.seller_confirm_payment(bigint);
+revoke execute on function public.seller_confirm_payment(bigint, text) from public;
+grant execute on function public.seller_confirm_payment(bigint, text) to authenticated;
+
+do $$ begin
+  drop trigger if exists audit_changes on public.receipts;
+  create trigger audit_changes after insert or update or delete on public.receipts for each row execute function public.audit_changes();
+exception when others then raise notice 'Journal des reçus indisponible (%).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

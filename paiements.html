@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mes paiements | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="payment-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Mes paiements | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="payment-config.js"></script><script src="recus.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>body{margin:0}
 .p-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 14px}
 .p-method{padding:12px;border:1px solid #e3ebf8;border-radius:12px;background:#fff;font-size:14px}
@@ -16,7 +16,7 @@
 <section class="d-hero"><div><p class="eyebrow">Espace parent</p><h1>Mes paiements</h1><p id="message">Chargement de vos factures…</p></div><div class="d-hero-cta"><a class="d-btn light" href="espace-parent.html">← Mon espace</a></div></section>
 <div class="d-kpis" id="kpis"></div>
 <section class="card d-card" id="box" hidden><div class="d-head"><h2>Mes factures</h2><span class="d-count" id="count">0</span></div><div id="list"></div></section>
-<section class="card d-card d-help" style="margin-top:18px"><h2>Une question sur une facture ?</h2><p>Notre équipe vous répond du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
+<section class="card d-card" style="margin-top:18px" id="mesRecus"></section><section class="card d-card d-help" style="margin-top:18px"><h2>Une question sur une facture ?</h2><p>Notre équipe vous répond du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
 </main>
 <script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey), pay = window.KONE_EDUC_PAYMENT || {};
@@ -30,10 +30,11 @@ const isLate = i => i.status === 'unpaid' && i.due_date && i.due_date < new Date
 const kpi = (ic, value, label) => '<div class="d-kpi"><div class="ic">' + ic + '</div><b>' + value + '</b><span>' + label + '</span></div>';
 const methodLabel = { wave: 'Wave', orange_money: 'Orange Money', moov_money: 'Moov Money', mtn_money: 'MTN MoMo' };
 
+function copier(t, b) { (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { const o = b.textContent; b.textContent = '✓ Copié'; setTimeout(() => b.textContent = o, 1500); }).catch(() => prompt('Copiez :', t)); }
 function payBox(i) {
   const methods = pay.methods || [];
   return '<div class="p-pay"><b>1. Payez ' + fcfa(i.amount) + '</b> par le moyen de votre choix :<div class="p-methods">'
-    + methods.map(m => '<div class="p-method ' + m.id + '"><h4>' + safe(m.label) + '</h4>' + safe(m.how) + ' <b>' + safe(m.number) + '</b>' + (pay.name ? ' (' + safe(pay.name) + ')' : '') + '.</div>').join('')
+    + methods.map(m => '<div class="p-method ' + m.id + '"><h4>' + safe(m.label) + '</h4>' + safe(m.how) + ' <b>' + safe(m.number) + '</b>' + (pay.name ? ' (' + safe(pay.name) + ')' : '') + '.<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><button type="button" class="d-btn sm ghost" onclick="copier(\'' + safe(m.number).replace(/\s/g, '') + '\',this)">📋 Copier le numéro</button><button type="button" class="d-btn sm ghost" onclick="copier(\'' + i.amount + '\',this)">📋 Copier ' + fcfa(i.amount) + '</button>' + (m.ussd ? '<a class="d-btn sm" href="tel:' + encodeURIComponent(m.ussd) + '">📲 Ouvrir ' + safe(m.ussd) + '</a>' : '') + '</div></div>').join('')
     + '</div><b>2. Indiquez votre paiement</b><form data-id="' + i.id + '" style="margin-top:8px"><label>Moyen utilisé<select name="method" required>' + methods.map(m => '<option value="' + m.id + '">' + safe(m.label) + '</option>').join('') + '</select></label>'
     + '<label>Référence de la transaction<input name="reference" required maxlength="100" placeholder="Référence reçue par SMS"></label><button class="btn">J’ai payé</button></form></div>';
 }
@@ -68,4 +69,5 @@ list.addEventListener('submit', async e => {
   load();
 });
 load();
+afficherRecus(document.getElementById('mesRecus'), { titre: '🧾 Mes reçus', kinds: ['mensualite', 'commande'] });
 </script><script src="app.js"></script></body></html>

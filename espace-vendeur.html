@@ -201,8 +201,9 @@ async function act(id, status) {
   if (status === 'accepted') { const o = orders.find(x => x.id === id); if (o && confirm('Commande acceptée ✅\nPrévenir le client sur WhatsApp ?')) window.open(waClient(o, 'accepted'), '_blank'); }
 }
 async function paye(id) {
-  if (!confirm('Confirmez-vous avoir bien reçu le paiement sur votre compte mobile money ?')) return;
-  const r = await db.rpc('seller_confirm_payment', { p_order: id }); if (r.error) return alert(r.error.message);
+  const ch = prompt('Sur quel compte avez-vous reçu le paiement ?\n1. Wave\n2. Orange Money\n3. MTN MoMo\n4. Moov Money\n\nTapez le numéro :', '1');
+  if (ch === null) return; const op = ['wave', 'orange_money', 'mtn_money', 'moov_money'][parseInt(ch, 10) - 1]; if (!op) return alert('Tapez un numéro entre 1 et 4.');
+  const r = await db.rpc('seller_confirm_payment', { p_order: id, p_operator: op }); if (r.error) return alert(r.error.message);
   await chargerCommandes(false); render();
 }
 function imprimer(id) {
@@ -358,8 +359,10 @@ function vueStats() {
   panel.innerHTML = '<h2>Statistiques</h2><div class="d-kpis" style="margin-top:14px"><div class="d-kpi"><b>' + B.fcfa(sum(month)) + '</b><span>Ventes livrées ce mois</span></div><div class="d-kpi"><b>' + B.fcfa(sum(done)) + '</b><span>Ventes livrées au total</span></div><div class="d-kpi"><b>' + (done.length ? B.fcfa(sum(done) / done.length) : '—') + '</b><span>Panier moyen</span></div><div class="d-kpi"><b>' + (orders.length ? Math.round(annul * 100 / orders.length) + ' %' : '—') + '</b><span>Commandes annulées ou refusées</span></div></div>'
     + '<h3>🏆 Articles les plus vendus</h3><div class="v-top">' + (topList.length ? topList.map(t => '<div><span>' + esc(t[0]) + ' (' + t[1][0] + ')</span><b>' + B.fcfa(t[1][1]) + '</b></div>').join('') : '<p class="d-sub">Vos meilleures ventes apparaîtront ici.</p>') + '</div>'
     + '<h3>⭐ Derniers avis</h3><div class="v-top">' + (avis.length ? avis.map(o => '<div><span>' + B.stars(o.rating) + ' ' + esc(o.buyer_name.split(' ')[0]) + (o.review ? ' : « ' + esc(o.review) + ' »' : '') + '</span></div>').join('') : '<p class="d-sub">Les avis de vos clients apparaîtront ici après la livraison.</p>') + '</div>'
+    + '<div id="mesRecus" style="margin-top:18px"></div>'
     + '<h3>🧾 Relevé mensuel</h3><div class="v-share"><input type="month" id="relMois" value="' + new Date().toISOString().slice(0, 7) + '" style="flex:0 1 200px"><button class="d-btn sm" onclick="releve()">🖨 Imprimer le relevé</button></div>'
     + '<p class="d-sub" style="margin-top:16px">' + (shop.commission_rate > 0 ? 'Commission KONE.EDUC (' + shop.commission_rate + ' %) sur les ventes livrées ce mois : <b>' + B.fcfa(commission) + '</b>.' : '✅ Aucune commission KONE.EDUC pendant le lancement : vous gardez 100 % de vos ventes.') + '</p>';
+  afficherRecus(document.getElementById('mesRecus'), { titre: '🧾 Reçus de mes ventes', kinds: ['commande'] });
 }
 
 function releve() {
@@ -380,4 +383,4 @@ function releve() {
   w.document.close();
 }
 init();
-</script><script src="app.js"></script></body></html>
+</script><script src="recus.js"></script><script src="app.js"></script></body></html>
