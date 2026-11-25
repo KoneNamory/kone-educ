@@ -140,3 +140,28 @@ main .ke-ph h1{margin:12px 0 6px;color:#fff}
 .ke-rank-list .tx{flex:1;min-width:0}.ke-rank-list .tx b{display:block;font-size:16px}.ke-rank-list .tx small{display:block;color:#c3d3f1;font-size:13px}
 .ke-rank-list .go{color:#ffb36b;font-weight:800;white-space:nowrap}
 @media(max-width:860px){.ke-rank-list{grid-template-columns:1fr}.ke-rank-list .go{display:none}}
+
+/* ---------- Mode aperçu (page ouverte dans la fenêtre Explorer) ---------- */
+.ke-embed .ke-header,.ke-embed .ke-footer,.ke-embed .ke-whatsapp,.ke-embed .ke-app,.ke-embed .ke-side,.ke-embed .ke-side-veil,.ke-embed .ke-backbar,.ke-embed .ke-peek,.ke-embed .ke-install,.ke-embed .f-sticky{display:none!important}
+.ke-embed body{padding-left:0!important}
+.ke-embed main{padding-top:14px!important}
+
+/* ---------- Fenêtre « Explorer » des espaces ---------- */
+.ke-xbtn{display:inline-flex;align-items:center;gap:8px;height:40px;margin:0;padding:0 14px;border:1px solid #ffd2ad;border-radius:12px;background:linear-gradient(180deg,#fff,#fff4ea);color:#c2530a;font:800 14px "DM Sans",Arial,sans-serif;cursor:pointer;box-shadow:none;width:auto}
+.ke-xbtn:hover{background:#ffe9d6}
+.ke-peek{position:fixed;z-index:80;top:0;right:0;bottom:0;width:min(520px,100%);display:flex;flex-direction:column;background:#f4f7fc;border-left:1px solid #e3ebf8;box-shadow:-24px 0 60px rgba(11,29,59,.22);transform:translateX(104%);transition:transform .25s ease;font-family:"DM Sans",Arial,sans-serif}
+.ke-peek-open .ke-peek{transform:none}
+.ke-peek-top{display:flex;align-items:center;gap:10px;padding:12px 14px;color:#fff;background:var(--ke-night)}
+.ke-peek-top b{flex:1;font:800 18px Manrope,sans-serif}
+.ke-peek-big{color:#ffb36b!important;font-weight:800;font-size:13.5px;text-decoration:none}
+.ke-peek-x{display:grid;place-items:center;width:36px;height:36px;margin:0;padding:0;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;box-shadow:none}
+.ke-peek-tabs{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;background:#fff;border-bottom:1px solid #e3ebf8;scrollbar-width:none}
+.ke-peek-tabs::-webkit-scrollbar{display:none}
+.ke-peek-tabs button{flex:none;margin:0;padding:8px 12px;border:1px solid #dbe5f5;border-radius:99px;background:#fff;color:#26324d;font:700 13.5px "DM Sans",Arial,sans-serif;cursor:pointer;box-shadow:none;width:auto}
+.ke-peek-tabs button.on{border-color:#fa7518;background:#fff2e6;color:#c2530a}
+.ke-peek-body{position:relative;flex:1;min-height:0}
+.ke-peek-body iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.ke-peek-load{padding:20px;color:#5b6884}
+@media(max-width:640px){.ke-xbtn span{display:none}.ke-xbtn{width:40px;padding:0;justify-content:center}}
+.ke-net{position:fixed;z-index:90;left:50%;bottom:18px;max-width:min(560px,calc(100% - 32px));padding:12px 16px;border-radius:14px;background:#0b1d3b;color:#fff;font:700 14px "DM Sans",Arial,sans-serif;box-shadow:0 14px 34px rgba(0,0,0,.3);transform:translate(-50%,140%);transition:transform .3s}
+.ke-net.on{transform:translate(-50%,0)}.ke-net.ok{background:#11743a}

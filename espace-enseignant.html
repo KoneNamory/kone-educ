@@ -67,7 +67,7 @@ async function load() {
   // Dossier
   if (!t) {
     availabilityCard.hidden = true;
-    profile.innerHTML = steps(0) + '<p class="d-sub">Pour postuler, renseignez votre diplôme, votre matière, vos disponibilités et votre zone, puis ajoutez vos documents (JPG, PNG ou PDF, 5 Mo maximum).</p>'
+    profile.innerHTML = steps(0) + '<p class="d-sub">Pour postuler, renseignez votre diplôme, votre matière, vos disponibilités et votre zone, puis ajoutez vos documents (photo ou PDF de 600 Ko maximum ; les photos sont compressées automatiquement).</p>'
       + '<div class="d-checks">' + DOCS.map(d => '<div class="d-check"><i>○</i>' + d[1] + '</div>').join('') + '</div>'
       + '<a class="d-btn" href="candidature-enseignant.html">Compléter mon dossier</a>';
   } else {

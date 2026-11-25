@@ -2949,5 +2949,10 @@ do $$ begin
 exception when others then raise notice 'Journal des résultats indisponible (%).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Stockage : 600 Ko maximum par fichier (photos compressées sur le téléphone avant l'envoi)
+-- ============================================================
+update storage.buckets set file_size_limit = 614400 where id in ('avatars', 'teacher-files', 'shop-images', 'documents');
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

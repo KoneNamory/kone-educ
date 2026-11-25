@@ -16,7 +16,7 @@ await ctx.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.abort());
 const p=await ctx.newPage();const errs=[];const issues=[];
 p.on('pageerror',e=>errs.push(p.url().split('/').pop()+': '+e.message));
 p.on('dialog',d=>d.type()==='prompt'&&d.defaultValue()?d.accept(d.defaultValue()):d.accept());
-const FILES={photo:{name:'photo.png',mimeType:'image/png',buffer:Buffer.from('89504e470d0a1a0a','hex')},doc:{name:'piece.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')}};
+const FILES={photo:{name:'photo.png',mimeType:'image/png',buffer:fs.readFileSync('assets/icons/favicon-48.png')},doc:{name:'piece.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')}};
 const go=async f=>{await p.goto(BASE+f,{waitUntil:'load'});await p.waitForTimeout(500)};
 const step=(n,ok,detail='')=>{console.log((ok?'✅':'❌')+' '+n+(detail?' — '+detail:''));if(!ok)issues.push(n)};
 const tick=async sel=>{const ok=await p.evaluate(s=>{const i=document.querySelector(s);if(!i)return 'absent';const l=i.closest('label')||document.querySelector('label[for="'+i.id+'"]');(l||i).click();return i.checked},sel);if(ok!==true)throw new Error('case non cochée: '+sel+' ('+ok+')')};
@@ -350,7 +350,7 @@ await loginAs('teacher','yao@test.ci');await go('offres-enseignants.html');await
 await p.evaluate(()=>{window.prompt=()=>'Professeur certifié, disponible le mercredi'});await p.click('#koneList button:has-text("Postuler")');await p.waitForTimeout(900);
 d=await db();step('Enseignant : candidature envoyée',(d.job_applications||[]).length===1&&(await p.textContent('#koneList')).includes('Candidature envoyée'));
 await go('espace-enseignant.html');await p.waitForTimeout(900);step('Enseignant : lien « Offres KONE.EDUC » dans son menu',(await p.locator('.ke-app-nav a[href="offres-enseignants.html"]').count())===1);
-await go('mon-profil.html');await p.waitForTimeout(700);await p.setInputFiles('#fichier','assets/store/1-accueil.png');await p.waitForTimeout(1500);{const d=await db();const me=d.profiles.find(x=>x.role==='teacher'&&x.avatar_url);step('Mon profil : photo envoyée, enregistrée sur le profil et la fiche enseignant',(await p.textContent('#msgPhoto')).includes('Photo enregistrée')&&!!me&&(d.teacher_profiles||[]).some(t=>t.id===me.id&&t.photo_url===me.avatar_url));}
+await go('mon-profil.html');await p.waitForTimeout(700);await p.setInputFiles('#fichier','assets/store/1-accueil.jpg');await p.waitForTimeout(1500);{const d=await db();const me=d.profiles.find(x=>x.role==='teacher'&&x.avatar_url);step('Mon profil : photo envoyée, enregistrée sur le profil et la fiche enseignant',(await p.textContent('#msgPhoto')).includes('Photo enregistrée')&&!!me&&(d.teacher_profiles||[]).some(t=>t.id===me.id&&t.photo_url===me.avatar_url));}
 step('Menu latéral : photo, numéro de compte et déconnexion',(await p.locator('.ke-side-av').count())===1&&/KE-[0-9A-Z]{2,8}/.test(await p.textContent('.ke-side-id'))&&(await p.locator('.ke-side-out').count())===1);
 await loginAs('admin','admin@kone.ci');await go('espace-admin.html#joboffers');await p.waitForTimeout(1200);
 step('Admin : candidat visible (dossier, message)',(await p.textContent('#joList')).includes('Yao Kouassi')&&(await p.textContent('#joList')).includes('disponible le mercredi'));
