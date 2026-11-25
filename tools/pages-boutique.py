@@ -477,19 +477,59 @@ OF_CSS = DV_CSS + r"""
 .of-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:6px}.of-acts a{flex:1;text-align:center;padding:10px;border-radius:12px;font-weight:800;text-decoration:none;font-size:14px}
 .of-acts .go{background:#1559eb;color:#fff}.of-acts .wa{background:#1fa855;color:#fff}.of-acts .fb{background:#f4f7fc;color:#102149}
 .of-empty{padding:30px;border:1px dashed #cbd7ee;border-radius:18px;text-align:center;color:#5b6884;background:#fff}
+.of-kind.kone{background:#10294f;color:#f0b030}
+.of-kone{border:2px solid #f0b030;box-shadow:0 14px 34px rgba(240,176,48,.18)}
+.of-kone.filled{border-color:#e3ebf8;box-shadow:none;opacity:.75}
+.of-desc{margin:0;color:#3b4a66;font-size:14.5px;line-height:1.5;white-space:pre-line}
+.of-st{display:inline-block;padding:5px 10px;border-radius:99px;font-size:12.5px;font-weight:800}
+.of-st.pending{background:#fff0dc;color:#9a5900}.of-st.accepted{background:#e5f7ec;color:#11743a}.of-st.rejected,.of-st.filled{background:#eef1f6;color:#5b6884}
+.of-acts button{flex:1;padding:10px;border:0;border-radius:12px;font:800 14px "DM Sans",sans-serif;cursor:pointer;background:#fa7518;color:#fff}
+.of-acts button.ghost{background:#fff;color:#b42318;border:1px solid #f5c2bc}
 """
 OF_MAIN = """<main class="dv">
 <section class="dv-hero"><div><h1>Offres pour enseignants à Abidjan</h1><p>Cours à domicile demandés par des familles et postes proposés par des écoles : préparation au CEPE, BEPC, BAC et aux concours ENSEA et INPHB. Mis à jour en temps réel.</p>
 <div class="tags"><span>Familles vérifiées</span><span>Écoles partenaires</span><span>Partagez une offre en 1 clic</span></div><a class="dv-btn" href="candidature-enseignant.html">Postuler comme enseignant →</a></div>
 <div class="dv-phone" aria-hidden="true"><div class="n"><span style="font-size:28px">📚</span><div><b>Mathématiques · Terminale</b><small>Préparation ENSEA – ISE Maths · Cocody</small></div></div><div class="n"><span style="font-size:28px">🏫</span><div><b>Collège / Lycée · Bingerville</b><small>Physique-Chimie · Vacation</small></div></div></div></section>
-<h2>Offres en cours</h2>
+<h2 id="kone">📢 Offres KONE.EDUC</h2><p style="text-align:center;color:#5b6884;margin:-6px 0 16px">Offres publiées par l’équipe KONE.EDUC : tous les enseignants peuvent postuler, l’équipe choisit le meilleur profil.</p>
+<div id="koneList"><div class="of-empty">Chargement…</div></div>
+<h2>Demandes des familles et des écoles</h2>
 <div class="of-bar" id="bar"></div><div id="list"><div class="of-empty">Chargement des offres…</div></div>
 <section class="dv-final"><h2 style="margin-top:0">Une école ? Une famille ?</h2><p>Déposez votre demande, nous trouvons l’enseignant qualifié.</p><div class="row"><a class="dv-btn" href="reservation.html">Famille : réserver un enseignant</a><a class="dv-btn light" style="border:1px solid #e3ebf8" href="ecoles.html">École : recruter un enseignant</a></div></section>
 </main>"""
 OF_JS = r"""<script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-let offres = [], f = { kind: '', prep: '', commune: '' };
+let offres = [], kone = [], me = null, role = null, f = { kind: '', prep: '', commune: '' };
+const ST = { pending: '⏳ Candidature envoyée', accepted: '🎉 Vous êtes retenu(e)', rejected: 'Non retenue', withdrawn: '' };
+function koneCard(o) {
+  const ouverte = o.status === 'open' && (!o.deadline || new Date(o.deadline + 'T23:59:59') >= new Date());
+  let act;
+  if (o.my_status === 'accepted') act = '<span class="of-st accepted">' + ST.accepted + '</span>';
+  else if (!ouverte) act = '<span class="of-st filled">' + (o.status === 'filled' ? '✅ Offre pourvue' : 'Candidatures closes') + '</span>';
+  else if (o.my_status === 'pending') act = '<span class="of-st pending">' + ST.pending + '</span><button type="button" class="ghost" onclick="retirer(' + o.id + ')">Retirer</button>';
+  else if (o.my_status && o.my_status !== 'withdrawn') act = '<span class="of-st ' + o.my_status + '">' + ST[o.my_status] + '</span>';
+  else act = '<button type="button" onclick="postuler(' + o.id + ')">Postuler</button>';
+  const partageK = o.title + (o.commune ? ' · ' + o.commune : '') + (o.remuneration ? ' · ' + o.remuneration : '') + '. Postulez sur KONE.EDUC : ' + location.origin + location.pathname + '#kone-' + o.id;
+  return '<article class="of-card of-kone' + (ouverte ? '' : ' filled') + '" id="kone-' + o.id + '"><span class="of-kind kone">📢 Offre KONE.EDUC</span><h3>' + esc(o.title) + '</h3>'
+    + '<div class="of-meta">' + (o.school_level ? '<span>🎓 ' + esc(o.school_level) + '</span>' : '') + '<span>📚 ' + esc(o.subjects) + '</span>' + (o.preparation ? '<span>🎯 ' + esc(o.preparation) + '</span>' : '') + (o.commune ? '<span>📍 ' + esc(o.commune + (o.quartier ? ', ' + o.quartier : '')) + '</span>' : '') + (o.format ? '<span>' + esc(o.format) + '</span>' : '') + (o.schedule ? '<span>🗓 ' + esc(o.schedule) + '</span>' : '') + (o.remuneration ? '<span>💰 ' + esc(o.remuneration) + '</span>' : '') + '</div>'
+    + (o.requirements ? '<p class="of-desc"><b>Profil :</b> ' + esc(o.requirements) + '</p>' : '') + (o.details ? '<p class="of-desc">' + esc(o.details) + '</p>' : '')
+    + '<small style="color:#5b6884">Publiée le ' + new Date(o.created_at).toLocaleDateString('fr-FR') + (o.deadline ? ' · candidatures jusqu’au ' + new Date(o.deadline + 'T12:00:00').toLocaleDateString('fr-FR') : '') + ' · ' + o.applicants + ' candidat(s)</small>'
+    + '<div class="of-acts">' + act + (ouverte ? '<a class="wa" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(partageK) + '">Partager</a>' : '') + '</div></article>';
+}
+function renderKone() {
+  koneList.innerHTML = kone.length ? '<div class="of-list">' + kone.map(koneCard).join('') + '</div>' : '<div class="of-empty"><b style="display:block;color:#102149;font-size:17px">Aucune offre KONE.EDUC pour le moment</b>Créez votre compte enseignant : vous serez prévenu(e) dès qu’une offre est publiée.</div>';
+}
+async function postuler(id) {
+  const o = kone.find(x => x.id === id);
+  if (!me) { if (confirm('Pour postuler, connectez-vous avec un compte Enseignant.\n\nOK : se connecter · Annuler : créer un compte')) location.href = 'connexion.html?role=teacher&redirect=offres-enseignants.html'; else location.href = 'inscription.html?role=teacher&redirect=offres-enseignants.html'; return; }
+  if (role !== 'teacher') { alert('Les candidatures sont réservées aux comptes Enseignant. Créez un compte Enseignant avec une autre adresse e-mail.'); return; }
+  const m = prompt('Postuler à « ' + o.title + ' »\n\nPrésentez-vous en quelques mots (diplôme, expérience, disponibilités) :', ''); if (m === null) return;
+  const r = await db.rpc('apply_job_offer', { p_offer: id, p_message: m });
+  if (r.error) { alert(r.error.message); return; }
+  alert('Candidature envoyée ✅ L’équipe KONE.EDUC étudie votre profil et vous prévient de sa décision.\n\nPensez à compléter votre dossier (diplôme, pièce d’identité, CV) pour être choisi(e) plus vite.'); chargerKone();
+}
+async function retirer(id) { if (!confirm('Retirer votre candidature ?')) return; const r = await db.rpc('withdraw_job_application', { p_offer: id }); if (r.error) { alert(r.error.message); return; } chargerKone(); }
+async function chargerKone() { const r = await db.rpc('public_job_offers'); kone = r.data || []; renderKone(); return kone; }
 const lien = o => location.origin + location.pathname + '#' + o.kind + '-' + o.id;
 function partage(o) { return o.title + (o.preparation ? ' · Préparation ' + o.preparation : '') + ' · ' + o.commune + '. Offre KONE.EDUC : ' + lien(o); }
 function render() {
@@ -512,7 +552,16 @@ function jsonld() {
     url: lien(o), identifier: { '@type': 'PropertyValue', name: 'KONE.EDUC', value: o.kind + '-' + o.id } })) });
   document.head.appendChild(s);
 }
-db.rpc('public_offers').then(r => { offres = r.data || []; render(); if (offres.length) jsonld(); const h = location.hash && document.querySelector(location.hash); if (h) h.scrollIntoView(); });
+(async () => {
+  const u = (await db.auth.getUser()).data.user; me = u || null;
+  if (me) { const pr = await db.from('profiles').select('role').eq('id', me.id).maybeSingle(); role = pr.data && pr.data.role; }
+  const [r] = await Promise.all([db.rpc('public_offers'), chargerKone()]);
+  offres = (r.data || []); render();
+  offres = offres.concat(kone.filter(o => o.status === 'open').map(o => ({ kind: 'kone', id: o.id, title: o.title, levels: o.school_level, preparation: o.preparation, commune: o.commune, contract: o.format, salary: o.remuneration, created_at: o.created_at })));
+  if (offres.length) jsonld();
+  offres = offres.filter(o => o.kind !== 'kone');
+  const h = location.hash && document.querySelector(location.hash); if (h) h.scrollIntoView();
+})();
 </script>"""
 page('offres-enseignants.html', 'Offres pour enseignants : cours à domicile et écoles à Abidjan | KONE.EDUC',
      'Offres de cours à domicile et postes en écoles à Abidjan : préparation CEPE, BEPC, BAC, concours ENSEA (AS, ISE) et INPHB (A2GP, classes préparatoires, ITA). Postulez avec KONE.EDUC.',

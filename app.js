@@ -3,9 +3,9 @@
   var client = typeof db !== 'undefined' ? db : supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
   var LINKS = {
     parent: [['espace-parent.html', 'Mon espace'], ['planning.html', 'Planning'], ['paiements.html', 'Paiements'], ['ressources.html', 'Ressources'], ['mes-commandes.html', 'Mes commandes'], ['reservation.html', 'Nouvelle demande']],
-    teacher: [['espace-enseignant.html', 'Mon espace'], ['planning.html', 'Planning'], ['offres.html', 'Offres de cours'], ['versements.html', 'Mes gains'], ['ressources.html', 'Ressources'], ['mes-commandes.html', 'Mes commandes']],
+    teacher: [['espace-enseignant.html', 'Mon espace'], ['planning.html', 'Planning'], ['offres-enseignants.html', '📢 Offres KONE.EDUC'], ['offres.html', 'Offres de cours'], ['versements.html', 'Mes gains'], ['ressources.html', 'Ressources'], ['mes-commandes.html', 'Mes commandes']],
     seller: [['espace-vendeur.html', 'Ma boutique'], ['boutique.html', 'Voir la boutique en ligne'], ['mes-commandes.html', 'Mes achats']],
-    admin: [['espace-admin.html', 'Administration'], ['tableau-de-bord.html', 'Tableau de bord'], ['planning.html', 'Planning'], ['versements.html', 'Versements'], ['gestion-documents.html', 'Documents'], ['espace-admin.html#shops', 'Boutiques'], ['ressources.html', 'Ressources']]
+    admin: [['espace-admin.html', 'Administration'], ['tableau-de-bord.html', 'Tableau de bord'], ['planning.html', 'Planning'], ['versements.html', 'Versements'], ['gestion-documents.html', 'Documents'], ['espace-admin.html#joboffers', 'Offres KONE.EDUC'], ['espace-admin.html#shops', 'Boutiques'], ['ressources.html', 'Ressources']]
   };
   var page = location.pathname.split('/').pop() || 'index.html';
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
