@@ -301,7 +301,7 @@ async function coherence() {
   const r = await db.rpc('integrity_check');
   if (r.error) { cohBox.innerHTML = '<p style="color:#a11">Contrôle indisponible : ' + shopEsc(r.error.message) + '. Exécutez le schéma Supabase à jour.</p>'; return; }
   const L = r.data || [];
-  cohBox.innerHTML = '<div class="u-item" style="border:2px solid ' + (L.length ? '#f5b5ad' : '#a7dfbb') + ';border-radius:12px;padding:12px;margin-bottom:10px">' + (L.length ? '<b>⚠ ' + L.length + ' point(s) à vérifier</b><br>' + L.map(x => '• <b>' + shopEsc(x.domaine) + '</b> ' + shopEsc(x.reference) + ' : ' + shopEsc(x.probleme)).join('<br>') : '<b>✅ Tout est cohérent</b> : totaux des commandes, stocks, paiements, factures et rémunérations (82 %).') + '</div>';
+  cohBox.innerHTML = '<div class="u-item" style="border:2px solid ' + (L.length ? '#f5b5ad' : '#a7dfbb') + ';border-radius:12px;padding:12px;margin-bottom:10px">' + (L.length ? '<b>⚠ ' + L.length + ' point(s) à vérifier</b><br>' + L.map(x => '• <b>' + shopEsc(x.domaine) + '</b> ' + shopEsc(x.reference) + ' : ' + shopEsc(x.probleme)).join('<br>') : '<b>✅ Tout est cohérent</b> : totaux des commandes, stocks, paiements, factures et rémunérations des enseignants.') + '</div>';
 }
 loadShopLog();
 if (['#schools', '#shoplog'].includes(location.hash)) setTimeout(() => document.querySelector(location.hash).scrollIntoView(), 700);

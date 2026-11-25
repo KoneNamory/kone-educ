@@ -2410,10 +2410,28 @@ end;
 $$;
 revoke execute on function public.shop_housekeeping() from public, anon, authenticated;
 
--- Contrôle de cohérence : ventes, stocks, factures et versements (18 % / 82 %)
+-- Taux des frais de service KONE.EDUC sur la prestation des enseignants : réglage privé (jamais publié)
+create or replace function public.admin_fee_rate() returns numeric
+language sql stable security definer set search_path = public, private as $$
+  select value::numeric from private.settings where key = 'teacher_fee_rate' and public.is_admin();
+$$;
+revoke execute on function public.admin_fee_rate() from public, anon;
+grant execute on function public.admin_fee_rate() to authenticated;
+create or replace function public.admin_set_fee_rate(p_rate numeric) returns void
+language plpgsql security definer set search_path = public, private as $$
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  if p_rate is null or p_rate < 0 or p_rate > 60 then raise exception 'Taux invalide (entre 0 et 60 %%)'; end if;
+  insert into private.settings values ('teacher_fee_rate', p_rate::text) on conflict (key) do update set value = excluded.value;
+end;
+$$;
+revoke execute on function public.admin_set_fee_rate(numeric) from public, anon;
+grant execute on function public.admin_set_fee_rate(numeric) to authenticated;
+
+-- Contrôle de cohérence : ventes, stocks, factures et versements (selon le taux privé de frais de service)
 create or replace function public.integrity_check()
 returns table (domaine text, reference text, probleme text)
-language plpgsql stable security definer set search_path = public as $$
+language plpgsql stable security definer set search_path = public, private as $$
 begin
   if auth.uid() is not null and not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
   return query
@@ -2436,9 +2454,10 @@ begin
   union all
   select 'Cours', cr.student_name || ' (' || cr.subject || ')', 'Cours en cours sans mensualité fixée' from public.course_requests cr where cr.status = 'assigned' and cr.monthly_fee is null
   union all
-  select 'Rémunération', cr.student_name || ' (' || cr.subject || ')', 'Enseignant payé ' || tr.monthly_amount || ' F pour ' || cr.monthly_fee || ' F de mensualité : pas 82 % (attendu ' || round(cr.monthly_fee * 0.82) || ' F)'
+  select 'Rémunération', cr.student_name || ' (' || cr.subject || ')', 'Enseignant payé ' || tr.monthly_amount || ' F pour ' || cr.monthly_fee || ' F de mensualité (attendu ' || round(cr.monthly_fee * (100 - fr.taux) / 100) || ' F selon le taux de frais de service)'
   from public.teacher_rates tr join public.course_requests cr on cr.id = tr.course_request_id
-  where cr.status = 'assigned' and cr.monthly_fee is not null and abs(tr.monthly_amount - cr.monthly_fee * 0.82) > greatest(100, cr.monthly_fee * 0.01)
+  cross join (select value::numeric as taux from private.settings where key = 'teacher_fee_rate') fr
+  where cr.status = 'assigned' and cr.monthly_fee is not null and abs(tr.monthly_amount - cr.monthly_fee * (100 - fr.taux) / 100) > greatest(100, cr.monthly_fee * 0.01)
   union all
   select 'Versement', tp.teacher_name || ' · ' || to_char(tp.month, 'MM/YYYY'), 'Enseignant payé alors que la mensualité de la famille n’est pas encore encaissée'
   from public.teacher_payouts tp join public.invoices i on i.course_request_id = tp.course_request_id and i.month = tp.month

@@ -318,7 +318,8 @@ step('Admin : journal boutique (commandes, entrées/sorties)',(await p.textConte
 await p.click('#shoplog button:has-text("Entrées / sorties")');await p.waitForTimeout(200);step('Admin : mouvements de stock (ventes)',(await p.textContent('#logList')).includes('Sortie (vente)'));
 await loginAs('seller','awa@test.ci');await go('espace-vendeur.html');await p.waitForTimeout(1000);await p.click('.v-tabs button:has-text("Mes articles")');await p.waitForTimeout(200);await p.click('button:has-text("Entrées / sorties")');await p.waitForTimeout(600);
 step('Vendeur : historique des entrées et sorties',(await p.textContent('#dlgBody')).includes('Vente'));
-await logout();await go('reglement-interieur.html');step('Règlement intérieur : 20 articles, 18 % et numéro de dépôt',(await p.locator('.art').count())===20&&(await p.textContent('main')).includes('18 %')&&(await p.textContent('main')).includes('01 61 70 13 61'));
+await logout();await go('reglement-interieur.html');step('Règlement intérieur : 20 articles, numéro de dépôt, taux des frais jamais affiché',(await p.locator('.art').count())===20&&(await p.textContent('main')).includes('01 61 70 13 61')&&!/18 ?%|82 ?%/.test(await p.content()));
+await go('candidature-enseignant.html');step('Candidature : taux des frais de service non affiché',!/18 ?%|82 ?%/.test(await p.textContent('body')));
 step('Pied de page : lien vers le règlement intérieur',(await p.locator('footer a[href="reglement-interieur.html"]').count())===1);
 // 9 septies. Ordre et traçabilité : règlement vendeur, litige, signalement, cohérence, relevé
 d=await db();step('Vendeur : acceptation du règlement enregistrée à l’ouverture',!!d.shops[0].terms_accepted_at);
