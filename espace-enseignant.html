@@ -63,9 +63,10 @@ async function load() {
       + '<a class="d-btn" href="candidature-enseignant.html">Compléter mon dossier</a>';
   } else {
     availabilityCard.hidden = false;
-    const photo = t.photo_url ? '<img class="d-av round" src="' + safe(t.photo_url) + '" alt="">' : '<span class="d-av round">' + safe((name || '?').charAt(0).toUpperCase()) + '</span>';
+    const photo = '<a class="d-av-edit" href="mon-profil.html#photo" title="Changer ma photo de profil">' + (t.photo_url ? '<img class="d-av round" src="' + safe(t.photo_url) + '" alt="">' : '<span class="d-av round">' + safe((name || '?').charAt(0).toUpperCase()) + '</span>') + '<em>📷</em></a>';
     profile.innerHTML = steps(t.approved ? 3 : missing.length ? 0 : 1)
       + '<div class="d-profile">' + photo + '<div><h3>' + safe(name || 'Mon profil') + '</h3><p class="d-sub">' + safe(t.subject) + ' · ' + safe(t.degree) + '</p>'
+      + (t.photo_url ? '' : '<p class="d-sub" style="color:#c2530a;font-weight:700">📷 Ajoutez une photo : les parents choisissent plus volontiers un enseignant avec photo. <a href="mon-profil.html#photo" style="color:#c2530a">Ajouter ma photo →</a></p>')
       + '<div class="d-meta">' + [t.levels, t.location, t.format, t.experience].filter(Boolean).map(x => '<span>' + safe(x) + '</span>').join('') + '</div></div></div>'
       + '<div class="d-progress" aria-label="Dossier complété à ' + pct + ' %"><i style="width:' + pct + '%"></i></div><p class="d-sub">' + (missing.length ? '⚠ Dossier incomplet : ' + safe(missing.join(', ')) + '.' : '✓ Dossier complet') + '</p>'
       + '<div class="d-checks"><div class="d-check' + (infoOk ? ' done' : '') + '"><i>' + (infoOk ? '✓' : '○') + '</i>Informations du profil</div>' + DOCS.map(d => '<div class="d-check' + (t[d[0]] ? ' done' : '') + '"><i>' + (t[d[0]] ? '✓' : '○') + '</i>' + d[1] + '</div>').join('') + '</div>'

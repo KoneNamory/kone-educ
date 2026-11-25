@@ -73,3 +73,6 @@ main button.cancel{margin:0;padding:8px 12px;border:1px solid #f1c7c2;border-rad
 .d-flash{margin-top:10px;font-size:14px;font-weight:700;color:var(--ok)}
 @media(max-width:960px){.d-grid{grid-template-columns:1fr}.d-kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.d-hero{flex-direction:column;align-items:flex-start;padding:24px 20px}.d-checks,.d-steps{grid-template-columns:1fr}.d-kpi b{font-size:22px}.d-item-top{flex-direction:column}}
+.d-av-edit{position:relative;flex:none;display:inline-block;border-radius:50%;text-decoration:none}
+.d-av-edit em{position:absolute;right:-2px;bottom:-2px;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#fff;font-style:normal;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.d-av-edit .d-av{box-shadow:0 0 0 3px #fff,0 0 0 5px #fa7518}

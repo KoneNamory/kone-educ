@@ -1,0 +1,119 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mon profil | KONE.EDUC</title><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+.mp-grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;margin-top:18px;align-items:start}
+.mp-photo{text-align:center}
+.mp-av{position:relative;display:inline-block;margin:6px auto 14px}
+.mp-av img,.mp-av span{display:grid;place-items:center;width:168px;height:168px;border-radius:50%;object-fit:cover;border:5px solid #fff;box-shadow:0 0 0 4px #fa7518,0 20px 40px rgba(21,61,140,.2);background:linear-gradient(135deg,#1559eb,#3d7bff);color:#fff;font:800 64px Manrope,sans-serif}
+.mp-btns{display:grid;gap:8px}
+.mp-btns label{display:flex;justify-content:center;align-items:center;gap:8px;padding:12px 16px;border-radius:14px;font-weight:800;cursor:pointer}
+.mp-btns .pick{background:linear-gradient(135deg,#fa7518,#ff9a3d);color:#fff;box-shadow:0 10px 24px rgba(250,117,24,.3)}
+.mp-btns .cam{border:1px solid var(--line);background:#fff;color:var(--ink)}
+.mp-btns input{display:none}
+.mp-rm{margin:4px 0 0;border:0;background:none;color:#b42318;font:700 14px "DM Sans",sans-serif;cursor:pointer;box-shadow:none;width:auto}
+.mp-tips{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:var(--soft);color:var(--mut);font-size:13.5px;line-height:1.5;text-align:left}
+.mp-form label{display:block;margin-top:14px;font-weight:800}
+.mp-form input{width:100%;margin-top:6px;padding:12px;border:1px solid var(--line);font:inherit}
+.mp-form input[readonly]{background:var(--soft);color:var(--mut)}
+.mp-two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.mp-msg{min-height:22px;margin:10px 0 0;font-weight:700}
+.mp-msg.ok{color:var(--ok)}.mp-msg.err{color:var(--bad)}
+.mp-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+@media(max-width:860px){.mp-grid{grid-template-columns:1fr}.mp-two{grid-template-columns:1fr}}
+</style><link rel="stylesheet" href="ke-theme.css"></head><body><main>
+<section class="d-hero"><div><p class="eyebrow">Mon compte</p><h1>Mon profil</h1><p id="message">Votre photo, vos coordonnées et votre numéro de compte.</p></div><div class="d-hero-cta"><span class="d-btn light" id="numero">KE-…</span></div></section>
+<div class="mp-grid">
+  <section class="card d-card mp-photo" id="photo"><h2>Photo de profil</h2>
+    <div class="mp-av" id="apercu"><span>?</span></div>
+    <div class="mp-btns">
+      <label class="pick">🖼️ Choisir une photo<input type="file" id="fichier" accept="image/jpeg,image/png,image/webp"></label>
+      <label class="cam">📷 Prendre une photo<input type="file" id="camera" accept="image/*" capture="user"></label>
+    </div>
+    <button type="button" class="mp-rm" id="retirer" hidden>Retirer la photo</button>
+    <p class="mp-msg" id="msgPhoto" role="status"></p>
+    <div class="mp-tips" id="conseils">✅ Visage bien visible, de face, souriant<br>✅ Fond clair et bonne lumière<br>❌ Pas de lunettes de soleil, pas de photo de groupe</div>
+  </section>
+  <section class="card d-card mp-form"><h2>Mes informations</h2>
+    <form id="infos">
+      <label>Nom complet<input id="nom" required autocomplete="name"></label>
+      <div class="mp-two"><label>Téléphone<input id="tel" type="tel" autocomplete="tel" placeholder="Ex. 07 00 00 00 00"></label><label>Adresse e-mail<input id="mail" readonly></label></div>
+      <div class="mp-two"><label>Type de compte<input id="role" readonly></label><label>Numéro de compte<input id="num" readonly></label></div>
+      <button class="d-btn orange" style="margin-top:18px">Enregistrer</button>
+      <p class="mp-msg" id="msgInfos" role="status"></p>
+    </form>
+    <div class="mp-links"><a class="d-btn ghost" href="mot-de-passe-oublie.html">🔒 Changer mon mot de passe</a><a class="d-btn ghost" id="fiche" href="#" hidden>👁️ Voir ma fiche publique</a><a class="d-btn ghost" href="suppression-compte.html">Supprimer mon compte</a></div>
+  </section>
+</div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const ROLES = { parent: 'Parent', teacher: 'Enseignant', seller: 'Vendeur', admin: 'Administration' };
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let me = null, prof = {};
+function montrer(url) {
+  apercu.innerHTML = url ? '<img src="' + esc(url) + '" alt="Ma photo de profil">' : '<span>' + esc((prof.full_name || '?').trim().charAt(0).toUpperCase()) + '</span>';
+  retirer.hidden = !url;
+  // Met aussi à jour la photo du menu et de la barre du haut
+  document.querySelectorAll('.ke-side-av,.ke-app-avatar').forEach(el => {
+    const n = document.createElement(url ? 'img' : 'span'); n.className = el.className;
+    if (url) { n.src = url; n.alt = ''; } else n.textContent = (prof.full_name || '?').charAt(0).toUpperCase();
+    el.replaceWith(n);
+  });
+}
+// Photo recadrée en carré au centre, 512 × 512, JPEG compressé (rapide à charger, même en 3G)
+function preparer(file) {
+  return new Promise((ok, ko) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const s = Math.min(img.width, img.height), c = document.createElement('canvas'); c.width = c.height = 512;
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 512, 512); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? ok(b) : ko(new Error('Image illisible')), 'image/jpeg', 0.85); };
+    img.onerror = () => ko(new Error('Ce fichier n’est pas une image lisible.'));
+    img.src = url;
+  });
+}
+async function envoyer(file) {
+  if (!file) return;
+  msgPhoto.className = 'mp-msg'; msgPhoto.textContent = 'Envoi de la photo…';
+  try {
+    if (file.size > 15 * 1024 * 1024) throw new Error('Photo trop lourde (15 Mo maximum).');
+    const blob = await preparer(file), path = me.id + '/profil-' + Date.now() + '.jpg';
+    const up = await db.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    if (up.error) throw up.error;
+    const url = db.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+    const r = await db.rpc('set_my_avatar', { p_url: url });
+    if (r.error) throw r.error;
+    const ancien = prof.avatar_url; prof.avatar_url = url; montrer(url);
+    const m = ancien && ancien.match(/\/avatars\/(.+)$/); if (m && m[1].indexOf(me.id + '/') === 0) db.storage.from('avatars').remove([decodeURIComponent(m[1])]);
+    msgPhoto.className = 'mp-msg ok'; msgPhoto.textContent = '✓ Photo enregistrée.';
+  } catch (e) { msgPhoto.className = 'mp-msg err'; msgPhoto.textContent = 'Envoi impossible : ' + (e.message || e) ; }
+  fichier.value = ''; camera.value = '';
+}
+fichier.onchange = () => envoyer(fichier.files[0]);
+camera.onchange = () => envoyer(camera.files[0]);
+retirer.onclick = async () => {
+  if (!confirm('Retirer votre photo de profil ?')) return;
+  const r = await db.rpc('set_my_avatar', { p_url: null });
+  if (r.error) { msgPhoto.className = 'mp-msg err'; msgPhoto.textContent = r.error.message; return; }
+  prof.avatar_url = null; montrer(null); msgPhoto.className = 'mp-msg ok'; msgPhoto.textContent = 'Photo retirée.';
+};
+infos.onsubmit = async e => {
+  e.preventDefault();
+  const full_name = nom.value.trim(), phone = tel.value.trim();
+  if (full_name.length < 3) { msgInfos.className = 'mp-msg err'; msgInfos.textContent = 'Indiquez votre nom complet.'; return; }
+  const r = await db.from('profiles').update({ full_name, phone }).eq('id', me.id);
+  if (r.error) { msgInfos.className = 'mp-msg err'; msgInfos.textContent = 'Enregistrement impossible : ' + r.error.message; return; }
+  prof.full_name = full_name; msgInfos.className = 'mp-msg ok'; msgInfos.textContent = '✓ Informations enregistrées.';
+  const b = document.querySelector('.ke-side-id b'); if (b) b.textContent = full_name;
+};
+(async () => {
+  me = (await db.auth.getUser()).data.user;
+  if (!me) { location.href = 'connexion.html?redirect=mon-profil.html'; return; }
+  prof = (await db.from('profiles').select('*').eq('id', me.id).single()).data || {};
+  const num = 'KE-' + String(me.id).replace(/-/g, '').slice(0, 8).toUpperCase();
+  nom.value = prof.full_name || ''; tel.value = prof.phone || ''; mail.value = me.email || ''; role.value = ROLES[prof.role] || ''; numero.textContent = num; document.getElementById('num').value = num;
+  if (prof.role === 'teacher') { fiche.hidden = false; fiche.href = 'enseignant.html?id=' + encodeURIComponent(me.id); conseils.innerHTML += '<br><br>👩‍🏫 Votre photo apparaît sur votre fiche publique : elle donne confiance aux parents.'; }
+  if (prof.role === 'seller') conseils.innerHTML += '<br><br>🏪 Le logo de votre boutique se change depuis « Ma boutique ».';
+  montrer(prof.avatar_url);
+})();
+</script>
+<script src="app.js"></script>
+</body></html>

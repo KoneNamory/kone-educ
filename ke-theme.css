@@ -55,7 +55,7 @@ main .cta .button,main .l-final .l-btn,main .c-cta a,main .dv-final .dv-btn{bord
 .d-hero{box-shadow:0 24px 60px rgba(11,29,59,.3)!important;border-radius:26px!important}
 .d-hero .d-btn.light{color:#0f1b37!important}
 main .card,main .d-card{border-radius:22px!important}
-.ke-app-nav a[aria-current=page]{box-shadow:inset 0 -3px 0 #fa7518}
+
 
 /* ---------- Mobile ---------- */
 @media(max-width:640px){main>section.hero::before,.l-hero::before,.c-hero::before,.dv-hero::before,.bq-hero::before,.d-hero::before{width:320px;height:320px;right:-140px;bottom:-180px}}
@@ -115,3 +115,12 @@ body.ka #togglePw{box-shadow:none!important;background:transparent!important;pad
 .ke-prep-band a{padding:12px 18px;border-radius:14px;background:linear-gradient(135deg,#fa7518,#ff9a3d);color:#fff!important;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 10px 24px rgba(250,117,24,.3)}
 @media(max-width:980px){.ke-prep-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.ke-prep{padding:56px 16px}.ke-prep-band{flex-direction:column;align-items:flex-start}}
+
+/* ---------- En-tête de page des espaces sans bandeau propre (admin, messagerie, suivi) ---------- */
+.ke-ph{position:relative;overflow:hidden;isolation:isolate;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:18px;margin:6px 0 18px;padding:28px 30px;border-radius:26px;background:var(--ke-night);color:#fff;box-shadow:0 24px 60px rgba(11,29,59,.25)}
+.ke-ph::before{content:"";position:absolute;z-index:-1;width:420px;height:420px;right:-140px;bottom:-240px;border-radius:50%;background:radial-gradient(circle,#fa7518 0%,rgba(250,117,24,0) 70%);opacity:.4}
+.ke-ph-k{display:inline-flex;padding:7px 13px;border:1px solid rgba(255,255,255,.25);border-radius:99px;background:rgba(255,255,255,.08);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+main .ke-ph h1{margin:12px 0 6px;color:#fff}
+.ke-ph p,.ke-ph .lead{margin:0;color:#d6e2fb!important}
+.ke-ph-cta{display:flex;flex-wrap:wrap;gap:10px}
+.ke-ph-cta a{padding:11px 16px;border-radius:12px;background:#fff;color:#0f1b37!important;font-weight:800;text-decoration:none}
