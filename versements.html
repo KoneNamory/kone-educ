@@ -46,7 +46,7 @@
   <section class="card d-card"><div class="d-head"><h2>Mes versements</h2><span class="d-count" id="tCount">0</span></div><div id="tList"></div>
   <p class="d-sub" style="margin:14px 0 0">Une question sur un versement ? Écrivez-nous sur WhatsApp au <a href="https://wa.me/2250161701361">01 61 70 13 61</a>.</p></section>
 </div>
-</main>
+<section class="card d-card" style="margin-top:18px" id="mesRecus"></section></main>
 <script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 const safe = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -218,4 +218,4 @@ addForm.onsubmit = async e => {
   addMsg.textContent = r.error ? 'Erreur : ' + r.error.message : '✓ Versement ajouté.';
   if (!r.error) { addLabel.value = ''; addAmount.value = ''; loadMonth(); }
 };
-</script><script src="app.js"></script></body></html>
+</script><script src="recus.js"></script><script>afficherRecus(document.getElementById('mesRecus'), { titre: '🧾 Reçus de versements', kinds: ['versement'] });</script><script src="app.js"></script></body></html>

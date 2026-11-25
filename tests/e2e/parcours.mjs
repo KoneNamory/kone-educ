@@ -358,6 +358,20 @@ await loginAs('teacher','yao@test.ci');await go('offres-enseignants.html');await
 await logout();await go('index.html');step('Accueil : section « Examens et concours » et lien Concours dans le menu',(await p.locator('#concours a[href^="reservation.html?preparation="]').count())===9&&(await p.locator('.ke-links a[href="preparation-concours.html"]').count())===1);
 await go('preparation-concours.html');step('Page Concours : CEPE, BEPC, BAC, ENSEA, INPHB avec réservation directe',(await p.locator('.pc-card').count())===9&&(await p.textContent('main')).includes('ISE Économie')&&(await p.textContent('main')).includes('A2GP'));
 await p.click('.pc-card:has-text("INPHB – ITA") a');await p.waitForTimeout(600);step('Concours → réservation avec la préparation choisie',(await p.inputValue('#preparation'))==='INPHB – ITA');
+// 9 nonies. Reçus numérotés, paiements 4 opérateurs, À propos sans fondateurs
+await logout();await go('a-propos.html');step('À propos : mission élargie, fondateurs retirés du site',(await p.textContent('main')).includes('prépare aux examens et aux concours')&&!(await p.textContent('main')).includes('Namory')&&!(await p.content()).includes('fondateurs/kone'));
+await go('index.html');step('Google : fondateurs toujours dans les données structurées',(await p.locator('script[type="application/ld+json"]').first().textContent()).includes('Kone Namory'));
+await loginAs('parent','mariam@test.ci');await go('paiements.html');await p.waitForTimeout(1200);
+step('Parent : « Mes reçus » avec le reçu de la mensualité confirmée',(await p.textContent('#mesRecus')).includes('R-2026-')&&(await p.textContent('#mesRecus')).includes('Mensualité'));
+await p.locator('#mesRecus a.rc-item').filter({hasText:'Mensualité'}).first().click();await p.waitForTimeout(1000);
+step('Reçu imprimable : numéro, montant en lettres, moyen de paiement',(await p.textContent('#out')).includes('Reçu de paiement')&&(await p.textContent('#out')).includes('francs CFA')&&(await p.locator('button:has-text("Imprimer")').count())===1);
+await go('mes-commandes.html');await p.waitForTimeout(1200);step('Acheteur : reçus des commandes payées',(await p.textContent('#mesRecus')).includes('Commande'));
+await loginAs('seller','awa@test.ci');await go('espace-vendeur.html');await p.waitForTimeout(1000);await p.click('.v-tabs button:has-text("Statistiques")');await p.waitForTimeout(800);
+step('Vendeur : reçus de ses ventes',(await p.textContent('#mesRecus')).includes('Reçus de mes ventes')&&(await p.textContent('#mesRecus')).includes('R-2026-'));
+await loginAs('admin','admin@kone.ci');await go('espace-admin.html#receipts');await p.waitForTimeout(1500);
+step('Admin : tous les reçus, recherche et export',(await p.locator('#allRecus a.rc-item').count())>=2&&(await p.locator('#allRecus .rc-x').count())===1);
+await p.fill('#allRecus .rc-q','Mensualité');await p.waitForTimeout(200);step('Admin : recherche dans les reçus',(await p.locator('#allRecus a.rc-item').count())>=1&&(await p.locator('#allRecus a.rc-item').filter({hasText:'Commande'}).count())===0);
+await loginAs('teacher','yao@test.ci');await go('versements.html');await p.waitForTimeout(1200);step('Enseignant : section des reçus de versements',(await p.textContent('#mesRecus')).includes('Reçus de versements'));
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');

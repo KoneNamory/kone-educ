@@ -1,0 +1,55 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reçu | KONE.EDUC</title><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><meta name="theme-color" content="#1559eb"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef3fb;font-family:"DM Sans",Arial,sans-serif;color:#0f1b37}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:16px}.bar a,.bar button{padding:11px 16px;border:0;border-radius:12px;background:#fff;color:#0f1b37;font:800 15px "DM Sans",sans-serif;text-decoration:none;cursor:pointer;box-shadow:0 4px 14px rgba(21,61,140,.08)}
+.bar .p{background:#1559eb;color:#fff}.bar .wa{background:#1fa855;color:#fff}
+.rc{max-width:720px;margin:0 auto 40px;padding:34px;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgba(21,61,140,.12);position:relative;overflow:hidden}
+.rc:before{content:"";position:absolute;inset:0 0 auto;height:8px;background:linear-gradient(90deg,#1559eb,#fa7518)}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:2px dashed #dbe5f5;padding-bottom:18px}
+.hd img{height:64px}.hd .t{text-align:right}.hd h1{margin:0;font:800 26px Manrope,sans-serif;letter-spacing:-.5px}.hd small{color:#5b6884}
+.no{display:inline-block;margin-top:6px;padding:6px 12px;border-radius:10px;background:#f1f5fd;font:800 16px Manrope,sans-serif;letter-spacing:1px}
+.ok{display:inline-flex;align-items:center;gap:8px;margin:18px 0 6px;padding:8px 14px;border-radius:99px;background:#e5f7ec;color:#11743a;font-weight:800}
+.amt{margin:14px 0 4px;font:800 44px Manrope,sans-serif;letter-spacing:-1px}.words{color:#5b6884;font-style:italic}
+table{width:100%;border-collapse:collapse;margin-top:18px}td{padding:11px 4px;border-bottom:1px solid #eef2f9;vertical-align:top}td:first-child{color:#5b6884;width:40%}td:last-child{font-weight:700}
+.ft{margin-top:22px;padding-top:14px;border-top:2px dashed #dbe5f5;font-size:13px;color:#5b6884;line-height:1.6}
+.msg{max-width:720px;margin:40px auto;padding:24px;border-radius:18px;background:#fff;text-align:center}
+@media(max-width:560px){.rc{padding:22px;border-radius:0}.amt{font-size:34px}.hd{flex-direction:column}.hd .t{text-align:left}}
+@media print{body{background:#fff}.bar{display:none}.rc{box-shadow:none;margin:0;max-width:none}}
+</style></head><body>
+<div class="bar" id="bar"><a href="javascript:history.back()">← Retour</a><button class="p" onclick="print()">🖨 Imprimer / PDF</button><a class="wa" id="share" target="_blank" rel="noopener" href="#">Envoyer sur WhatsApp</a></div>
+<div id="out"><div class="msg">Chargement du reçu…</div></div>
+<script src="recus.js"></script>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey), R = KE_RECUS;
+// Montant en lettres (français)
+function lettres(n) {
+  const u = ['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];
+  const d = ['','dix','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];
+  const cent = x => { let s = ''; const c = Math.floor(x / 100), r = x % 100;
+    if (c) s = (c > 1 ? u[c] + ' cent' + (r ? '' : 's') : 'cent');
+    if (r) { let t; if (r < 20) t = u[r]; else { const dz = Math.floor(r / 10), un = r % 10;
+      if (dz === 7 || dz === 9) t = d[dz] + (dz === 7 && un === 1 ? '-et-' : '-') + u[10 + un];
+      else t = d[dz] + (un === 1 && dz !== 8 ? '-et-un' : un ? '-' + u[un] : (dz === 8 ? 's' : '')); }
+      s += (s ? ' ' : '') + t; }
+    return s; };
+  if (!n) return 'zéro';
+  const parts = [[1e9, 'milliard'], [1e6, 'million'], [1e3, 'mille']]; let s = '', r = Math.round(n);
+  for (const [v, w] of parts) { const q = Math.floor(r / v); if (q) { s += (w === 'mille' ? (q === 1 ? 'mille' : cent(q) + ' mille') : cent(q) + ' ' + w + (q > 1 ? 's' : '')) + ' '; r %= v; } }
+  if (r) s += cent(r);
+  return s.trim().replace(/cents (mille|million|milliard)/, 'cent $1');
+}
+(async () => {
+  const n = new URLSearchParams(location.search).get('n');
+  const u = (await db.auth.getUser()).data.user;
+  if (!u) { location.href = 'connexion.html?redirect=' + encodeURIComponent('recu.html?n=' + (n || '')); return; }
+  const r = await db.from('receipts').select('*').eq('number', n || '').maybeSingle();
+  if (r.error || !r.data) { out.innerHTML = '<div class="msg"><b>Reçu introuvable</b><p>Vérifiez le numéro, ou connectez-vous avec le compte concerné par ce paiement.</p></div>'; bar.querySelector('.p').hidden = true; share.hidden = true; return; }
+  const x = r.data, K = R.KIND[x.kind] || ['🧾', 'Paiement'];
+  document.title = 'Reçu ' + x.number + ' | KONE.EDUC';
+  out.innerHTML = '<article class="rc"><div class="hd"><img src="assets/logo/kone-educ-logo.jpg" alt="KONE.EDUC"><div class="t"><h1>Reçu de paiement</h1><div class="no">N° ' + R.esc(x.number) + '</div><br><small>Émis le ' + new Date(x.issued_at).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' }) + '</small></div></div>'
+    + '<div class="ok">✓ Paiement confirmé et enregistré</div><div class="amt">' + R.fcfa(x.amount) + '</div><div class="words">Soit ' + lettres(x.amount) + ' francs CFA</div>'
+    + '<table><tr><td>Objet</td><td>' + K[0] + ' ' + R.esc(x.label) + '</td></tr><tr><td>Type</td><td>' + K[1] + '</td></tr><tr><td>Payé par</td><td>' + R.esc(x.payer_name || '—') + '</td></tr><tr><td>Reçu par</td><td>' + R.esc(x.payee_name || '—') + '</td></tr><tr><td>Moyen de paiement</td><td>' + R.esc(R.METH[x.method] || x.method || '—') + '</td></tr>' + (x.reference ? '<tr><td>Référence de la transaction</td><td>' + R.esc(x.reference) + '</td></tr>' : '') + '</table>'
+    + '<div class="ft">Ce reçu est généré automatiquement par la plateforme KONE.EDUC au moment de la confirmation du paiement. Son numéro est unique et la transaction est enregistrée et horodatée dans l’historique de la plateforme.<br>KONE.EDUC · Abidjan, Côte d’Ivoire · WhatsApp 01 61 70 13 61 · www.kone-educ.com</div></article>';
+  share.href = 'https://wa.me/?text=' + encodeURIComponent('Reçu KONE.EDUC n° ' + x.number + ' : ' + x.label + ' – ' + R.fcfa(x.amount) + ' (' + (R.METH[x.method] || x.method || '') + '). ' + location.href);
+})();
+</script></body></html>

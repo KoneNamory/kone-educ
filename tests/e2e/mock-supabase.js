@@ -10,6 +10,18 @@
     for (var k in obj) if (COLS[t].indexOf(k) < 0) return { message: 'Could not find the \'' + k + '\' column of \'' + t + '\' in the schema cache' };
     return null;
   };
+  // Reçu numéroté créé à chaque paiement confirmé (comme les déclencheurs SQL)
+  var mkReceipt = function (db, kind, src) {
+    db.receipts = db.receipts || []; if (db.receipts.some(function (x) { return x.kind === kind && x.source_id === src.id; })) return;
+    db.__seq = db.__seq || {}; db.__seq.receipts = (db.__seq.receipts || 0) + 1;
+    var pr = function (id) { return ((db.profiles || []).find(function (x) { return x.id === id; }) || {}).full_name; };
+    var shop = kind === 'commande' ? (db.shops || []).find(function (x) { return x.id === src.shop_id; }) || {} : {};
+    db.receipts.push({ id: db.__seq.receipts, number: 'R-2026-' + String(db.__seq.receipts).padStart(6, '0'), kind: kind, source_id: src.id,
+      amount: kind === 'commande' ? src.total : src.amount, method: kind === 'commande' ? (src.payment_operator || (src.payment_method === 'cod' ? 'livraison' : 'mobile_money')) : src.payment_method,
+      reference: src.payment_reference || src.payment_ref || null, label: kind === 'mensualite' ? 'Mensualité ' + String(src.month).slice(5, 7) + '/' + String(src.month).slice(0, 4) : kind === 'commande' ? 'Commande ' + src.ref + ' – ' + shop.name : 'Versement – ' + src.label,
+      payer_name: kind === 'mensualite' ? pr(src.parent_id) : kind === 'commande' ? src.buyer_name : 'KONE.EDUC', payee_name: kind === 'mensualite' ? 'KONE.EDUC' : kind === 'commande' ? shop.name : src.teacher_name,
+      parent_id: kind === 'versement' ? null : (src.parent_id || src.buyer_id), teacher_id: kind === 'versement' ? src.teacher_id : null, shop_id: kind === 'commande' ? src.shop_id : null, issued_at: new Date().toISOString() });
+  };
   function query(table) {
     var filters = [], orders = [], op = 'select', payload = null, cols = '*', opts = {}, single = 0;
     var q = {
@@ -57,7 +69,7 @@
       }
       if (op === 'update') {
         if ((err = checkCols(table, payload))) return { data: null, error: err };
-        rows.filter(match).forEach(function (r) { Object.assign(r, payload); });
+        rows.filter(match).forEach(function (r) { Object.assign(r, payload); if (table === 'invoices' && r.status === 'paid') mkReceipt(db, 'mensualite', r); if (table === 'teacher_payouts' && r.status === 'paid') mkReceipt(db, 'versement', r); });
         log(['update', table, payload, filters]); save(db); return { data: null, error: null };
       }
       if (op === 'delete') { db[table] = rows.filter(function (r) { return !match(r); }); save(db); return { data: null, error: null }; }
@@ -202,14 +214,14 @@
       if ((a.p_status === 'refused' || a.p_status === 'cancelled') && String(a.p_note || '').trim().length < 3) return fail('Indiquez la raison au client');
       ord.status = a.p_status; ord[a.p_status + '_at'] = new Date().toISOString();
       if (a.p_status === 'refused' || a.p_status === 'cancelled') { ord.cancel_reason = a.p_note; restock(bq, ord.id); }
-      if (a.p_status === 'delivered' && ord.payment_method === 'cod') ord.payment_status = 'paid';
+      if (a.p_status === 'delivered' && ord.payment_method === 'cod') { ord.payment_status = 'paid'; mkReceipt(bq, 'commande', ord); }
       notif(bq, ord.buyer_id, 'Commande ' + a.p_status, ord.ref); save(bq); return { data: null, error: null };
     }
-    if (name === 'seller_confirm_payment') { if (!ord || !me0 || shopOf.owner_id !== me0.id) return fail('Commande introuvable'); ord.payment_status = 'paid'; save(bq); return { data: null, error: null }; }
+    if (name === 'seller_confirm_payment') { if (!ord || !me0 || shopOf.owner_id !== me0.id) return fail('Commande introuvable'); ord.payment_status = 'paid'; if (a.p_operator) ord.payment_operator = a.p_operator; mkReceipt(bq, 'commande', ord); save(bq); return { data: null, error: null }; }
     if (['buyer_cancel_order', 'buyer_declare_payment', 'buyer_confirm_received', 'rate_order'].indexOf(name) >= 0 && (!ord || !me0 || ord.buyer_id !== me0.id)) return fail('Commande introuvable');
     if (name === 'buyer_cancel_order') { if (ord.status !== 'new') return fail('Le vendeur a déjà accepté la commande : contactez-le pour l’annuler'); ord.status = 'cancelled'; ord.cancel_reason = a.p_reason || 'Annulée par le client'; restock(bq, ord.id); save(bq); return { data: null, error: null }; }
     if (name === 'buyer_declare_payment') { if (ord.payment_method !== 'momo' || ord.payment_status !== 'unpaid') return fail('Paiement déjà signalé ou commande annulée'); ord.payment_status = 'declared'; ord.payment_ref = a.p_ref; save(bq); return { data: null, error: null }; }
-    if (name === 'buyer_confirm_received') { if (['accepted', 'ready', 'delivering'].indexOf(ord.status) < 0) return fail('Cette commande ne peut pas être confirmée'); ord.status = 'delivered'; if (ord.payment_method === 'cod') ord.payment_status = 'paid'; save(bq); return { data: null, error: null }; }
+    if (name === 'buyer_confirm_received') { if (['accepted', 'ready', 'delivering'].indexOf(ord.status) < 0) return fail('Cette commande ne peut pas être confirmée'); ord.status = 'delivered'; if (ord.payment_method === 'cod') { ord.payment_status = 'paid'; mkReceipt(bq, 'commande', ord); } save(bq); return { data: null, error: null }; }
     if (name === 'rate_order') { if (ord.status !== 'delivered') return fail('Vous pourrez noter la boutique après la livraison'); if (ord.rating) return fail('Vous avez déjà noté cette commande'); ord.rating = a.p_rating; ord.review = a.p_review || null; save(bq); return { data: null, error: null }; }
     if (name === 'create_account') {
       var d = load(); d.__users = d.__users || []; d.profiles = d.profiles || [];
