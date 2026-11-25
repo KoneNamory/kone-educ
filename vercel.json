@@ -2,9 +2,29 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "kone-educ.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "kone-educ.vercel.app"
+        }
+      ],
       "destination": "https://www.kone-educ.com/:path*",
       "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
     }
   ]
 }
