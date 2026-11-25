@@ -90,3 +90,28 @@ body.ka .back-home{display:inline-flex;padding:7px 13px;border:1px solid #cfe0ff
 body.ka #togglePw{box-shadow:none!important;background:transparent!important;padding:0!important}
 @media(max-width:940px){body.ka{grid-template-columns:1fr}.ka-side{padding:30px 20px 0;gap:14px;text-align:center;align-items:center}.ka-side .ka-list,.ka-side .ka-pay{display:none}.ka-side h2{font-size:28px}body.ka main.box{margin:20px 0 40px;padding:28px 22px!important}}
 @media (prefers-reduced-motion:reduce){body.ka main.box{animation:none}}
+
+/* ---------- Section « Examens et concours » (accueil et services) ---------- */
+.ke-prep{position:relative;overflow:hidden;isolation:isolate;margin:40px 0 0;padding:80px 24px;background:var(--ke-night);color:#fff}
+.ke-prep::before{content:"";position:absolute;z-index:-1;width:620px;height:620px;left:-200px;bottom:-320px;border-radius:50%;background:radial-gradient(circle,#fa7518 0%,rgba(250,117,24,0) 70%);opacity:.35}
+.ke-prep-in{max-width:1200px;margin:0 auto}
+.ke-prep-kick{display:inline-flex;padding:8px 14px;border:1px solid rgba(255,255,255,.25);border-radius:99px;background:rgba(255,255,255,.08);font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.ke-prep h2{margin:16px 0 10px;font:800 clamp(30px,3.8vw,46px)/1.08 Manrope,sans-serif;letter-spacing:-1.4px;color:#fff}
+.ke-prep h2 em{font-style:normal;background:linear-gradient(90deg,#ffb36b,#fa7518);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ke-prep-sub{max-width:720px;margin:0;color:#d6e2fb;font-size:17px;line-height:1.6}
+.ke-prep-pts{display:flex;flex-wrap:wrap;gap:8px 20px;list-style:none;margin:18px 0 0;padding:0;color:#d6e2fb;font-weight:700;font-size:15px}
+.ke-prep-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:30px}
+.ke-prep-card{display:flex;flex-direction:column;gap:10px;padding:26px;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);transition:transform .2s,background .2s,border-color .2s}
+.ke-prep-card:hover{transform:translateY(-4px);background:rgba(255,255,255,.11);border-color:rgba(255,179,107,.5)}
+.ke-prep-ic{display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:#fff;font-size:27px}
+.ke-prep-card h3{margin:6px 0 0;font:800 22px Manrope,sans-serif;letter-spacing:-.4px;color:#fff}
+.ke-prep-card p{margin:0;color:#c3d3f1;line-height:1.55}
+.ke-prep-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;flex:1;align-content:flex-start}
+.ke-prep-chips a{padding:10px 15px;border-radius:99px;background:#fff;color:#0f1b37!important;font-weight:800;font-size:14.5px;text-decoration:none;transition:transform .15s,background .15s,color .15s}
+.ke-prep-chips a:hover{transform:translateY(-2px);background:linear-gradient(135deg,#fa7518,#ff9a3d);color:#fff!important}
+.ke-prep-more{margin-top:6px;color:#ffb36b!important;font-weight:800;text-decoration:none}
+.ke-prep-band{display:flex;align-items:center;gap:16px;margin-top:20px;padding:18px 22px;border-radius:20px;background:#fff;color:#0f1b37}
+.ke-prep-band>span{font-size:30px}.ke-prep-band p{flex:1;margin:0;color:#3c4b6b;line-height:1.5}.ke-prep-band b{color:#0f1b37}
+.ke-prep-band a{padding:12px 18px;border-radius:14px;background:linear-gradient(135deg,#fa7518,#ff9a3d);color:#fff!important;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 10px 24px rgba(250,117,24,.3)}
+@media(max-width:980px){.ke-prep-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.ke-prep{padding:56px 16px}.ke-prep-band{flex-direction:column;align-items:flex-start}}
