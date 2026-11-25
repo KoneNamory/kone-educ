@@ -110,6 +110,22 @@
     }
   };
   var rpc = async function (name, a) {
+    if (['teacher_badges', 'public_teacher_ranking', 'admin_verify_exam_result'].indexOf(name) >= 0) { var zx = load(); zx.exam_results = zx.exam_results || [];
+      var nmx = function (id) { var x = (zx.profiles || []).find(function (y) { return y.id === id; }); return x ? x.full_name : ''; };
+      if (name === 'admin_verify_exam_result') { var er = zx.exam_results.find(function (x) { return x.id === a.p_id; }); if (!er) return { data: null, error: { message: 'Résultat introuvable' } }; er.status = a.p_ok ? 'verified' : 'rejected'; save(zx); return { data: null, error: null }; }
+      var stat = function (id) { var v = zx.exam_results.filter(function (x) { return x.teacher_id === id && x.status === 'verified'; }); var ad = v.filter(function (x) { return x.result === 'admis'; }).length; return { v: v, ad: ad }; };
+      if (name === 'teacher_badges') { var tpx = (zx.teacher_profiles || []).find(function (x) { return x.id === a.p_id && x.approved; }); if (!tpx) return { data: null, error: null }; var st = stat(a.p_id);
+        var bd = [{ ic: '✅', t: 'Profil vérifié', d: 'Diplôme et identité contrôlés par KONE.EDUC' }]; var by = {}; st.v.forEach(function (x) { by[x.exam] = by[x.exam] || { exam: x.exam, admis: 0, total: 0, annee: x.year }; by[x.exam].total++; if (x.result === 'admis') by[x.exam].admis++; });
+        Object.keys(by).forEach(function (k) { if (by[k].admis >= 2) bd.push({ ic: '🎯', t: 'Spécialiste ' + k, d: by[k].admis + ' élèves admis' }); });
+        return { data: { sessions: 0, students: 0, rating: null, reviews: 0, admis: st.ad, results: st.v.length, success_rate: st.v.length ? Math.round(100 * st.ad / st.v.length) : null, exams: Object.values(by), badges: bd }, error: null }; }
+      return { data: (zx.teacher_profiles || []).filter(function (x) { return x.approved; }).map(function (x) { var st = stat(x.id); return { id: x.id, display_name: nmx(x.id), subject: x.subject, location: x.location, photo_url: x.photo_url, rating: null, reviews_count: 0, sessions: 0, admitted: st.ad, results: st.v.length, score: st.ad * 6 }; }).sort(function (p, q) { return q.score - p.score; }), error: null }; }
+    if (name === 'course_room') { var zr = load(), meR = JSON.parse(localStorage.getItem('__ke_user') || 'null'); var cr = (zr.course_requests || []).find(function (x) { return x.id === a.p_course; });
+      if (!cr || !meR) return { data: null, error: { message: 'Cours introuvable' } };
+      var pr = (zr.profiles || []).find(function (x) { return x.id === meR.id; }) || {}, role = meR.id === cr.parent_id ? 'parent' : meR.id === cr.teacher_id ? 'teacher' : pr.role === 'admin' ? 'admin' : null;
+      if (!role) return { data: null, error: { message: 'Accès réservé à la famille et à l’enseignant de ce cours' } };
+      if (!cr.online_room) { cr.online_room = 'KoneEduc-' + Math.random().toString(36).slice(2, 14); save(zr); }
+      var nm = function (id) { var x = (zr.profiles || []).find(function (y) { return y.id === id; }); return x ? x.full_name : null; };
+      return { data: [{ room: cr.online_room, subject: cr.subject, student_name: cr.student_name, school_level: cr.school_level, parent_name: nm(cr.parent_id), teacher_name: nm(cr.teacher_id), my_role: role }], error: null }; }
     if (name === 'set_my_avatar') { var za = load(), meA = JSON.parse(localStorage.getItem('__ke_user') || 'null'); if (!meA) return { data: null, error: { message: 'Connexion requise' } };
       var pa = (za.profiles || []).find(function (x) { return x.id === meA.id; }); if (pa) pa.avatar_url = a.p_url;
       var ta = (za.teacher_profiles || []).find(function (x) { return x.id === meA.id; }); if (ta && pa && pa.role === 'teacher') ta.photo_url = a.p_url; save(za); return { data: null, error: null }; }

@@ -52,6 +52,9 @@
 .f-sticky small{display:block;color:var(--muted);font-size:12.5px}.f-sticky .f-btn{padding:12px 18px}
 @media(max-width:900px){.f-grid{grid-template-columns:1fr}.f-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){.shell{width:calc(100% - 32px)}.f-hero{padding:28px 0}.f-hero-grid{grid-template-columns:1fr;gap:20px;text-align:center}.f-photo{width:150px;height:150px;margin:auto;font-size:60px;border-radius:24px}.f-cta{justify-content:center}.f-sum{grid-template-columns:1fr;gap:14px}.f-card{padding:20px}.f-sticky:not([hidden]){display:flex}main{padding-bottom:80px}body:has(.f-sticky:not([hidden])) .ke-whatsapp{bottom:calc(84px + env(safe-area-inset-bottom))}.f-stat b{font-size:22px}}
+.f-badges{display:flex;flex-wrap:wrap;gap:10px}.f-badge{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #ffd9b8;border-radius:16px;background:linear-gradient(180deg,#fff,#fff6ee)}.f-badge i{font-style:normal;font-size:22px}.f-badge b{display:block;font-size:14px}.f-badge small{display:block;color:#5b6884;font-size:12px}
+.f-h3{margin:18px 0 8px;font-size:16px}.f-h3 em{font-style:normal;color:#11743a}.f-exam{display:grid;grid-template-columns:170px 1fr auto;gap:10px;align-items:center;margin:8px 0;font-size:14px}.f-exam .tr{height:10px;border-radius:99px;background:#eef2f9;overflow:hidden}.f-exam .tr i{display:block;height:100%;background:linear-gradient(90deg,#1fa855,#7bd88f)}
+@media(max-width:560px){.f-exam{grid-template-columns:1fr auto}.f-exam .tr{grid-column:1/-1;grid-row:2}}
 </style><link rel="stylesheet" href="ke-theme.css"></head><body><header class="ke-header"><nav class="ke-nav" aria-label="Navigation principale"><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><button class="ke-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button><div class="ke-menu"><div class="ke-links"><a href="index.html">Accueil</a><a href="services.html">Services</a><a href="preparation-concours.html">Concours</a><a href="enseignants.html">Enseignants</a><a href="tarifs.html">Tarifs</a><a href="boutique.html">Boutique</a><a href="a-propos.html">À propos</a><a href="conseils.html">Conseils</a><a href="contact.html">Contact</a></div><div class="ke-actions"><a class="ke-btn" href="connexion.html">Se connecter</a><a class="ke-btn fill" href="reservation.html">Réserver un cours</a></div></div></nav></header><main id="fiche" aria-live="polite">
 <div class="shell"><p id="msg" class="f-msg">Chargement du profil…</p></div>
 <div id="page" hidden>
@@ -70,6 +73,7 @@
 <section class="shell f-stats" id="stats"></section>
 <div class="shell f-grid">
   <div class="f-col">
+    <section class="f-card" id="badgesCard" hidden><h2>Badges et résultats</h2><div class="f-badges" id="badges"></div><div id="exams"></div><p class="f-note">🔒 <b>Résultats vérifiés :</b> seuls les résultats contrôlés par l’équipe KONE.EDUC sont affichés.</p></section>
     <section class="f-card" id="bioCard"><h2>À propos</h2><p id="bio"></p></section>
     <section class="f-card" id="reviewsCard"><h2>Avis des parents</h2><div class="f-sum" id="summary"></div><div id="reviews"></div>
       <p class="f-note">🔒 <b>Avis vérifiés :</b> seuls les parents dont l’enfant a suivi des cours avec cet enseignant via KONE.EDUC peuvent donner un avis. Les avis publiés le sont avec l’accord du parent, sous son prénom et l’initiale de son nom.</p></section>
@@ -122,6 +126,14 @@
     [since || '–', 'membre de KONE.EDUC']
   ].map(function (x) { return '<div class="f-stat"><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></div>'; }).join('');
   if (t.bio) $('bio').textContent = t.bio; else $('bioCard').hidden = true;
+  db.rpc('teacher_badges', { p_id: t.id }).then(function (rb) {
+    var x = rb && rb.data; if (!x || rb.error) return;
+    $('badges').innerHTML = (x.badges || []).map(function (g) { return '<span class="f-badge" title="' + esc(g.d) + '"><i>' + esc(g.ic) + '</i><span><b>' + esc(g.t) + '</b><small>' + esc(g.d) + '</small></span></span>'; }).join('');
+    $('exams').innerHTML = (x.exams || []).length ? '<h3 class="f-h3">🎓 Résultats aux examens' + (x.success_rate != null ? ' · <em>' + x.success_rate + ' % d’admis</em>' : '') + '</h3>' + x.exams.map(function (e) {
+      var pc = e.total ? Math.round(100 * e.admis / e.total) : 0;
+      return '<div class="f-exam"><b>' + esc(e.exam) + '</b><span class="tr"><i style="width:' + pc + '%"></i></span><span>' + e.admis + ' / ' + e.total + ' admis</span></div>'; }).join('') : '';
+    $('badgesCard').hidden = false;
+  });
   $('facts').innerHTML = [['Diplôme', t.degree], ['Expérience', t.experience], ['Matière', t.subject], ['Niveaux enseignés', t.levels], ['Format', t.format], ['Zone', t.location], ['Disponibilités', t.availability]]
     .filter(function (x) { return x[1]; }).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + esc(x[1]) + '</dd></div>'; }).join('');
   $('checks').innerHTML = [

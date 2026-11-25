@@ -68,7 +68,7 @@ dialog.v-dlg::backdrop{background:rgba(10,20,45,.55)}
 <script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 const B = KE_BOUTIQUE, esc = B.esc;
-const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {}));
+const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {})).concat(Object.keys(window.KONE_EDUC_VILLES || {}));
 let user = null, prof = null, shop = null, products = [], orders = [], items = {}, litiges = {}, tab = 'orders', ofilter = 'todo', known = null, pq = '';
 const MONTH0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 

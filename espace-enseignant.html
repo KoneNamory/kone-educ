@@ -1,4 +1,8 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Enseignant | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"><link rel="stylesheet" href="ke-theme.css"></head><body><main>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Enseignant | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css"><style>.ex-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ex-form input,.ex-form select{padding:10px;border:1px solid #d7e1f2;font:inherit;min-width:0}.ex-form button{grid-column:1/-1;justify-content:center}
+.ex-it{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-top:1px solid #eef2f9;font-size:14px}.ex-st{padding:3px 9px;border-radius:99px;font-size:12px;font-weight:800;white-space:nowrap}
+.f-badges{display:flex;flex-wrap:wrap;gap:8px}.f-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid #ffd9b8;border-radius:99px;background:#fff6ee;font-size:13px;font-weight:700}
+@media(max-width:560px){.ex-form{grid-template-columns:1fr}}</style>
+<link rel="stylesheet" href="ke-theme.css"></head><body><main>
 <section class="d-hero"><div><p class="eyebrow">Espace enseignant</p><h1 id="hello">Bonjour 👋</h1><p id="message">Chargement de votre profil…</p></div><div class="d-hero-cta" id="heroCta"></div></section>
 <div class="d-kpis" id="kpis"></div>
 <div class="d-grid">
@@ -8,6 +12,11 @@
 </div>
 <aside class="d-col">
 <section class="card d-card" id="nextCard"><div class="d-head"><h2>📅 Prochains cours</h2><a class="d-link" href="planning.html">Planning →</a></div><div id="nextList"><p class="d-sub">Chargement…</p></div></section><section class="card d-card"><div class="d-head"><h2>Notifications</h2></div><div id="notifications">Chargement…</div></section>
+<section class="card d-card" id="examCard" hidden><div class="d-head"><h2>🎓 Résultats de mes élèves</h2></div>
+<p class="d-sub">Déclarez les résultats de vos élèves aux examens et concours. Une fois vérifiés par KONE.EDUC, ils apparaissent sur votre fiche publique et vous font gagner des badges.</p>
+<div class="f-badges" id="myBadges" style="margin:10px 0"></div>
+<form id="examForm" class="ex-form"><select id="exExam" required></select><input id="exYear" type="number" min="2000" max="2100" required aria-label="Année"><input id="exStudent" required maxlength="40" placeholder="Élève (prénom + initiale)"><select id="exResult" required><option value="admis">✅ Admis</option><option value="echoue">❌ Non admis</option></select><input id="exMention" maxlength="40" placeholder="Mention ou rang (facultatif)"><input id="exProof" maxlength="300" placeholder="Preuve : n° de table, lien des résultats… (facultatif)"><button class="d-btn orange">Déclarer ce résultat</button></form>
+<div id="examList" style="margin-top:10px"></div></section>
 <section class="card d-card" id="availabilityCard" hidden><div class="d-head"><h2>Mes disponibilités</h2></div><form id="form"><label>Créneaux habituels<input id="availability" required placeholder="Ex. Mercredi après-midi, samedi matin"></label><label>Format de cours<select id="format"><option>À domicile</option><option>En ligne</option><option>À domicile et en ligne</option></select></label><button class="d-btn">Enregistrer</button><p class="d-flash" id="flash" role="status"></p></form></section>
 <section class="card d-card d-help"><h2>Besoin d’aide ?</h2><p>Notre équipe vous accompagne pour votre dossier et vos cours, du lundi au samedi.</p><a class="d-btn orange sm" href="https://wa.me/2250161701361">💬 Écrire sur WhatsApp</a></section>
 </aside>
@@ -82,7 +91,7 @@ async function load() {
     const pill = c.status === 'completed' ? '<span class="d-pill off">Terminé</span>' : c.status === 'cancelled' ? '<span class="d-pill bad">Annulé</span>' : '<span class="d-pill ok">En cours</span>';
     return '<div class="d-item row"><span class="d-av">' + safe(String(c.subject || '?').charAt(0)) + '</span><div class="d-item-main"><div class="d-item-top"><div><b>' + safe(c.student_name) + ' · ' + safe(c.subject) + '</b><p class="d-sub">' + safe(c.availability) + '</p></div>' + pill + '</div>'
       + '<div class="d-meta"><span>' + safe(c.school_level) + '</span><span>📍 ' + safe(c.location) + '</span><span>' + safe(c.format) + '</span></div>'
-      + (c.status === 'cancelled' ? '' : '<div class="d-actions"><a class="d-link" href="suivi.html?cours=' + c.id + '">📝 Compte rendu de séance</a><a class="d-link" href="bilan.html?cours=' + c.id + '">📊 Bilan du mois</a><a class="d-link" href="messagerie.html?cours=' + c.id + '">💬 Écrire au parent</a></div>') + '</div></div>';
+      + (c.status === 'cancelled' ? '' : '<div class="d-actions"><a class="d-link" href="salle.html?cours=' + c.id + '">🎥 Salle de cours en ligne</a><a class="d-link" href="suivi.html?cours=' + c.id + '">📝 Compte rendu de séance</a><a class="d-link" href="bilan.html?cours=' + c.id + '">📊 Bilan du mois</a><a class="d-link" href="messagerie.html?cours=' + c.id + '">💬 Écrire au parent</a></div>') + '</div></div>';
   }).join('') || '<div class="d-empty"><span class="big">📚</span>' + (t && t.approved ? '<p>Aucun cours pour le moment. Postulez aux offres de cours pour être choisi par l’équipe.</p><a class="d-btn" href="offres.html">Voir les offres de cours</a>' : '<p>Les cours vous seront proposés une fois votre dossier validé.</p>') + '</div>';
 
   // Notifications
@@ -103,4 +112,34 @@ db.from('sessions').select('*, course_requests(subject, student_name)').eq('stat
   el.innerHTML = r.data.map(x => { const d = new Date(x.starts_at), c = x.course_requests || {}; return '<div class="d-note"><b>' + d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</b><small>' + String(c.subject || '').replace(/[<>&]/g, '') + ' · ' + String(c.student_name || '').replace(/[<>&]/g, '') + (x.change_request ? ' · 🔁 changement demandé' : '') + '</small></div>'; }).join('') || '<p class="d-sub">Aucun cours planifié pour le moment.</p>';
 });
 load();
-</script><script src="app.js"></script></body></html>
+</script><script src="preparations.js"></script>
+<script>
+// Résultats aux examens déclarés par l'enseignant (vérifiés ensuite par KONE.EDUC)
+(function () {
+  var exDb = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey), me = null;
+  var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var ST = { pending: ['⏳ En vérification', 'background:#fff1dc;color:#9a5a00'], verified: ['✓ Vérifié', 'background:#e5f7ec;color:#11743a'], rejected: ['Non retenu', 'background:#fdecea;color:#b42318'] };
+  exExam.innerHTML = (window.KONE_EDUC_PREPARATIONS || []).map(function (g) { return '<optgroup label="' + e(g[0]) + '">' + g[1].map(function (x) { return '<option>' + e(x) + '</option>'; }).join('') + '</optgroup>'; }).join('') + '<optgroup label="Autre"><option>Examen de classe / composition</option><option>Autre concours</option></optgroup>';
+  exYear.value = new Date().getFullYear();
+  async function charger() {
+    var r = await exDb.from('exam_results').select('*').eq('teacher_id', me).order('created_at', { ascending: false });
+    if (r.error) { examList.innerHTML = '<p class="d-sub">Disponible après la mise à jour de la base.</p>'; return; }
+    examList.innerHTML = (r.data || []).map(function (x) { var st = ST[x.status] || ST.pending;
+      return '<div class="ex-it"><span>' + (x.result === 'admis' ? '✅' : '❌') + ' <b>' + e(x.exam) + ' ' + x.year + '</b> · ' + e(x.student_label) + (x.mention ? ' · ' + e(x.mention) : '') + '</span><span><span class="ex-st" style="' + st[1] + '">' + st[0] + '</span>'
+        + (x.status === 'pending' ? ' <button type="button" class="d-btn ghost sm" data-del="' + x.id + '">Retirer</button>' : '') + '</span></div>'; }).join('') || '<p class="d-sub">Aucun résultat déclaré pour le moment.</p>';
+    examList.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = async function () { if (!confirm('Retirer ce résultat ?')) return; await exDb.from('exam_results').delete().eq('id', Number(b.dataset.del)); charger(); }; });
+    var bd = await exDb.rpc('teacher_badges', { p_id: me });
+    myBadges.innerHTML = bd.data && bd.data.badges ? bd.data.badges.map(function (g) { return '<span class="f-badge" title="' + e(g.d) + '">' + e(g.ic) + ' ' + e(g.t) + '</span>'; }).join('') : '';
+  }
+  examForm.onsubmit = async function (ev) {
+    ev.preventDefault();
+    var row = { teacher_id: me, exam: exExam.value, year: Number(exYear.value), student_label: exStudent.value.trim(), result: exResult.value, mention: exMention.value.trim() || null, proof: exProof.value.trim() || null, status: 'pending' };
+    var r = await exDb.from('exam_results').insert(row);
+    if (r.error) { alert('Enregistrement impossible : ' + r.error.message); return; }
+    examForm.reset(); exYear.value = new Date().getFullYear(); charger();
+  };
+  exDb.auth.getUser().then(function (u) { u = u.data && u.data.user; if (!u) return;
+    exDb.from('profiles').select('role').eq('id', u.id).single().then(function (p) { if (!p.data || p.data.role !== 'teacher') return; me = u.id; examCard.hidden = false; charger(); }); });
+})();
+</script>
+<script src="app.js"></script></body></html>

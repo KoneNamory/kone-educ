@@ -39,7 +39,7 @@
       ['Mes achats', [['mes-commandes.html', 'Mes achats', 'bag']]]],
     admin: [['Pilotage', [['espace-admin.html', 'Administration', 'shield'], ['tableau-de-bord.html', 'Tableau de bord', 'chart'], ['planning.html', 'Planning', 'cal']]],
       ['Finances', [['versements.html', 'Versements', 'coins']]],
-      ['Contenus', [['gestion-documents.html', 'Documents', 'file'], ['ressources.html', 'Ressources', 'book'], ['espace-admin.html#joboffers', 'Offres KONE.EDUC', 'mega'], ['espace-admin.html#shops', 'Boutiques', 'store']]]]
+      ['Contenus', [['gestion-documents.html', 'Documents', 'file'], ['ressources.html', 'Ressources', 'book'], ['espace-admin.html#joboffers', 'Offres KONE.EDUC', 'mega'], ['espace-admin.html#shops', 'Boutiques', 'store'], ['espace-admin.html#examresults', 'Résultats aux examens', 'chart']]]]
   };
   var ROLE = { parent: 'Parent', teacher: 'Enseignant', seller: 'Vendeur', admin: 'Administration' };
   var page = location.pathname.split('/').pop() || 'index.html';

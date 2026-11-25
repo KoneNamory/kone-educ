@@ -1,0 +1,119 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Salle de cours en ligne | KONE.EDUC</title><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<style>
+main{max-width:1180px!important}
+.sl-grid{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
+.sl-visio{display:grid;gap:10px}
+.sl-join{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;border-radius:18px;background:linear-gradient(135deg,#fa7518,#ff9a3d);color:#fff!important;font:800 18px "DM Sans",sans-serif;text-decoration:none;box-shadow:0 14px 30px rgba(250,117,24,.35)}
+.sl-join:hover{transform:translateY(-2px)}
+.sl-small{color:var(--mut);font-size:13.5px;line-height:1.5}
+.sl-list{margin:0;padding:0;list-style:none;display:grid;gap:8px}.sl-list li{display:flex;gap:10px;font-size:14px;line-height:1.45}
+.sl-online{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;background:var(--okbg);color:var(--ok);font-weight:800;font-size:13px}
+.sl-online i{width:8px;height:8px;border-radius:50%;background:#1fa855}
+.sl-board{padding:14px!important}
+.sl-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.sl-tools button{margin:0;width:auto;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:700 14px "DM Sans",sans-serif;cursor:pointer;box-shadow:none}
+.sl-tools button.on{border-color:#1559eb;background:#eaf1ff;color:#1559eb}
+.sl-col{width:30px!important;height:30px;padding:0!important;border-radius:50%!important;border:3px solid #fff!important;box-shadow:0 0 0 1px var(--line)!important}
+.sl-col.on{box-shadow:0 0 0 3px #fa7518!important}
+.sl-sep{width:1px;height:26px;background:var(--line)}
+.sl-wrap{position:relative;width:100%;aspect-ratio:16/10;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;touch-action:none;background-image:radial-gradient(#dbe5f5 1px,transparent 1px);background-size:22px 22px}
+.sl-wrap canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.sl-wrap:fullscreen{border-radius:0;aspect-ratio:auto}
+.sl-msg{margin:8px 0 0;color:var(--mut);font-size:13px}
+@media(max-width:900px){.sl-grid{grid-template-columns:1fr}.sl-wrap{aspect-ratio:4/3}}
+</style><link rel="stylesheet" href="ke-theme.css"></head><body><main>
+<a id="back" href="javascript:history.back()">← Retour</a>
+<section class="ke-ph"><div><span class="ke-ph-k">🎥 Cours en ligne</span><h1>Salle de cours</h1><p id="message">Ouverture de la salle…</p></div><div class="ke-ph-cta"><span class="sl-online" id="online" hidden><i></i><span>1 connecté</span></span></div></section>
+<div class="sl-grid" id="salle" hidden>
+  <div class="sl-visio">
+    <section class="card d-card"><h2>1. La visio</h2>
+      <p class="sl-small">Caméra, micro et partage d’écran, sans rien installer sur ordinateur. Sur téléphone, l’application gratuite <b>Jitsi Meet</b> s’ouvre automatiquement si elle est installée.</p>
+      <a class="sl-join" id="rejoindre" target="_blank" rel="noopener" href="#">🎥 Rejoindre la visio</a>
+      <button type="button" class="d-btn ghost" id="copier" style="justify-content:center">🔗 Copier le lien de la salle</button>
+      <p class="sl-small" id="noteProf" hidden>👩‍🏫 <b>Enseignant :</b> la première fois, Jitsi peut vous demander de vous connecter (compte Google) pour ouvrir la salle. L’élève attend ensuite dans la salle et vous le faites entrer.</p>
+    </section>
+    <section class="card d-card"><h2>Avant de commencer</h2>
+      <ul class="sl-list"><li>📶 Une bonne connexion (Wi-Fi ou 4G)</li><li>🎧 Des écouteurs avec micro, dans un endroit calme</li><li>📓 Le cahier, le manuel et de quoi écrire</li><li>⏰ Se connecter 5 minutes avant l’heure</li></ul>
+      <p class="sl-small" style="margin-top:10px">Après la séance, l’enseignant remplit le compte rendu, comme pour un cours à domicile. <a id="suivi" href="#">Voir le suivi →</a></p>
+    </section>
+  </div>
+  <section class="card d-card sl-board"><div class="d-head"><h2>2. Le tableau blanc partagé</h2></div>
+    <div class="sl-tools" id="tools">
+      <button type="button" class="sl-col on" data-c="#0f1b37" style="background:#0f1b37" aria-label="Noir"></button>
+      <button type="button" class="sl-col" data-c="#1559eb" style="background:#1559eb" aria-label="Bleu"></button>
+      <button type="button" class="sl-col" data-c="#e5484d" style="background:#e5484d" aria-label="Rouge"></button>
+      <button type="button" class="sl-col" data-c="#1fa855" style="background:#1fa855" aria-label="Vert"></button>
+      <button type="button" class="sl-col" data-c="#fa7518" style="background:#fa7518" aria-label="Orange"></button>
+      <span class="sl-sep"></span>
+      <button type="button" data-w="2">Fin</button><button type="button" data-w="4" class="on">Moyen</button><button type="button" data-w="9">Épais</button>
+      <span class="sl-sep"></span>
+      <button type="button" id="gomme">🧽 Gomme</button><button type="button" id="annuler">↩ Annuler</button><button type="button" id="effacer">🗑 Tout effacer</button>
+      <button type="button" id="plein">⛶ Plein écran</button><button type="button" id="png">⬇ Image</button>
+    </div>
+    <div class="sl-wrap" id="wrap"><canvas id="cv"></canvas></div>
+    <p class="sl-msg" id="syncMsg">Tout ce qui est écrit ici apparaît en direct chez l’élève et chez l’enseignant.</p>
+  </section>
+</div>
+</main>
+<script>
+const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const cours = Number(new URLSearchParams(location.search).get('cours'));
+// ---------- Tableau blanc : traits en coordonnées relatives (0 à 1), identiques sur tous les écrans
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let traits = [], courant = null, couleur = '#0f1b37', epaisseur = 4, gomme = false, canal = null, moi = Math.random().toString(36).slice(2);
+function taille() { const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); dessinerTout(); }
+function trait(t) {
+  if (!t.p.length) return; const W = cv.width, H = cv.height, k = W / 1000;
+  ctx.lineCap = ctx.lineJoin = 'round'; ctx.strokeStyle = t.e ? '#ffffff' : t.c; ctx.lineWidth = t.w * k * (t.e ? 5 : 1);
+  ctx.globalCompositeOperation = t.e ? 'destination-out' : 'source-over';
+  ctx.beginPath(); ctx.moveTo(t.p[0][0] * W, t.p[0][1] * H);
+  for (const q of t.p.slice(1)) ctx.lineTo(q[0] * W, q[1] * H);
+  if (t.p.length === 1) ctx.lineTo(t.p[0][0] * W + .1, t.p[0][1] * H);
+  ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
+}
+function dessinerTout() { ctx.clearRect(0, 0, cv.width, cv.height); traits.forEach(trait); }
+const pos = e => { const r = cv.getBoundingClientRect(); return [+((e.clientX - r.left) / r.width).toFixed(4), +((e.clientY - r.top) / r.height).toFixed(4)]; };
+const envoyer = (event, payload) => { if (canal) canal.send({ type: 'broadcast', event, payload }); };
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); courant = { id: moi + Date.now(), c: couleur, w: epaisseur, e: gomme, p: [pos(e)] }; traits.push(courant); trait(courant); });
+cv.addEventListener('pointermove', e => { if (!courant) return; courant.p.push(pos(e)); dessinerTout(); });
+const fin = () => { if (!courant) return; envoyer('trait', courant); courant = null; };
+cv.addEventListener('pointerup', fin); cv.addEventListener('pointercancel', fin);
+document.querySelectorAll('.sl-col').forEach(b => b.onclick = () => { document.querySelectorAll('.sl-col').forEach(x => x.classList.remove('on')); b.classList.add('on'); couleur = b.dataset.c; gomme = false; document.getElementById('gomme').classList.remove('on'); });
+document.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { document.querySelectorAll('[data-w]').forEach(x => x.classList.remove('on')); b.classList.add('on'); epaisseur = Number(b.dataset.w); });
+document.getElementById('gomme').onclick = function () { gomme = !gomme; this.classList.toggle('on', gomme); };
+annuler.onclick = () => { for (let i = traits.length - 1; i >= 0; i--) if (traits[i].id.indexOf(moi) === 0) { const t = traits.splice(i, 1)[0]; envoyer('retirer', { id: t.id }); break; } dessinerTout(); };
+effacer.onclick = () => { if (!confirm('Effacer tout le tableau, pour tout le monde ?')) return; traits = []; dessinerTout(); envoyer('effacer', {}); };
+plein.onclick = () => { const w = document.getElementById('wrap'); document.fullscreenElement ? document.exitFullscreen() : (w.requestFullscreen && w.requestFullscreen()); };
+document.addEventListener('fullscreenchange', () => setTimeout(taille, 100));
+png.onclick = () => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(cv, 0, 0); const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'tableau-kone-educ-' + new Date().toISOString().slice(0, 10) + '.png'; a.click(); };
+window.addEventListener('resize', taille);
+// ---------- Ouverture de la salle
+(async () => {
+  const u = (await db.auth.getUser()).data.user;
+  if (!u) { location.href = 'connexion.html?redirect=' + encodeURIComponent('salle.html?cours=' + cours); return; }
+  const r = await db.rpc('course_room', { p_course: cours });
+  const s = r.data && (Array.isArray(r.data) ? r.data[0] : r.data);
+  if (r.error || !s) { message.textContent = r.error ? r.error.message : 'Salle introuvable.'; return; }
+  const nom = (s.my_role === 'teacher' ? s.teacher_name : s.my_role === 'parent' ? (s.student_name || s.parent_name) : 'KONE.EDUC') || 'Participant';
+  message.innerHTML = esc(s.subject) + ' · ' + esc(s.student_name) + (s.school_level ? ' (' + esc(s.school_level) + ')' : '') + (s.teacher_name ? ' · avec ' + esc(s.teacher_name) : '');
+  const lien = 'https://meet.jit.si/' + encodeURIComponent(s.room);
+  rejoindre.href = lien + '#userInfo.displayName=' + encodeURIComponent('"' + nom + '"') + '&config.prejoinConfig.enabled=true';
+  copier.onclick = async () => { try { await navigator.clipboard.writeText(lien); copier.textContent = '✓ Lien copié'; } catch (e) { prompt('Lien de la salle :', lien); } };
+  document.getElementById('suivi').href = 'suivi.html?cours=' + cours;
+  noteProf.hidden = s.my_role !== 'teacher';
+  salle.hidden = false; taille();
+  // Tableau partagé en direct (canal privé de la salle)
+  if (typeof db.channel !== 'function') { syncMsg.textContent = 'Le partage en direct du tableau n’est pas disponible ici : le tableau reste utilisable sur cet écran.'; return; }
+  canal = db.channel('salle-' + s.room, { config: { broadcast: { self: false }, presence: { key: moi } } });
+  canal.on('broadcast', { event: 'trait' }, ({ payload }) => { traits.push(payload); trait(payload); })
+    .on('broadcast', { event: 'retirer' }, ({ payload }) => { traits = traits.filter(t => t.id !== payload.id); dessinerTout(); })
+    .on('broadcast', { event: 'effacer' }, () => { traits = []; dessinerTout(); })
+    .on('broadcast', { event: 'bonjour' }, () => { if (traits.length) envoyer('etat', { traits: traits.slice(-400) }); })
+    .on('broadcast', { event: 'etat' }, ({ payload }) => { if (!traits.length && payload.traits) { traits = payload.traits; dessinerTout(); } })
+    .on('presence', { event: 'sync' }, () => { const n = Object.keys(canal.presenceState()).length; online.hidden = false; online.querySelector('span').textContent = n + (n > 1 ? ' connectés' : ' connecté'); })
+    .subscribe(st => { if (st === 'SUBSCRIBED') { canal.track({ nom }); envoyer('bonjour', {}); } });
+})();
+</script>
+<script src="app.js"></script>
+</body></html>

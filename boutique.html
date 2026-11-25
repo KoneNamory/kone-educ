@@ -105,7 +105,7 @@ const st = { q: '', cat: '', niveau: '', commune: '', livrable: true };
 try { st.commune = localStorage.getItem('koneEducCommune') || ''; } catch (e) {}
 const params = () => new URLSearchParams(location.search);
 const shopById = id => shops.find(s => String(s.id) === String(id));
-const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {}));
+const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {})).concat(Object.keys(window.KONE_EDUC_VILLES || {}));
 commune.innerHTML += COMMUNES.map(c => '<option>' + esc(c) + '</option>').join('');
 commune.value = st.commune;
 commune.onchange = () => { st.commune = commune.value; try { localStorage.setItem('koneEducCommune', st.commune); } catch (e) {} render(); };

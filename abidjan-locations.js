@@ -21,18 +21,66 @@ window.KONE_EDUC_ENVIRONS={
   'Grand-Bassam':['Azuretti','Impérial','Mockeyville','Moossou','Petit Paris','Quartier France','Autre quartier'],
   'Jacqueville':['Jacqueville Centre','Autre quartier']
 };
+// Autres villes de Côte d’Ivoire : cours à domicile selon les enseignants disponibles, sinon cours en ligne
+window.KONE_EDUC_VILLES={
+  'Abengourou':['Centre-ville','Autre quartier'],
+  'Aboisso':['Centre-ville','Autre quartier'],
+  'Adiaké':['Centre-ville','Autre quartier'],
+  'Adzopé':['Centre-ville','Autre quartier'],
+  'Agboville':['Centre-ville','Autre quartier'],
+  'Akoupé':['Centre-ville','Autre quartier'],
+  'Alépé':['Centre-ville','Autre quartier'],
+  'Bondoukou':['Centre-ville','Autre quartier'],
+  'Bongouanou':['Centre-ville','Autre quartier'],
+  'Bouaflé':['Centre-ville','Autre quartier'],
+  'Bouaké':['Air France','Ahougnanssou','Belleville','Commerce','Dar-es-Salam','Kennedy','Koko','N’Gattakro','Nimbo','Sokoura','Autre quartier'],
+  'Boundiali':['Centre-ville','Autre quartier'],
+  'Béoumi':['Centre-ville','Autre quartier'],
+  'Daloa':['Commerce','Kennedy','Lobia','Orly','Tazibouo','Autre quartier'],
+  'Danané':['Centre-ville','Autre quartier'],
+  'Daoukro':['Centre-ville','Autre quartier'],
+  'Dimbokro':['Centre-ville','Autre quartier'],
+  'Divo':['Commerce','Konankro','Résidentiel','Autre quartier'],
+  'Duékoué':['Centre-ville','Autre quartier'],
+  'Ferkessédougou':['Centre-ville','Autre quartier'],
+  'Gagnoa':['Commerce','Dioulabougou','Garahio','Libreville','Autre quartier'],
+  'Grand-Lahou':['Centre-ville','Autre quartier'],
+  'Guiglo':['Centre-ville','Autre quartier'],
+  'Issia':['Centre-ville','Autre quartier'],
+  'Katiola':['Centre-ville','Autre quartier'],
+  'Korhogo':['Cocody','Haoussabougou','Petit Paris','Résidentiel','Soba','Autre quartier'],
+  'Lakota':['Centre-ville','Autre quartier'],
+  'M’Bahiakro':['Centre-ville','Autre quartier'],
+  'Man':['Commerce','Domoraud','Libreville','Grand Gbapleu','Autre quartier'],
+  'Odienné':['Centre-ville','Autre quartier'],
+  'Oumé':['Centre-ville','Autre quartier'],
+  'Sakassou':['Centre-ville','Autre quartier'],
+  'San-Pédro':['Bardot','Cité','Lac','Séwéké','Zimbabwe','Autre quartier'],
+  'Sassandra':['Centre-ville','Autre quartier'],
+  'Sinfra':['Centre-ville','Autre quartier'],
+  'Soubré':['Centre-ville','Autre quartier'],
+  'Séguéla':['Centre-ville','Autre quartier'],
+  'Tabou':['Centre-ville','Autre quartier'],
+  'Tiassalé':['Centre-ville','Autre quartier'],
+  'Tingréla':['Centre-ville','Autre quartier'],
+  'Touba':['Centre-ville','Autre quartier'],
+  'Toumodi':['Centre-ville','Autre quartier'],
+  'Vavoua':['Centre-ville','Autre quartier'],
+  'Yamoussoukro':['Habitat','Kokrenou','Morofé','N’Zuessi','Dioulakro','220 Logements','Millionnaire','Autre quartier'],
+  'Zuénoula':['Centre-ville','Autre quartier']
+};
 // Choix « Autre commune » : la commune est saisie à la main et marquée « à vérifier » pour l’équipe.
 window.KONE_EDUC_OTHER_COMMUNE='Autre commune (à préciser)';
 window.setupAbidjanLocation=(communeId,quartierId)=>{
   const commune=document.getElementById(communeId),quartier=document.getElementById(quartierId),OTHER=KONE_EDUC_OTHER_COMMUNE;
   const field=(id,label,ph)=>{const l=document.createElement('label');l.className='conditional full';l.id=id+'-field';l.innerHTML=label+' <span>*</span><input id="'+id+'" autocomplete="off" maxlength="80" placeholder="'+ph+'">';return l};
-  const cLab=field(communeId+'-autre','Précisez la commune ou la ville','Ex. Grand-Bassam, Bonoua, Dabou…');
+  const cLab=field(communeId+'-autre','Précisez la commune ou la ville','Ex. nom de la ville ou du village');
   const qLab=field(quartierId+'-autre','Précisez le quartier','Ex. nom du quartier, repère proche');
   const anchor=quartier.closest('label')||quartier;anchor.after(cLab);cLab.after(qLab);
   const cIn=cLab.querySelector('input'),qIn=qLab.querySelector('input');
   const note=document.createElement('small');note.className='full';note.style.cssText='display:block;color:#8a5a00;margin-top:4px';note.textContent='Nous vérifions que nous avons un enseignant près de chez vous, puis nous vous rappelons.';cLab.appendChild(note);
-  const ALL=Object.assign({},KONE_EDUC_ABIDJAN,KONE_EDUC_ENVIRONS),o=x=>'<option>'+x+'</option>';
-  commune.innerHTML='<option value="">Choisir une commune</option><optgroup label="Abidjan">'+Object.keys(KONE_EDUC_ABIDJAN).map(o).join('')+'</optgroup><optgroup label="Environs d’Abidjan">'+Object.keys(KONE_EDUC_ENVIRONS).map(o).join('')+'</optgroup><optgroup label="Ailleurs"><option value="'+OTHER+'">'+OTHER+'</option></optgroup>';
+  const ALL=Object.assign({},KONE_EDUC_ABIDJAN,KONE_EDUC_ENVIRONS,KONE_EDUC_VILLES),o=x=>'<option>'+x+'</option>';
+  commune.innerHTML='<option value="">Choisir une commune</option><optgroup label="Abidjan">'+Object.keys(KONE_EDUC_ABIDJAN).map(o).join('')+'</optgroup><optgroup label="Environs d’Abidjan">'+Object.keys(KONE_EDUC_ENVIRONS).map(o).join('')+'</optgroup><optgroup label="Autres villes de Côte d’Ivoire">'+Object.keys(KONE_EDUC_VILLES).map(o).join('')+'</optgroup><optgroup label="Ailleurs"><option value="'+OTHER+'">'+OTHER+'</option></optgroup>';
   const sync=()=>{const isOther=commune.value===OTHER,isOtherQ=isOther||quartier.value==='Autre quartier';
     cLab.classList.toggle('show',isOther);cIn.required=isOther;if(!isOther)cIn.value='';
     qLab.classList.toggle('show',isOtherQ);qIn.required=isOtherQ;if(!isOtherQ)qIn.value='';
