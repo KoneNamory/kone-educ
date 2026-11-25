@@ -59,3 +59,34 @@ main .card,main .d-card{border-radius:22px!important}
 
 /* ---------- Mobile ---------- */
 @media(max-width:640px){main>section.hero::before,.l-hero::before,.c-hero::before,.dv-hero::before,.bq-hero::before,.d-hero::before{width:320px;height:320px;right:-140px;bottom:-180px}}
+
+/* ---------- Écrans d’accès : connexion, inscription, mot de passe ---------- */
+body.ka{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);place-items:stretch!important;gap:0;min-height:100vh;padding:0!important;background:var(--ke-night)!important;position:relative;overflow-x:hidden}
+body.ka::before{content:"";position:fixed;z-index:0;width:620px;height:620px;left:-220px;bottom:-300px;border-radius:50%;background:radial-gradient(circle,#fa7518 0%,rgba(250,117,24,0) 70%);opacity:.35;pointer-events:none}
+.ka-side{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center;gap:22px;padding:56px clamp(28px,6vw,90px);color:#fff}
+.ka-brand{display:inline-flex;align-items:center;gap:10px;font:800 28px Manrope,sans-serif;letter-spacing:-1px;color:#fff;text-decoration:none}.ka-brand b{color:#ff9a3d}.ka-brand img{width:46px;height:46px;border-radius:12px;background:#fff;padding:3px}
+.ka-side h2{margin:0;font:800 clamp(32px,3.6vw,50px)/1.05 Manrope,sans-serif;letter-spacing:-1.6px}.ka-side h2 em{font-style:normal;background:linear-gradient(90deg,#ffb36b,#fa7518);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ka-side>p{margin:0;max-width:480px;color:#d6e2fb;font-size:17px;line-height:1.6}
+.ka-list{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:480px}
+.ka-list li{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.07);backdrop-filter:blur(6px);font-weight:700;font-size:15px}
+.ka-list li span{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#fff;font-size:19px}
+.ka-list li small{display:block;color:#b9cbef;font-weight:500;font-size:13px}
+.ka-pay{display:flex;flex-wrap:wrap;gap:8px}.ka-pay span{padding:6px 12px;border-radius:99px;font-size:13px;font-weight:800;background:#fff;color:#0f1b37}
+.ka-pay .w{background:#1dc8ff}.ka-pay .o{background:#ff7900;color:#fff}.ka-pay .m{background:#ffcc00}.ka-pay .v{background:#0066b3;color:#fff}
+body.ka main.box{position:relative;z-index:1;align-self:center;justify-self:center;width:min(100% - 32px,500px)!important;margin:40px 0;padding:40px!important;border-radius:28px!important;box-shadow:0 40px 100px rgba(3,10,30,.55)!important;animation:kaIn .5s ease-out}
+@keyframes kaIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+body.ka main.box .brand{display:none!important}body.ka main.box{overflow:hidden}body.ka .role,body.ka main.box button{font-family:"DM Sans",Arial,sans-serif}
+body.ka main.box::before{content:"";position:absolute;inset:0 0 auto;height:6px;border-radius:28px 28px 0 0;background:linear-gradient(90deg,#1559eb,#fa7518)}
+body.ka main.box h1{letter-spacing:-1px}
+body.ka main.box input,body.ka main.box select{padding:14px!important;border-radius:14px!important;background:#f6f9fe;border:1.5px solid #dbe5f5!important;transition:border-color .15s,box-shadow .15s,background .15s}
+body.ka main.box input:focus,body.ka main.box select:focus{outline:none;background:#fff;border-color:#1559eb!important;box-shadow:0 0 0 4px rgba(21,89,235,.14)}
+body.ka main.box form>button:not([type=button]){padding:16px!important;border-radius:14px!important;background:var(--ke-cta)!important;box-shadow:0 12px 26px rgba(250,117,24,.35);transition:transform .15s,box-shadow .15s}
+body.ka main.box form>button:not([type=button]):hover{transform:translateY(-2px);box-shadow:0 16px 32px rgba(250,117,24,.42)}
+body.ka main.box form>button:disabled{opacity:.7;transform:none}
+body.ka .role{border-radius:18px!important;transition:transform .15s,border-color .15s,box-shadow .15s}
+body.ka .role:hover{transform:translateY(-2px);border-color:#9fbcf3!important}
+body.ka .role.on{border-color:#1559eb!important;background:linear-gradient(180deg,#f3f7ff,#e8f0ff)!important;box-shadow:0 10px 24px rgba(21,89,235,.18)!important}
+body.ka .back-home{display:inline-flex;padding:7px 13px;border:1px solid #cfe0ff;border-radius:99px;background:#fff}
+body.ka #togglePw{box-shadow:none!important;background:transparent!important;padding:0!important}
+@media(max-width:940px){body.ka{grid-template-columns:1fr}.ka-side{padding:30px 20px 0;gap:14px;text-align:center;align-items:center}.ka-side .ka-list,.ka-side .ka-pay{display:none}.ka-side h2{font-size:28px}body.ka main.box{margin:20px 0 40px;padding:28px 22px!important}}
+@media (prefers-reduced-motion:reduce){body.ka main.box{animation:none}}
