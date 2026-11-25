@@ -83,7 +83,8 @@ REGLEMENT = [
   ('Article 11 – Paiement des mensualités', [
     f'La mensualité est payée <b>au plus tard le {JOUR_LIMITE} de chaque mois</b>, uniquement sur le numéro officiel de KONE.EDUC : <b>{NUMERO}</b>. Le nom de l’élève et le mois concerné sont indiqués dans le message du paiement.',
     '- Aucun paiement ne doit être remis directement à l’enseignant. KONE.EDUC ne reconnaît que les paiements reçus sur son numéro officiel.',
-    '- Le parent conserve le reçu du paiement (SMS de confirmation) et peut le déclarer depuis son espace « Paiements ».',
+    '- Le paiement se fait par Wave, Orange Money, MTN MoMo ou Moov Money. Le parent conserve le SMS de confirmation et déclare le paiement depuis son espace « Paiements ».',
+    '- Chaque paiement confirmé par KONE.EDUC donne lieu à un <b>reçu numéroté</b> (R-année-numéro), disponible dans l’espace du parent, imprimable et partageable.',
     '- Après deux relances restées sans réponse, les cours peuvent être suspendus jusqu’au paiement.',
     '- Toute modification de la mensualité fait l’objet d’une nouvelle fiche d’accord.',
   ]),
@@ -165,21 +166,21 @@ EMBL = 'file://' + str(ROOT / 'assets' / 'logo' / 'kone-educ-embleme.jpg')
 PDF_CSS = FONTS + '''
 @page{size:A4;margin:18mm 17mm 18mm}
 *{box-sizing:border-box}body{margin:0;font-family:I,Arial,sans-serif;font-size:10.4pt;line-height:1.5;color:#0f1b37}
-.head{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1559eb;padding-bottom:10px;margin-bottom:14px}
-.head img{height:60px}.head div{text-align:right;font-size:9pt;color:#5b6884}
+.head{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;padding:12px 18px;border-radius:14px;background:linear-gradient(120deg,#0b1d3b 0%,#133a9a 60%,#2a63e8 100%);border-bottom:4px solid #fa7518}
+.head img{height:56px;border-radius:10px;background:#fff;padding:3px}.head div{text-align:right;font-size:9pt;color:#d6e2fb}
 h1{margin:6px 0 2px;font-size:22pt;font-weight:800;letter-spacing:-.5px;color:#10294f}
 .sub{margin:0 0 12px;color:#5b6884}
-.titre{margin:18px 0 6px;padding:7px 12px;border-radius:8px;background:#10294f;color:#fff;font-size:12.5pt;font-weight:800;break-after:avoid}
+.titre{margin:18px 0 6px;padding:7px 12px;border-radius:8px;background:linear-gradient(90deg,#0b1d3b,#133a9a);border-left:5px solid #fa7518;color:#fff;font-size:12.5pt;font-weight:800;break-after:avoid}
 .art{break-inside:avoid-page}.art h3{margin:12px 0 4px;font-size:11pt;font-weight:800;color:#1559eb;break-after:avoid}
 p{margin:4px 0}ul{margin:4px 0 4px 18px;padding:0}li{margin:2px 0}
-.cle{margin:10px 0;padding:10px 14px;border:2px solid #f0b030;border-radius:10px;background:#fff8e9}
+.cle{margin:10px 0;padding:10px 14px;border:2px solid #fa7518;border-radius:12px;background:#fff4ea}
 .sign{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:18px;break-inside:avoid}
 .sign div{border:1px solid #cfdcf3;border-radius:10px;padding:10px 12px;height:120px}
 .sign b{display:block;margin-bottom:4px}.sign small{color:#5b6884}
 .foot{margin-top:16px;font-size:8.5pt;color:#5b6884;text-align:center}
 '''
 reg_pdf = ('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Règlement intérieur KONE.EDUC</title><style>' + PDF_CSS + '</style></head><body>'
-  + '<div class="head"><img src="' + LOGO + '" alt="KONE.EDUC"><div>KONE.EDUC – Cours à domicile<br>Abidjan, Côte d’Ivoire<br>WhatsApp : ' + NUMERO + '<br>kone-educ.com</div></div>'
+  + '<div class="head"><img src="' + LOGO + '" alt="KONE.EDUC"><div>KONE.EDUC – Cours à domicile<br>Abidjan, Côte d’Ivoire<br>WhatsApp : ' + NUMERO + '<br>www.kone-educ.com</div></div>'
   + '<h1>Règlement intérieur</h1><p class="sub">Enseignants · Parents et familles · Vendeurs · ' + VERSION + '</p>'
   + '<div class="cle"><b>L’essentiel :</b> mensualité payée au plus tard le ' + str(JOUR_LIMITE) + ' du mois, uniquement au ' + NUMERO + ' (KONE.EDUC) · ' + (str(TAUX) + ' % de frais de service, ' + str(PART_ENS) + ' % versés à l’enseignant · ' if INTERNE else '') + 'aucun paiement direct à l’enseignant · absence prévenue 24 h à l’avance · compte rendu après chaque séance.</div>'
   + corps_reglement()
@@ -194,18 +195,18 @@ def ligne(lbl, w='100%'):
 FA_CSS = FONTS + '''
 @page{size:A4;margin:9mm 12mm}
 *{box-sizing:border-box}body{margin:0;font-family:I,Arial,sans-serif;font-size:9pt;line-height:1.32;color:#0f1b37}
-.head{display:flex;align-items:center;gap:14px;border-bottom:3px solid #1559eb;padding-bottom:8px}
+.head{display:flex;align-items:center;gap:14px;padding-bottom:8px;border-bottom:4px solid;border-image:linear-gradient(90deg,#1559eb,#fa7518) 1}
 .head img{height:46px}.head h1{flex:1;margin:0;font-size:17pt;font-weight:800;color:#10294f;letter-spacing:-.3px}.head h1 small{display:block;font-size:9pt;font-weight:600;color:#5b6884;letter-spacing:0}
 .ref{text-align:right;font-size:8.8pt;color:#5b6884}.ref b{color:#0f1b37}
-h2{margin:7px 0 2px;padding:3px 10px;border-radius:6px;background:#eaf1ff;color:#10294f;font-size:10.5pt;font-weight:800}
+h2{margin:7px 0 2px;padding:3px 10px;border-radius:6px;background:#eaf1ff;border-left:4px solid #fa7518;color:#10294f;font-size:10.5pt;font-weight:800}
 .row{display:flex;flex-wrap:wrap;gap:4px 14px}
 .f{display:flex;align-items:flex-end;gap:6px;margin:4px 0}.f span{white-space:nowrap;font-weight:600}.f i{flex:1;border-bottom:1px dotted #8a99b8;height:13px}
 .chk{display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-weight:600}.chk:before{content:"";width:11px;height:11px;border:1.5px solid #10294f;border-radius:2px}
-.pay{margin:6px 0;padding:7px 12px;border:2.5px solid #f0b030;border-radius:12px;background:#fff8e9}
+.pay{margin:6px 0;padding:7px 12px;border:2.5px solid #fa7518;border-radius:12px;background:#fff4ea}
 .pay .num{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .pay .num b{font-size:22pt;font-weight:800;color:#10294f;letter-spacing:.5px}.pay .num small{font-size:9pt;font-weight:700}
 .pay p{margin:3px 0}
-.split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}.split div{padding:6px 8px;border-radius:8px;background:#fff;border:1px solid #f3d38c}.split b{display:block;font-size:8.5pt;color:#5b6884}
+.split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}.split div{padding:6px 8px;border-radius:8px;background:#fff;border:1px solid #ffcfa6}.split b{display:block;font-size:8.5pt;color:#5b6884}
 ul{margin:2px 0 2px 16px;padding:0}li{margin:1px 0}
 .eng{display:grid;grid-template-columns:1fr 1fr;gap:10px}.eng div{padding:6px 10px;border:1px solid #dbe5f5;border-radius:10px}.eng b{color:#1559eb}
 .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}.sign div{height:105px;padding:6px 8px;border:1px solid #cfdcf3;border-radius:10px;font-size:8.8pt}.sign b{display:block}
@@ -227,7 +228,7 @@ fiche = ('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fich
   + '<h2>6. Engagements</h2><div class="eng"><div><b>La famille s’engage à :</b><ul><li>payer la mensualité avant le ' + str(JOUR_LIMITE) + ' du mois sur le numéro officiel ;</li><li>assurer la présence d’un adulte pendant les cours d’un mineur ;</li><li>prévenir 24 h à l’avance en cas d’annulation (sinon la séance est due) ;</li><li>prévenir 15 jours avant la fin du mois pour arrêter les cours.</li></ul></div>'
   + '<div><b>L’enseignant s’engage à :</b><ul><li>être ponctuel et prévenir 24 h à l’avance de toute absence ;</li><li>rattraper chaque séance manquée dans le mois ;</li><li>remplir le compte rendu après chaque séance ;</li><li>ne recevoir aucun paiement direct de la famille et ne pas la démarcher hors KONE.EDUC.</li></ul></div></div>'
   + '<p style="margin:6px 0 0"><b>KONE.EDUC s’engage à</b> suivre les cours, remplacer l’enseignant en cas de besoin, envoyer un bilan mensuel et verser à l’enseignant sa rémunération au plus tard le ' + str(JOUR_VERSEMENT) + ' du mois suivant.</p>'
-  + '<p style="margin:4px 0 0">Les signataires déclarent avoir lu et accepté le <b>règlement intérieur de KONE.EDUC</b> (kone-educ.com/reglement-interieur.html), dont la présente fiche fait partie.</p>'
+  + '<p style="margin:4px 0 0">Les signataires déclarent avoir lu et accepté le <b>règlement intérieur de KONE.EDUC</b> (www.kone-educ.com/reglement-interieur.html), dont la présente fiche fait partie.</p>'
   + '<div class="sign"><div><b>Le parent / tuteur</b>« Lu et approuvé », date et signature</div><div><b>L’enseignant</b>« Lu et approuvé », date et signature</div><div><b>Pour KONE.EDUC</b>Nom, date, signature et cachet</div></div>'
   + '<p class="note">Fiche établie en trois exemplaires : un pour la famille, un pour l’enseignant, un pour KONE.EDUC · ' + VERSION + '</p></body></html>')
 (OUT / 'fiche-accord.html').write_text(fiche, encoding='utf-8')

@@ -10,6 +10,31 @@
       ],
       "destination": "https://www.kone-educ.com/:path*",
       "permanent": true
+    },
+    {
+      "source": "/boutique",
+      "destination": "/boutique.html",
+      "permanent": false
+    },
+    {
+      "source": "/concours",
+      "destination": "/preparation-concours.html",
+      "permanent": false
+    },
+    {
+      "source": "/offres",
+      "destination": "/offres-enseignants.html",
+      "permanent": false
+    },
+    {
+      "source": "/reserver",
+      "destination": "/reservation.html",
+      "permanent": false
+    },
+    {
+      "source": "/vendre",
+      "destination": "/devenir-vendeur.html",
+      "permanent": false
     }
   ],
   "headers": [
