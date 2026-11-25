@@ -84,6 +84,7 @@
     const otherSubject = document.getElementById('subject-other');
     setupAbidjanLocation('commune','quartier');
     fillPreparations(document.getElementById('preparation'));
+    { const n0 = new URLSearchParams(location.search).get('niveau'); const ls = document.querySelector('select[name="level"]'); if (n0 && ls && Array.from(ls.options).some(o => o.value === n0 || o.text === n0)) ls.value = n0; }
     { const pr0 = new URLSearchParams(location.search).get('preparation'); const ps = document.getElementById('preparation'); if (pr0 && Array.from(ps.options).some(o => o.value === pr0)) ps.value = pr0; }
     // Arrivée depuis une page « Cours à domicile à [commune] » : commune présélectionnée
     { const c0 = new URLSearchParams(location.search).get('commune'); const sel = document.getElementById('commune');

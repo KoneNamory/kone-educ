@@ -372,6 +372,9 @@ await loginAs('admin','admin@kone.ci');await go('espace-admin.html#receipts');aw
 step('Admin : tous les reçus, recherche et export',(await p.locator('#allRecus a.rc-item').count())>=2&&(await p.locator('#allRecus .rc-x').count())===1);
 await p.fill('#allRecus .rc-q','Mensualité');await p.waitForTimeout(200);step('Admin : recherche dans les reçus',(await p.locator('#allRecus a.rc-item').count())>=1&&(await p.locator('#allRecus a.rc-item').filter({hasText:'Commande'}).count())===0);
 await loginAs('teacher','yao@test.ci');await go('versements.html');await p.waitForTimeout(1200);step('Enseignant : section des reçus de versements',(await p.textContent('#mesRecus')).includes('Reçus de versements'));
+await logout();await go('index.html');step('Accueil : 6 services, chiffres et démonstration de l’espace',(await p.locator('#services .kh-card').count())===6&&(await p.locator('.kh-strip b').count())===4&&(await p.locator('.kh-phone .kh-n').count())===5);
+await p.selectOption('#khNiv','Lycée');await p.selectOption('#khObj','ENSEA – ISE Maths');await p.selectOption('#khCom','Cocody');await p.click('#khSearch button');await p.waitForTimeout(800);
+step('Accueil : recherche rapide → réservation préremplie (niveau, concours, commune)',(await p.inputValue('select[name="level"]'))==='Lycée'&&(await p.inputValue('#preparation'))==='ENSEA – ISE Maths'&&(await p.inputValue('#commune'))==='Cocody');
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');
