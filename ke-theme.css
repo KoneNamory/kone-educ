@@ -1,0 +1,61 @@
+/* KONE.EDUC – Habillage commun inspiré de la page d’accueil (bandeau bleu nuit, halo orange, cartes animées).
+   Chargé en dernier dans <head> : il s’applique par-dessus le style propre à chaque page. */
+:root{--ke-night:radial-gradient(120% 90% at 85% 0%,#2a63e8 0%,#133a9a 45%,#0b1d3b 100%);--ke-cta:linear-gradient(135deg,#fa7518,#ff9a3d)}
+html{scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased}
+
+/* ---------- Bandeaux d’en-tête des pages publiques ---------- */
+main>section.hero,.l-hero,.c-hero,.dv-hero,.bq-hero,.d-hero{position:relative;overflow:hidden;isolation:isolate;background:var(--ke-night)!important;color:#fff!important}
+main>section.hero::before,.l-hero::before,.c-hero::before,.dv-hero::before,.bq-hero::before,.d-hero::before{content:"";position:absolute;z-index:-1;width:520px;height:520px;right:-160px;bottom:-260px;border-radius:50%;background:radial-gradient(circle,#fa7518 0%,rgba(250,117,24,0) 70%);opacity:.38;pointer-events:none}
+.d-hero::after{display:none}
+main>section.hero h1,.l-hero h1,.c-hero h1,.dv-hero h1,.bq-hero h1,main .d-hero h1{color:#fff!important}
+main>section.hero h1 em,.l-hero h1 em,.c-hero h1 em,.dv-hero h1 em,.bq-hero h1 em,.d-hero h1 em{font-style:normal;background:linear-gradient(90deg,#ffb36b,#fa7518);-webkit-background-clip:text;background-clip:text;color:transparent!important}
+main>section.hero .lead,main>section.hero p:not(.kicker):not(.eyebrow),.l-hero .l-lead,.l-hero p,.c-hero p,.c-hero .c-meta,.dv-hero p,.bq-hero p,.d-hero #message{color:#d6e2fb!important}
+main>section.hero .kicker,main>section.hero .eyebrow,.l-hero .l-kicker,.c-hero .c-kick,.c-hero .c-tag,.dv-hero .dv-kick,.d-hero .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid rgba(255,255,255,.25)!important;border-radius:99px;background:rgba(255,255,255,.08)!important;color:#fff!important;backdrop-filter:blur(6px)}
+.l-hero .l-crumb,.l-hero .l-crumb a,.c-hero .c-crumb,.c-hero .c-crumb a{color:#b9cbef!important}
+.l-hero .l-crumb a:hover,.c-hero .c-crumb a:hover{color:#fff!important}
+/* Boutons d’appel à l’action dans les bandeaux : orange comme sur l’accueil */
+main>section.hero .button,.l-hero .l-btn:not(.ghost),.dv-hero .dv-btn,.bq-hero .bq-btn{border:0!important;background:var(--ke-cta)!important;color:#fff!important;box-shadow:0 10px 24px rgba(250,117,24,.4)}
+.l-hero .l-btn.ghost{background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.35)!important;color:#fff!important}
+/* Illustrations des bandeaux : relief et cadre clair */
+main>section.hero .service-art,main>section.hero .portrait{box-shadow:0 30px 80px rgba(3,10,30,.55)!important}
+main>section.hero .card p:not(.kicker):not(.eyebrow):not(.ke-x){color:#596580!important}
+.l-hero .l-trust,.l-hero .l-trust li{color:#d6e2fb!important}
+main>section.hero .service-art{background:linear-gradient(135deg,#1559eb,#3d7bff)!important;border:6px solid rgba(255,255,255,.12)}
+main>section.hero .card{animation:keFloat 6s ease-in-out infinite}
+main>section.hero .card.second{animation-delay:1.5s}
+@keyframes keFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media (prefers-reduced-motion:reduce){main>section.hero .card{animation:none}}
+
+/* ---------- Titres et accroches ---------- */
+main h1 em{font-style:normal;background:linear-gradient(90deg,#ff9a3d,#fa7518);-webkit-background-clip:text;background-clip:text;color:transparent}
+.heading p,.kicker,.eyebrow{letter-spacing:.12em}
+main h2{letter-spacing:-1px}
+
+/* ---------- Cartes : arrondi et relief au survol, comme les cartes de l’accueil ---------- */
+main .item,main .offer,main .value,main .teacher,main .c-card,main .dv-card,main .bq-card,main .l-sec .card,main .step,main .info,main .question,main .method-grid>*,main .d-kpi{border-radius:22px!important;transition:transform .2s,box-shadow .2s,border-color .2s}
+main .item:hover,main .offer:hover,main .value:hover,main .teacher:hover,main .c-card:hover,main .dv-card:hover,main .bq-card:hover,main .l-sec .card:hover,main .d-kpi:hover{transform:translateY(-4px);box-shadow:0 22px 50px rgba(21,61,140,.14)!important;border-color:#c9d8f5!important}
+main .icon{border-radius:16px!important}
+main .offer.featured{box-shadow:0 30px 70px rgba(21,61,140,.22)!important}
+
+/* ---------- Boutons ---------- */
+main .button,main .l-btn,main .dv-btn,main .d-btn,main .btn{border-radius:14px!important;transition:transform .15s,box-shadow .15s}
+main .button:hover,main .l-btn:hover,main .dv-btn:hover,main .d-btn:hover,main .btn:hover{transform:translateY(-2px)}
+main .d-btn.orange,main .dv-btn{background:var(--ke-cta)!important;box-shadow:0 10px 24px rgba(250,117,24,.3)}
+.ke-header .ke-btn.fill{background:linear-gradient(135deg,#1559eb,#3d7bff);border-color:transparent;box-shadow:0 8px 18px rgba(21,89,235,.25)}
+
+/* ---------- Bandeaux de fin de page (appel à l’action) ---------- */
+main .cta,main .l-final,main .c-cta,main .dv-final{position:relative;overflow:hidden;isolation:isolate;border:0!important;border-radius:26px;background:linear-gradient(135deg,#0b1d3b,#1559eb)!important;color:#fff!important}
+main .cta h2,main .l-final h2,main .c-cta h2,main .dv-final h2,main .cta h3,main .c-cta h3,main .dv-final h3{color:#fff!important}
+main .cta p,main .l-final p,main .c-cta p,main .dv-final p{color:#d6e2fb!important}
+main .cta::before,main .l-final::before,main .c-cta::before,main .dv-final::before{content:"";position:absolute;z-index:-1;width:380px;height:380px;right:-120px;top:-180px;border-radius:50%;background:radial-gradient(circle,#fa7518 0%,rgba(250,117,24,0) 70%);opacity:.4}
+main .cta .button,main .l-final .l-btn,main .c-cta a,main .dv-final .dv-btn{border:0!important;background:var(--ke-cta)!important;color:#fff!important}
+
+/* ---------- Espaces connectés ---------- */
+.d-hero{box-shadow:0 24px 60px rgba(11,29,59,.3)!important;border-radius:26px!important}
+.d-hero .d-btn.light{color:#0f1b37!important}
+main .card,main .d-card{border-radius:22px!important}
+.ke-app-nav a[aria-current=page]{box-shadow:inset 0 -3px 0 #fa7518}
+
+/* ---------- Mobile ---------- */
+@media(max-width:640px){main>section.hero::before,.l-hero::before,.c-hero::before,.dv-hero::before,.bq-hero::before,.d-hero::before{width:320px;height:320px;right:-140px;bottom:-180px}}
