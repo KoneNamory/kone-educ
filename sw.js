@@ -1,6 +1,6 @@
 // Service worker KONE.EDUC : installation de l'application et chargement rapide, même avec un réseau faible.
 // Changer VERSION à chaque modification de ce fichier pour forcer la mise à jour.
-const VERSION = 'kone-educ-v16';
+const VERSION = 'kone-educ-v17';
 const EXT = 'kone-educ-externe-v1'; // bibliothèque Supabase et polices : gardées d'une version à l'autre
 const CORE = ['./', 'index.html', 'offline.html', 'site.css', 'ke-theme.css', 'site.js', 'app.css', 'dash.css', 'app.js', 'embed.js', 'fichiers.js',
   'abidjan-locations.js', 'preparations.js', 'supabase-config.js', 'assets/logo/kone-educ-embleme.jpg', 'assets/icons/favicon-48.png', 'assets/hero-tutor.webp', 'assets/icons/icon-192.png'];

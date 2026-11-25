@@ -85,15 +85,95 @@ dialog.bq-dlg::backdrop{background:rgba(10,20,45,.55)}
 .bq-sellcta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-top:34px;padding:22px;border-radius:22px;background:#fff7ec;border:1px solid #ffd7b0}
 .bq-sellcta b{font:800 19px Manrope,sans-serif;color:var(--bq-n)}.bq-sellcta p{margin:4px 0 0;color:var(--bq-m)}
 @media(max-width:640px){.bq{padding:14px 14px 120px}.bq-hero{padding:20px;border-radius:20px}.bq-search{grid-template-columns:1fr}.bq-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bq-card .in{padding:10px}.bq-card h3{font-size:14px}.bq-card .row{flex-direction:column;align-items:stretch}.bq-add{width:100%;padding:10px}.bq-step{justify-content:space-between}.bq-opts{grid-template-columns:1fr}.bq-shophead{grid-template-columns:1fr}.bq-bar{left:12px;right:80px;bottom:12px}}
+
+/* ---------- Boutique : version vitrine (bandeau bleu nuit, suivi de commande animé, cartes premium) ---------- */
+.bq{max-width:1240px}
+.bq-hero{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)!important;gap:30px!important;align-items:center;padding:40px 40px!important;border-radius:30px!important;box-shadow:0 30px 80px rgba(11,29,59,.25)}
+.bq-hero h1{font-size:clamp(30px,4.4vw,54px)!important;line-height:1.04!important;letter-spacing:-1.8px!important;margin:14px 0 12px!important}
+.bq-hero h1 em{font-style:normal;background:linear-gradient(90deg,#ffb36b,#fa7518);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bq-hero-l p{font-size:17px;line-height:1.6;margin:0 0 20px!important}
+.bq-kick{display:inline-flex;padding:8px 14px;border:1px solid rgba(255,255,255,.25);border-radius:99px;background:rgba(255,255,255,.08);font-weight:800;font-size:13px;letter-spacing:.08em}
+.bq-search{padding:8px;border-radius:20px;background:#fff;box-shadow:0 24px 60px rgba(4,12,35,.45)}
+.bq-search input,.bq-search select{background:#f3f6fc!important;padding:15px 16px!important}
+.bq-trust{margin-top:16px;color:#d6e2fb!important}
+.bq-hero-r{position:relative;min-height:330px}
+.bq-track{position:relative;z-index:1;margin:10px 0 0 auto;max-width:360px;padding:18px;border-radius:24px;background:#fff;color:#0f1b37;box-shadow:0 30px 80px rgba(3,10,30,.5);animation:bqUp .7s ease-out both}
+@keyframes bqUp{from{transform:translateY(14px)}to{transform:none}}
+.bq-track-hd{padding-bottom:10px;margin-bottom:6px;border-bottom:1px dashed #dbe5f5}.bq-track-hd b{display:block;font:800 16px Manrope,sans-serif}.bq-track-hd small{color:#5b6884}
+.bq-tl{display:flex;gap:12px;align-items:center;padding:9px 0;animation:bqUp .5s ease-out both}
+.bq-tl:nth-child(2){animation-delay:.3s}.bq-tl:nth-child(3){animation-delay:.6s}.bq-tl:nth-child(4){animation-delay:.9s}.bq-tl:nth-child(5){animation-delay:1.2s}
+.bq-tl i{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#eef3fb;font-style:normal;font-weight:800}
+.bq-tl i.ok{background:#e5f7ec;color:#11743a}.bq-tl i.go{background:#fff2e6;animation:bqPulse 1.6s ease-in-out infinite}
+@keyframes bqPulse{50%{box-shadow:0 0 0 8px rgba(250,117,24,.15)}}
+.bq-tl b{display:block;font-size:14px}.bq-tl small{color:#5b6884;font-size:12.5px}
+.bq-float{position:absolute;z-index:2;padding:10px 14px;border-radius:14px;background:#fff;color:#0f1b37;font-size:14px;box-shadow:0 18px 40px rgba(3,10,30,.35);animation:bqF 6s ease-in-out infinite}
+.bq-float.f1{left:0;top:30px}.bq-float.f2{left:20px;bottom:30px;animation-delay:2s}.bq-float.f3{right:-10px;bottom:-6px;animation-delay:4s}
+@keyframes bqF{50%{transform:translateY(-8px)}}
+.bq-promise{display:grid;grid-template-columns:repeat(4,1fr);margin:-26px 24px 6px;position:relative;z-index:2;border-radius:22px;background:#fff;box-shadow:0 20px 50px rgba(21,61,140,.12);overflow:hidden}
+.bq-promise div{display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:center;padding:18px;border-right:1px solid #eef2f9}.bq-promise div:last-child{border-right:0}
+.bq-promise i{grid-row:span 2;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#fff2e6;font-style:normal;font-size:22px}
+.bq-promise b{font-size:15px}.bq-promise span{color:#5b6884;font-size:13px}
+.bq-cats{padding:22px 0 8px!important;gap:10px!important}
+.bq-chip{padding:12px 18px!important;border:1.5px solid #e3ebf8!important;font-size:14.5px!important;box-shadow:0 6px 16px rgba(21,61,140,.05);transition:transform .15s,box-shadow .15s}
+.bq-chip:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(21,61,140,.1)}
+.bq-chip.on{background:linear-gradient(135deg,#0b1d3b,#1559eb)!important;border-color:transparent!important;box-shadow:0 10px 24px rgba(21,89,235,.3)}
+.bq h2{font-size:26px!important;letter-spacing:-.6px}
+.bq-shop{border-radius:22px!important;padding:16px!important;transition:transform .2s,box-shadow .2s}
+.bq-shop:hover{transform:translateY(-3px);box-shadow:0 20px 40px rgba(21,61,140,.14)!important}
+.bq-shop img,.bq-shop .ph{border-radius:50%!important;box-shadow:0 0 0 3px #fff,0 0 0 5px #fa7518}
+.bq-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;gap:16px!important}
+.bq-card{border-radius:22px!important;transition:transform .2s,box-shadow .2s}
+.bq-card:hover{transform:translateY(-4px);box-shadow:0 24px 50px rgba(21,61,140,.16)!important}
+.bq-card .img{overflow:hidden;background:linear-gradient(160deg,#f6f9ff,#eef3fb)!important}
+.bq-card .img img{transition:transform .35s}.bq-card:hover .img img{transform:scale(1.06)}
+.bq-card h3{font-size:15.5px!important}
+.bq-price{font-size:18px!important;background:linear-gradient(90deg,#0b1d3b,#1559eb);-webkit-background-clip:text;background-clip:text;color:transparent!important}
+.bq-add{border-radius:12px!important;background:linear-gradient(135deg,#fa7518,#ff9a3d)!important;box-shadow:0 8px 18px rgba(250,117,24,.3);transition:transform .15s}
+.bq-add:hover{transform:translateY(-1px)}
+.bq-bar{background:linear-gradient(135deg,#0b1d3b,#133a9a)!important;border-radius:20px!important}
+.bq-bar em{background:linear-gradient(135deg,#fa7518,#ff9a3d)!important}
+.bq-sell{position:relative;overflow:hidden;isolation:isolate;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:30px;align-items:center;margin-top:44px;padding:40px;border-radius:30px;color:#fff;background:radial-gradient(120% 90% at 85% 0%,#2a63e8 0%,#133a9a 45%,#0b1d3b 100%)}
+.bq-sell::before{content:"";position:absolute;z-index:-1;width:520px;height:520px;left:-180px;bottom:-300px;border-radius:50%;background:radial-gradient(circle,#fa7518 0%,rgba(250,117,24,0) 70%);opacity:.4}
+.bq-sell h2{margin:14px 0 10px!important;color:#fff!important;font-size:clamp(28px,3.6vw,42px)!important}
+.bq-sell h2 em{font-style:normal;background:linear-gradient(90deg,#ffb36b,#fa7518);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bq-sell p{color:#d6e2fb;line-height:1.6;margin:0}
+.bq-sell-pts{list-style:none;margin:18px 0 22px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bq-sell-pts li{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-size:13.5px;color:#c3d3f1}
+.bq-sell-pts i{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#fff;color:#c2530a;font-style:normal;font-weight:800}
+.bq-sell-pts b{display:block;color:#fff;font-size:14.5px}
+.bq-btn.big{padding:16px 22px;font-size:16px;border-radius:16px;background:linear-gradient(135deg,#fa7518,#ff9a3d)!important;box-shadow:0 14px 30px rgba(250,117,24,.4)}
+.bq-calc{padding:22px;border-radius:24px;background:#fff;color:#0f1b37;box-shadow:0 30px 80px rgba(3,10,30,.45)}
+.bq-calc>b{display:block;margin-bottom:6px;font:800 18px Manrope,sans-serif}
+.bq-calc label{display:block;margin-top:14px;font-weight:700;font-size:14px}.bq-calc output{float:right;color:#c2530a;font-weight:800}
+.bq-calc input[type=range]{width:100%;margin-top:8px;accent-color:#fa7518}
+.bq-calc-res{margin-top:16px;padding:16px;border-radius:18px;background:linear-gradient(135deg,#fff4ea,#ffe9d6);text-align:center}
+.bq-calc-res small{display:block;color:#5b6884;font-weight:700}.bq-calc-res strong{display:block;margin:4px 0;font:800 30px Manrope,sans-serif;color:#0f1b37}.bq-calc-res em{font-style:normal;color:#11743a;font-weight:800;font-size:13px}
+@media(max-width:900px){.bq-hero{grid-template-columns:1fr!important;padding:26px 20px!important}.bq-hero-r{display:none}.bq-promise{grid-template-columns:1fr 1fr;margin:-18px 10px 6px}.bq-promise div:nth-child(2){border-right:0}.bq-promise div:nth-child(-n+2){border-bottom:1px solid #eef2f9}.bq-sell{grid-template-columns:1fr;padding:26px 20px}.bq-sell-pts{grid-template-columns:1fr}}
+@media(max-width:520px){.bq-promise{grid-template-columns:1fr}.bq-promise div{border-right:0;border-bottom:1px solid #eef2f9}.bq-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}}
+@media (prefers-reduced-motion:reduce){.bq-track,.bq-tl,.bq-float,.bq-tl i.go{animation:none;opacity:1}}
 </style><link rel="stylesheet" href="ke-theme.css"></head><body><header class="ke-header"><nav class="ke-nav" aria-label="Navigation principale"><a class="ke-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="42" height="42"><span>KONE.<b>EDUC</b></span></a><button class="ke-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false">☰</button><div class="ke-menu"><div class="ke-links"><a href="index.html">Accueil</a><a href="services.html">Services</a><a href="preparation-concours.html">Concours</a><a href="enseignants.html">Enseignants</a><a href="tarifs.html">Tarifs</a><a href="boutique.html" aria-current="page">Boutique</a><a href="a-propos.html">À propos</a><a href="conseils.html">Conseils</a><a href="contact.html">Contact</a></div><div class="ke-actions"><a class="ke-btn" href="connexion.html">Se connecter</a><a class="ke-btn fill" href="reservation.html">Réserver un cours</a></div></div></nav></header><main class="bq" id="bq">
-<section class="bq-hero" id="hero">
-  <h1>Fournitures scolaires livrées chez vous</h1>
-  <p>Livres, manuels, cahiers, annales et fournitures du programme, chez des boutiques vérifiées d’Abidjan. Commandez en 2 minutes, payez à la livraison ou par mobile money.</p>
-  <div class="bq-search"><input id="q" type="search" placeholder="Rechercher : cahier, annales BEPC, manuel CM2…" aria-label="Rechercher un article"><select id="commune" aria-label="Commune de livraison"><option value="">📍 Ma commune de livraison</option></select></div>
-  <div class="bq-trust"><span>✅ Boutiques vérifiées</span><span>💵 Paiement à la livraison</span><span>📱 Wave · Orange Money · MTN · Moov</span><span>⭐ Avis des familles</span></div>
-</section>
+<section class="bq-hero" id="hero"><div class="bq-hero-l">
+  <span class="bq-kick">🛍️ Boutique scolaire KONE.EDUC</span>
+  <h1>Tout le programme scolaire, <em>livré chez vous.</em></h1>
+  <p>Livres, manuels, cahiers, annales et fournitures, chez des librairies et papeteries vérifiées. Commandez en 2 minutes, payez à la livraison ou par mobile money, recevez un reçu.</p>
+  <div class="bq-search"><input id="q" type="search" placeholder="🔎 Cahier, annales BEPC, manuel CM2…" aria-label="Rechercher un article"><select id="commune" aria-label="Commune de livraison"><option value="">📍 Ma commune de livraison</option></select></div>
+  <div class="bq-trust"><span>✅ Boutiques vérifiées</span><span>💵 Paiement à la livraison</span><span>🧾 Reçu pour chaque achat</span><span>⭐ Avis des familles</span></div>
+</div>
+<div class="bq-hero-r" aria-hidden="true">
+  <div class="bq-track"><div class="bq-track-hd"><b>Commande KE-2419</b><small>Librairie du Plateau · 3 articles</small></div>
+    <div class="bq-tl"><i class="ok">✓</i><span><b>Commande acceptée</b><small>en 4 minutes</small></span></div>
+    <div class="bq-tl"><i class="ok">✓</i><span><b>Préparée</b><small>Annales BEPC, 2 cahiers 200 p.</small></span></div>
+    <div class="bq-tl"><i class="go">🛵</i><span><b>En route vers vous</b><small>Livraison à Cocody · Angré</small></span></div>
+    <div class="bq-tl"><i>🧾</i><span><b>Reçu R-2026-000418</b><small>payé par Wave · 9 500 FCFA</small></span></div></div>
+  <div class="bq-float f1">📚 <b>Manuels</b></div><div class="bq-float f2">📝 <b>Annales</b></div><div class="bq-float f3">✏️ <b>Fournitures</b></div>
+</div></section>
+<div class="bq-promise"><div><i>🚚</i><b>Livré chez vous</b><span>par le vendeur, dans votre commune</span></div><div><i>💵</i><b>Payez comme vous voulez</b><span>à la livraison, Wave, Orange, MTN, Moov</span></div><div><i>🧾</i><b>Reçu automatique</b><span>pour chaque commande payée</span></div><div><i>🛡️</i><b>Achat protégé</b><span>litige suivi par KONE.EDUC</span></div></div>
 <div id="view"></div>
-<section class="bq-sellcta"><div><b>🏪 Vous êtes libraire ou papetier ?</b><p>Ouvrez votre boutique gratuitement et recevez des commandes de parents et d’enseignants près de chez vous.</p></div><a class="bq-btn orange" href="devenir-vendeur.html">Vendre sur KONE.EDUC →</a></section>
+<section class="bq-sell"><div class="bq-sell-l"><span class="bq-kick">🏪 Libraires, papetiers, imprimeurs</span><h2>Ouvrez votre boutique <em>en 5 minutes.</em></h2><p>Des milliers de parents et d’enseignants cherchent déjà livres, cahiers et annales. Vendez-leur depuis votre téléphone, soyez payé directement, sans intermédiaire.</p>
+<ul class="bq-sell-pts"><li><i>0</i><span><b>0 FCFA, 0 % de commission</b>pendant le lancement</span></li><li><i>🔔</i><span><b>Commandes en temps réel</b>alerte sonore, WhatsApp en un clic</span></li><li><i>📊</i><span><b>Tableau de bord pro</b>ventes, stocks, relevé mensuel, reçus</span></li><li><i>🎯</i><span><b>Clients qui viennent pour l’école</b>rentrée, examens, concours</span></li></ul>
+<a class="bq-btn orange big" href="devenir-vendeur.html">Ouvrir ma boutique gratuitement →</a></div>
+<div class="bq-sell-r"><div class="bq-calc"><b>💰 Combien pouvez-vous gagner ?</b><label>Commandes par semaine <output id="cN">15</output><input type="range" id="cR1" min="1" max="100" value="15"></label><label>Panier moyen <output id="cP">8 000 FCFA</output><input type="range" id="cR2" min="2000" max="40000" step="500" value="8000"></label><div class="bq-calc-res"><small>Ventes estimées par mois</small><strong id="cT">520 000 FCFA</strong><em>Vous gardez 100 % pendant le lancement</em></div></div></div></section>
+<script>(function(){var r1=document.getElementById('cR1'),r2=document.getElementById('cR2');if(!r1)return;var f=function(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' FCFA'};var u=function(){document.getElementById('cN').textContent=r1.value;document.getElementById('cP').textContent=f(r2.value);document.getElementById('cT').textContent=f(r1.value*r2.value*52/12)};r1.oninput=r2.oninput=u;u();})();</script>
 </main>
 <button type="button" class="bq-bar" id="bar" aria-label="Voir le panier"><span><b id="barN">0 article</b><small id="barT">0 FCFA</small></span><em>Voir le panier →</em></button>
 <dialog class="bq-dlg" id="dlg" aria-labelledby="dlgTitle"><div class="hd"><h2 id="dlgTitle">Panier</h2><button type="button" class="x" aria-label="Fermer" onclick="dlg.close()">✕</button></div><div class="bd" id="dlgBody"></div></dialog>
@@ -105,7 +185,7 @@ const st = { q: '', cat: '', niveau: '', commune: '', livrable: true };
 try { st.commune = localStorage.getItem('koneEducCommune') || ''; } catch (e) {}
 const params = () => new URLSearchParams(location.search);
 const shopById = id => shops.find(s => String(s.id) === String(id));
-const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {})).concat(Object.keys(window.KONE_EDUC_VILLES || {}));
+const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {}));
 commune.innerHTML += COMMUNES.map(c => '<option>' + esc(c) + '</option>').join('');
 commune.value = st.commune;
 commune.onchange = () => { st.commune = commune.value; try { localStorage.setItem('koneEducCommune', st.commune); } catch (e) {} render(); };
