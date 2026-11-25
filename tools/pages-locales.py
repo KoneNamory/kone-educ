@@ -183,7 +183,7 @@ def page(fname, title, desc, h1, crumbs, body, jsonld):
     bc = {'@type': 'BreadcrumbList', 'itemListElement': [{'@type': 'ListItem', 'position': i + 1, 'name': n, 'item': SITE + '/' + u} for i, (n, u) in enumerate(crumbs)]}
     ld = {'@context': 'https://schema.org', '@graph': [bc] + jsonld}
     crumb_html = '<p class="l-crumb">' + ' › '.join('<a href="' + u + '">' + html.escape(n) + '</a>' for n, u in crumbs[:-1]) + ' › ' + html.escape(crumbs[-1][0]) + '</p>'
-    out = (head + '<style>' + CSS + '</style><script type="application/ld+json">' + json.dumps(ld, ensure_ascii=False) + '</script></head>'
+    out = (head + '<style>' + CSS + '</style><script type="application/ld+json">' + json.dumps(ld, ensure_ascii=False) + '</script><link rel="stylesheet" href="ke-theme.css"></head>'
            + BODY_START + '<main>' + body.replace('{CRUMB}', crumb_html) + '</main>' + FOOTER + TEACHERS_JS + '<script src="site.js"></script></body></html>\n')
     (ROOT / fname).write_text(out, encoding='utf-8')
     return fname

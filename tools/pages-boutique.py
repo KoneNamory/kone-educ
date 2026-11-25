@@ -20,7 +20,7 @@ def page(fname, title, desc, css, main, scripts, extra_head=''):
     head = re.sub(r'<link rel="canonical" href="[^"]*">', '<link rel="canonical" href="' + SITE + '/' + fname + '">', head)
     head = re.sub(r'<meta property="og:url" content="[^"]*">', '<meta property="og:url" content="' + SITE + '/' + fname + '">', head)
     body_start = BODY_START.replace('<a href="' + fname + '">', '<a href="' + fname + '" aria-current="page">', 1)
-    out = (head + extra_head + '<style>' + css + '</style></head>' + body_start + main + FOOTER + scripts
+    out = (head + extra_head + '<style>' + css + '</style><link rel="stylesheet" href="ke-theme.css"></head>' + body_start + main + FOOTER + scripts
            + '<script src="site.js"></script></body></html>\n')
     (ROOT / fname).write_text(out, encoding='utf-8')
     print('écrit', fname)
