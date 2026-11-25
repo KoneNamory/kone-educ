@@ -227,10 +227,16 @@ function fiche(id) {
     + '<p class="bq-price" style="font-size:24px;margin:14px 0 4px">' + B.fcfa(p.price) + '</p><p style="margin:0;color:#5b6884">' + esc([B.catLabel(p.category), p.level, p.subject].filter(Boolean).join(' · ')) + '</p>'
     + (p.description ? '<p style="white-space:pre-line">' + esc(p.description) + '</p>' : '')
     + '<p>🏪 <a href="boutique.html?shop=' + s.id + '">' + esc(s.name) + '</a> · ' + noteTexte(s) + '<br><small>' + esc(livraisonTexte(s)) + '</small></p>'
-    + (p.stock === 0 ? '<button class="bq-btn" disabled>Épuisé</button>' : '<button class="bq-btn orange" style="width:100%" onclick="plus(' + p.id + ',1);dlg.close()">Ajouter au panier</button>');
+    + (p.stock === 0 ? '<button class="bq-btn" disabled>Épuisé</button>' : '<button class="bq-btn orange" style="width:100%" onclick="plus(' + p.id + ',1);dlg.close()">Ajouter au panier</button>')
+    + '<p style="text-align:center;margin:12px 0 0"><button type="button" style="border:0;background:none;color:#5b6884;text-decoration:underline;cursor:pointer" onclick="signaler(' + p.id + ')">Signaler cet article</button></p>';
   if (!dlg.open) dlg.showModal();
 }
 
+async function signaler(id) {
+  if (!user) { alert('Connectez-vous pour signaler un article.'); return; }
+  const r0 = prompt('Quel est le problème avec cet article ? (prix abusif, photo trompeuse, contrefaçon…)', ''); if (!r0) return;
+  const r = await db.rpc('report_product', { p_product: id, p_reason: r0 }); alert(r.error ? r.error.message : 'Merci, l’équipe KONE.EDUC va vérifier cet article.');
+}
 function ouvrirPanier() {
   const c = B.panier(), ids = Object.keys(c);
   dlg.dataset.mode = 'panier'; dlgTitle.textContent = '🛒 Mon panier';

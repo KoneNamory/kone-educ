@@ -2,14 +2,16 @@
 """Règlement intérieur KONE.EDUC (page du site + PDF) et fiche d'accord parent–enseignant (PDF à signer).
 Usage : python3 tools/documents-officiels.py   (puis le rendu PDF se fait avec Playwright, voir la fin du fichier)
 Pour modifier un taux, un numéro ou une date limite, changez les constantes ci-dessous."""
-import html, pathlib, re
+import html, os, pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / 'communication' / '8-Documents-officiels'
+OUT = ROOT / 'communication' / '8-Documents-officiels' / ('interne' if int(os.environ.get('KONE_TAUX', '0') or 0) > 0 else '')
 OUT.mkdir(parents=True, exist_ok=True)
 
-TAUX = 18                       # frais de service KONE.EDUC sur la prestation des enseignants (%)
-PART_ENS = 100 - TAUX           # part versée à l'enseignant (%)
+# Taux des frais de service : jamais écrit ici (dépôt public). Documents internes : KONE_TAUX=… python3 tools/documents-officiels.py
+TAUX = int(os.environ.get('KONE_TAUX', '0') or 0)
+PART_ENS = 100 - TAUX
+INTERNE = TAUX > 0              # avec le taux : documents internes, rangés dans un dossier non publié
 NUMERO = '01 61 70 13 61'       # numéro officiel de dépôt des mensualités
 JOUR_LIMITE = 10                # mensualité à payer au plus tard le … de chaque mois
 JOUR_VERSEMENT = 15             # versement aux enseignants au plus tard le … du mois
@@ -54,9 +56,12 @@ REGLEMENT = [
     '- Il contribue au bilan mensuel de progression envoyé aux parents.',
     '- Il signale à KONE.EDUC toute difficulté importante : absences répétées de l’élève, manque de matériel, problème de comportement.',
   ]),
-  ('Article 7 – Rémunération et frais de service', [
+  ('Article 7 – Rémunération et frais de service', ([
     f'KONE.EDUC encaisse la mensualité payée par la famille. Elle retient <b>{TAUX} % de frais de service</b> (recherche des familles, vérification, suivi pédagogique, facturation, assistance) et verse <b>{PART_ENS} % de la mensualité à l’enseignant</b>.',
     f'Exemple : pour une mensualité de 40 000 FCFA, KONE.EDUC retient {40000 * TAUX // 100:,} FCFA et verse {40000 * PART_ENS // 100:,} FCFA à l’enseignant.'.replace(',', ' '),
+  ] if INTERNE else [
+    'KONE.EDUC encaisse la mensualité payée par la famille. Elle retient des frais de service (recherche des familles, vérification, suivi pédagogique, facturation, assistance) et verse le reste de la mensualité à l’enseignant. Le montant versé à l’enseignant est indiqué sur sa fiche d’accord.',
+  ]) + [
     f'Le versement est effectué par mobile money au plus tard le {JOUR_VERSEMENT} du mois, pour le mois écoulé, dès réception de la mensualité de la famille. Le montant et la date de chaque versement sont visibles par l’enseignant dans son espace « Mes gains ».',
     '- Le premier mois est rémunéré au prorata des séances réellement effectuées.',
     '- Les séances non faites et non rattrapées ne sont pas rémunérées.',
@@ -176,7 +181,7 @@ p{margin:4px 0}ul{margin:4px 0 4px 18px;padding:0}li{margin:2px 0}
 reg_pdf = ('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Règlement intérieur KONE.EDUC</title><style>' + PDF_CSS + '</style></head><body>'
   + '<div class="head"><img src="' + LOGO + '" alt="KONE.EDUC"><div>KONE.EDUC – Cours à domicile<br>Abidjan, Côte d’Ivoire<br>WhatsApp : ' + NUMERO + '<br>kone-educ.vercel.app</div></div>'
   + '<h1>Règlement intérieur</h1><p class="sub">Enseignants · Parents et familles · Vendeurs · ' + VERSION + '</p>'
-  + '<div class="cle"><b>L’essentiel :</b> mensualité payée au plus tard le ' + str(JOUR_LIMITE) + ' du mois, uniquement au ' + NUMERO + ' (KONE.EDUC) · ' + str(TAUX) + ' % de frais de service, ' + str(PART_ENS) + ' % versés à l’enseignant · aucun paiement direct à l’enseignant · absence prévenue 24 h à l’avance · compte rendu après chaque séance.</div>'
+  + '<div class="cle"><b>L’essentiel :</b> mensualité payée au plus tard le ' + str(JOUR_LIMITE) + ' du mois, uniquement au ' + NUMERO + ' (KONE.EDUC) · ' + (str(TAUX) + ' % de frais de service, ' + str(PART_ENS) + ' % versés à l’enseignant · ' if INTERNE else '') + 'aucun paiement direct à l’enseignant · absence prévenue 24 h à l’avance · compte rendu après chaque séance.</div>'
   + corps_reglement()
   + '<div class="sign"><div><b>Nom, prénom et qualité</b><small>(enseignant, parent, vendeur)</small></div><div><b>Date et signature</b><small>précédées de la mention « Lu et approuvé »</small></div></div>'
   + '<p class="foot">KONE.EDUC – L’excellence à domicile · ' + VERSION + '</p></body></html>')
@@ -218,16 +223,18 @@ fiche = ('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fich
   + '<div class="num"><div><small>NUMÉRO OFFICIEL DE DÉPÔT DES MENSUALITÉS (KONE.EDUC)</small><br><b>' + NUMERO + '</b></div><div style="text-align:right"><span class="chk">Wave</span><span class="chk">Orange Money</span><br><span class="chk">MTN MoMo</span><span class="chk">Moov Money</span></div></div>'
   + '<p>• Paiement <b>au plus tard le ' + str(JOUR_LIMITE) + ' de chaque mois</b>, uniquement sur ce numéro. Indiquer dans le message : <b>nom de l’élève + mois</b>.</p>'
   + '<p>• <b>Aucun paiement ne doit être remis à l’enseignant.</b> Seuls les paiements reçus sur le numéro officiel de KONE.EDUC sont reconnus.</p>'
-  + '<div class="split"><div><b>Mensualité payée par la famille</b>__________ FCFA (100 %)</div><div><b>Frais de service KONE.EDUC</b>__________ FCFA (' + str(TAUX) + ' %)</div><div><b>Versé à l’enseignant par KONE.EDUC</b>__________ FCFA (' + str(PART_ENS) + ' %)</div></div></div>'
+  + ('<div class="split"><div><b>Mensualité payée par la famille</b>__________ FCFA (100 %)</div><div><b>Frais de service KONE.EDUC</b>__________ FCFA (' + str(TAUX) + ' %)</div><div><b>Versé à l’enseignant par KONE.EDUC</b>__________ FCFA (' + str(PART_ENS) + ' %)</div></div>' if INTERNE else '') + '</div>'
   + '<h2>6. Engagements</h2><div class="eng"><div><b>La famille s’engage à :</b><ul><li>payer la mensualité avant le ' + str(JOUR_LIMITE) + ' du mois sur le numéro officiel ;</li><li>assurer la présence d’un adulte pendant les cours d’un mineur ;</li><li>prévenir 24 h à l’avance en cas d’annulation (sinon la séance est due) ;</li><li>prévenir 15 jours avant la fin du mois pour arrêter les cours.</li></ul></div>'
   + '<div><b>L’enseignant s’engage à :</b><ul><li>être ponctuel et prévenir 24 h à l’avance de toute absence ;</li><li>rattraper chaque séance manquée dans le mois ;</li><li>remplir le compte rendu après chaque séance ;</li><li>ne recevoir aucun paiement direct de la famille et ne pas la démarcher hors KONE.EDUC.</li></ul></div></div>'
-  + '<p style="margin:6px 0 0"><b>KONE.EDUC s’engage à</b> suivre les cours, remplacer l’enseignant en cas de besoin, envoyer un bilan mensuel et verser à l’enseignant ' + str(PART_ENS) + ' % de la mensualité au plus tard le ' + str(JOUR_VERSEMENT) + ' du mois suivant.</p>'
+  + '<p style="margin:6px 0 0"><b>KONE.EDUC s’engage à</b> suivre les cours, remplacer l’enseignant en cas de besoin, envoyer un bilan mensuel et verser à l’enseignant sa rémunération au plus tard le ' + str(JOUR_VERSEMENT) + ' du mois suivant.</p>'
   + '<p style="margin:4px 0 0">Les signataires déclarent avoir lu et accepté le <b>règlement intérieur de KONE.EDUC</b> (kone-educ.vercel.app/reglement-interieur.html), dont la présente fiche fait partie.</p>'
   + '<div class="sign"><div><b>Le parent / tuteur</b>« Lu et approuvé », date et signature</div><div><b>L’enseignant</b>« Lu et approuvé », date et signature</div><div><b>Pour KONE.EDUC</b>Nom, date, signature et cachet</div></div>'
   + '<p class="note">Fiche établie en trois exemplaires : un pour la famille, un pour l’enseignant, un pour KONE.EDUC · ' + VERSION + '</p></body></html>')
 (OUT / 'fiche-accord.html').write_text(fiche, encoding='utf-8')
 
-# ------------------------------------------------------------------ Page du site : reglement-interieur.html
+# ------------------------------------------------------------------ Page du site : reglement-interieur.html (version publique uniquement)
+if INTERNE:
+    print('Documents internes (avec le taux) écrits dans', OUT, '– ne pas publier.'); sys.exit(0)
 base = (ROOT / 'services.html').read_text(encoding='utf-8')
 head = base[:base.index('<style>')]
 head = re.sub(r'<title>[^<]*</title>', '<title>Règlement intérieur | KONE.EDUC</title>', head)
@@ -254,7 +261,7 @@ def ancre(m):
     return '<h2 class="titre" id="t' + str([k for k, (t, p) in enumerate(REGLEMENT) if not p][i[0] - 1]) + '">'
 corps = re.sub(r'<h2 class="titre">', ancre, corps)
 main = ('<main class="ri"><h1>Règlement intérieur</h1><p class="sub">Enseignants · Parents et familles · Vendeurs · ' + VERSION + '</p>'
-  + '<div class="cle"><b>L’essentiel :</b> mensualité payée au plus tard le ' + str(JOUR_LIMITE) + ' du mois, uniquement au <b>' + NUMERO + '</b> (KONE.EDUC) · ' + str(TAUX) + ' % de frais de service, ' + str(PART_ENS) + ' % versés à l’enseignant · aucun paiement direct à l’enseignant · absence prévenue 24 h à l’avance · compte rendu après chaque séance.</div>'
+  + '<div class="cle"><b>L’essentiel :</b> mensualité payée au plus tard le ' + str(JOUR_LIMITE) + ' du mois, uniquement au <b>' + NUMERO + '</b> (KONE.EDUC) · ' + (str(TAUX) + ' % de frais de service, ' + str(PART_ENS) + ' % versés à l’enseignant · ' if INTERNE else '') + 'aucun paiement direct à l’enseignant · absence prévenue 24 h à l’avance · compte rendu après chaque séance.</div>'
   + '<div class="dl"><a href="https://github.com/KoneNamory/kone-educ/raw/main/communication/8-Documents-officiels/KONE-EDUC-reglement-interieur.pdf">⬇ Télécharger en PDF</a><a class="alt" href="https://github.com/KoneNamory/kone-educ/raw/main/communication/8-Documents-officiels/KONE-EDUC-fiche-accord.pdf">⬇ Fiche d’accord à signer</a></div>'
   + '<nav class="toc" aria-label="Sommaire">' + toc + '</nav>' + corps + '<p style="margin-top:30px;color:#5b6884">Une question sur ce règlement ? Écrivez-nous sur WhatsApp au ' + NUMERO + '.</p></main>')
 (ROOT / 'reglement-interieur.html').write_text(head + '<style>' + SITE_CSS + '</style></head>' + body_start + main + footer + '<script src="site.js"></script></body></html>\n', encoding='utf-8')

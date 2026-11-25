@@ -2247,5 +2247,250 @@ drop trigger if exists log_stock_movement on public.products;
 create trigger log_stock_movement after insert or update or delete on public.products
   for each row execute function public.log_stock_movement();
 
+-- ============================================================
+-- Ordre et traçabilité : historique conservé, délais automatiques, litiges, contrôle de cohérence
+-- ============================================================
+-- Les ventes et les factures restent dans l'historique même si un compte est supprimé
+do $$ begin
+  alter table public.orders drop constraint if exists orders_buyer_id_fkey;
+  alter table public.orders alter column buyer_id drop not null;
+  alter table public.orders add constraint orders_buyer_id_fkey foreign key (buyer_id) references public.profiles(id) on delete set null;
+  alter table public.invoices drop constraint if exists invoices_parent_id_fkey;
+  alter table public.invoices alter column parent_id drop not null;
+  alter table public.invoices add constraint invoices_parent_id_fkey foreign key (parent_id) references public.profiles(id) on delete set null;
+  alter table public.invoices drop constraint if exists invoices_course_request_id_fkey;
+  alter table public.invoices alter column course_request_id drop not null;
+  alter table public.invoices add constraint invoices_course_request_id_fkey foreign key (course_request_id) references public.course_requests(id) on delete set null;
+end $$;
+
+alter table public.orders add column if not exists reminded_at timestamptz;
+alter table public.orders add column if not exists auto_closed boolean not null default false;
+alter table public.shops add column if not exists terms_accepted_at timestamptz;
+
+-- Litiges ouverts par les clients
+create table if not exists public.order_disputes (
+  id bigint generated always as identity primary key,
+  order_id bigint not null references public.orders(id) on delete cascade,
+  buyer_id uuid references public.profiles(id) on delete set null,
+  reason text not null check (reason in ('non_recu','incomplet','different','abime','paiement','autre')),
+  message text check (length(message) <= 800),
+  status text not null default 'open' check (status in ('open','resolved')),
+  resolution text check (length(resolution) <= 800),
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+create index if not exists order_disputes_order_idx on public.order_disputes (order_id);
+alter table public.order_disputes enable row level security;
+grant select on public.order_disputes to authenticated;
+drop policy if exists "Disputes visible to parties" on public.order_disputes;
+create policy "Disputes visible to parties" on public.order_disputes for select to authenticated
+  using (buyer_id = auth.uid() or public.is_admin()
+         or exists (select 1 from public.orders o where o.id = order_id and o.shop_id = public.my_shop_id()));
+
+-- Articles signalés par les utilisateurs
+create table if not exists public.product_reports (
+  id bigint generated always as identity primary key,
+  product_id bigint references public.products(id) on delete set null,
+  product_name text,
+  shop_id bigint references public.shops(id) on delete cascade,
+  reporter_id uuid references public.profiles(id) on delete set null,
+  reason text not null check (length(reason) between 3 and 400),
+  handled boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.product_reports enable row level security;
+grant select, update on public.product_reports to authenticated;
+drop policy if exists "Admins manage product reports" on public.product_reports;
+create policy "Admins manage product reports" on public.product_reports for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+do $$ declare t text; begin
+  foreach t in array array['order_disputes','product_reports'] loop
+    execute format('drop trigger if exists audit_changes on public.%I', t);
+    execute format('create trigger audit_changes after insert or update or delete on public.%I for each row execute function public.audit_changes()', t);
+  end loop;
+exception when others then raise notice 'Journal des litiges indisponible (%).', sqlerrm;
+end $$;
+
+create or replace function public.open_dispute(p_order bigint, p_reason text, p_message text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_o public.orders; v_shop public.shops;
+begin
+  select * into v_o from public.orders where id = p_order and buyer_id = auth.uid();
+  if v_o.id is null then raise exception 'Commande introuvable'; end if;
+  if v_o.status in ('new','refused','cancelled') then raise exception 'Cette commande ne peut pas faire l’objet d’un litige'; end if;
+  if v_o.status = 'delivered' and coalesce(v_o.delivered_at, v_o.updated_at) < now() - interval '7 days' then
+    raise exception 'Le délai de 7 jours après la livraison est dépassé. Contactez KONE.EDUC sur WhatsApp au 01 61 70 13 61.';
+  end if;
+  if exists (select 1 from public.order_disputes where order_id = p_order and status = 'open') then raise exception 'Un signalement est déjà en cours pour cette commande'; end if;
+  insert into public.order_disputes (order_id, buyer_id, reason, message) values (p_order, auth.uid(), p_reason, nullif(left(trim(coalesce(p_message, '')), 800), ''));
+  select * into v_shop from public.shops where id = v_o.shop_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, '⚠ Litige boutique', 'Commande ' || v_o.ref || ' chez ' || v_shop.name || ' (' || v_o.total || ' FCFA) : ' || p_reason || coalesce(' – « ' || left(trim(p_message), 200) || ' »', '') || '. À traiter.', 'espace-admin.html#shoplog'
+  from public.profiles a where a.role = 'admin';
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v_shop.owner_id, '⚠ Problème signalé par un client', 'Le client de la commande ' || v_o.ref || ' signale un problème. Contactez-le rapidement ; KONE.EDUC suit le dossier.', 'espace-vendeur.html');
+end;
+$$;
+revoke execute on function public.open_dispute(bigint, text, text) from public;
+grant execute on function public.open_dispute(bigint, text, text) to authenticated;
+
+create or replace function public.resolve_dispute(p_dispute bigint, p_resolution text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_d public.order_disputes; v_o public.orders; v_owner uuid;
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  if length(trim(coalesce(p_resolution, ''))) < 3 then raise exception 'Indiquez la décision prise'; end if;
+  update public.order_disputes set status = 'resolved', resolution = left(trim(p_resolution), 800), resolved_at = now() where id = p_dispute and status = 'open' returning * into v_d;
+  if v_d.id is null then raise exception 'Litige introuvable ou déjà traité'; end if;
+  select * into v_o from public.orders where id = v_d.order_id;
+  select owner_id into v_owner from public.shops where id = v_o.shop_id;
+  insert into public.notifications (recipient_id, title, body, link)
+  select x.id, 'Litige traité', 'Commande ' || v_o.ref || ' : ' || trim(p_resolution), x.link
+  from (values (v_o.buyer_id, 'mes-commandes.html'), (v_owner, 'espace-vendeur.html')) as x(id, link) where x.id is not null;
+end;
+$$;
+revoke execute on function public.resolve_dispute(bigint, text) from public;
+grant execute on function public.resolve_dispute(bigint, text) to authenticated;
+
+create or replace function public.report_product(p_product bigint, p_reason text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_p public.products; v_n integer;
+begin
+  if auth.uid() is null then raise exception 'Connectez-vous pour signaler un article'; end if;
+  if length(trim(coalesce(p_reason, ''))) < 3 then raise exception 'Expliquez le problème en quelques mots'; end if;
+  select count(*) into v_n from public.product_reports where reporter_id = auth.uid() and created_at > now() - interval '1 day';
+  if v_n >= 10 then raise exception 'Trop de signalements aujourd’hui'; end if;
+  select * into v_p from public.products where id = p_product;
+  if v_p.id is null then raise exception 'Article introuvable'; end if;
+  insert into public.product_reports (product_id, product_name, shop_id, reporter_id, reason) values (v_p.id, v_p.name, v_p.shop_id, auth.uid(), left(trim(p_reason), 400));
+  insert into public.notifications (recipient_id, title, body, link)
+  select a.id, 'Article signalé', '« ' || v_p.name || ' » : ' || left(trim(p_reason), 200), 'espace-admin.html#shoplog'
+  from public.profiles a where a.role = 'admin';
+end;
+$$;
+revoke execute on function public.report_product(bigint, text) from public;
+grant execute on function public.report_product(bigint, text) to authenticated;
+
+-- Délais automatiques (toutes les heures) : rappel à 2 h, annulation à 24 h, clôture des livraisons après 7 jours
+create or replace function public.shop_housekeeping() returns integer
+language plpgsql security definer set search_path = public as $$
+declare r record; v_n integer := 0; v_owner uuid; v_name text;
+begin
+  for r in select * from public.orders where status = 'new' and reminded_at is null and created_at < now() - interval '2 hours' and created_at >= now() - interval '24 hours' loop
+    update public.orders set reminded_at = now() where id = r.id;
+    select owner_id into v_owner from public.shops where id = r.shop_id;
+    insert into public.notifications (recipient_id, title, body, link)
+    values (v_owner, '⏰ Commande en attente', 'La commande ' || r.ref || ' (' || r.total || ' FCFA) attend votre réponse depuis 2 heures. Sans réponse sous 24 h, elle sera annulée automatiquement.', 'espace-vendeur.html');
+    v_n := v_n + 1;
+  end loop;
+  for r in select * from public.orders where status = 'new' and created_at < now() - interval '24 hours' for update skip locked loop
+    update public.orders set status = 'cancelled', cancelled_at = now(), updated_at = now(), auto_closed = true,
+      cancel_reason = 'Annulée automatiquement : la boutique n’a pas répondu sous 24 heures.' where id = r.id;
+    perform public.restock_order(r.id);
+    select owner_id, name into v_owner, v_name from public.shops where id = r.shop_id;
+    insert into public.notifications (recipient_id, title, body, link)
+    select x.id, 'Commande annulée automatiquement', x.body, x.link from (values
+      (r.buyer_id, 'Votre commande ' || r.ref || ' chez ' || v_name || ' a été annulée : la boutique n’a pas répondu sous 24 heures. Vous pouvez commander dans une autre boutique.', 'mes-commandes.html'),
+      (v_owner, 'La commande ' || r.ref || ' a été annulée automatiquement faute de réponse sous 24 heures. Répondez plus vite pour garder la confiance des clients.', 'espace-vendeur.html')) as x(id, body, link) where x.id is not null;
+    v_n := v_n + 1;
+  end loop;
+  for r in select * from public.orders o where o.status = 'delivering' and o.delivering_at < now() - interval '7 days'
+           and not exists (select 1 from public.order_disputes d where d.order_id = o.id and d.status = 'open') for update skip locked loop
+    update public.orders set status = 'delivered', delivered_at = now(), updated_at = now(), auto_closed = true,
+      payment_status = case when payment_method = 'cod' then 'paid' else payment_status end where id = r.id;
+    select owner_id into v_owner from public.shops where id = r.shop_id;
+    insert into public.notifications (recipient_id, title, body, link)
+    select x.id, 'Commande clôturée', 'La commande ' || r.ref || ' est clôturée comme livrée (aucun problème signalé en 7 jours).', x.link
+    from (values (r.buyer_id, 'mes-commandes.html'), (v_owner, 'espace-vendeur.html')) as x(id, link) where x.id is not null;
+    v_n := v_n + 1;
+  end loop;
+  return v_n;
+end;
+$$;
+revoke execute on function public.shop_housekeeping() from public, anon, authenticated;
+
+-- Taux des frais de service KONE.EDUC sur la prestation des enseignants : réglage privé (jamais publié)
+create or replace function public.admin_fee_rate() returns numeric
+language sql stable security definer set search_path = public, private as $$
+  select value::numeric from private.settings where key = 'teacher_fee_rate' and public.is_admin();
+$$;
+revoke execute on function public.admin_fee_rate() from public, anon;
+grant execute on function public.admin_fee_rate() to authenticated;
+create or replace function public.admin_set_fee_rate(p_rate numeric) returns void
+language plpgsql security definer set search_path = public, private as $$
+begin
+  if not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  if p_rate is null or p_rate < 0 or p_rate > 60 then raise exception 'Taux invalide (entre 0 et 60 %%)'; end if;
+  insert into private.settings values ('teacher_fee_rate', p_rate::text) on conflict (key) do update set value = excluded.value;
+end;
+$$;
+revoke execute on function public.admin_set_fee_rate(numeric) from public, anon;
+grant execute on function public.admin_set_fee_rate(numeric) to authenticated;
+
+-- Contrôle de cohérence : ventes, stocks, factures et versements (selon le taux privé de frais de service)
+create or replace function public.integrity_check()
+returns table (domaine text, reference text, probleme text)
+language plpgsql stable security definer set search_path = public, private as $$
+begin
+  if auth.uid() is not null and not public.is_admin() then raise exception 'Réservé aux administrateurs'; end if;
+  return query
+  select 'Boutique', o.ref, 'Total (' || o.total || ') différent des articles + livraison (' || (o.subtotal + o.delivery_fee) || ')' from public.orders o where o.total <> o.subtotal + o.delivery_fee
+  union all
+  select 'Boutique', o.ref, 'Sous-total (' || o.subtotal || ') différent de la somme des lignes (' || coalesce(s.t, 0) || ')'
+  from public.orders o left join (select order_id, sum(line_total) t from public.order_items group by order_id) s on s.order_id = o.id where o.subtotal <> coalesce(s.t, 0)
+  union all
+  select 'Boutique', o.ref, 'Ligne « ' || i.name || ' » : prix × quantité incorrect' from public.order_items i join public.orders o on o.id = i.order_id where i.line_total <> i.unit_price * i.qty
+  union all
+  select 'Boutique', o.ref, 'Livrée avec paiement à la livraison mais non marquée payée' from public.orders o where o.status = 'delivered' and o.payment_method = 'cod' and o.payment_status <> 'paid'
+  union all
+  select 'Boutique', o.ref, 'Commande sans réponse depuis plus de 25 h (l’annulation automatique n’a pas tourné)' from public.orders o where o.status = 'new' and o.created_at < now() - interval '25 hours'
+  union all
+  select 'Stock', p.name, 'Stock affiché (' || p.stock || ') différent du journal des mouvements (' || m.t || ')'
+  from public.products p join (select product_id, sum(delta) t, bool_or(reason = 'creation') c from public.stock_movements group by product_id) m on m.product_id = p.id
+  where p.stock is not null and m.c and m.t <> p.stock
+  union all
+  select 'Litige', o.ref, 'Litige ouvert depuis plus de 3 jours' from public.order_disputes d join public.orders o on o.id = d.order_id where d.status = 'open' and d.created_at < now() - interval '3 days'
+  union all
+  select 'Cours', cr.student_name || ' (' || cr.subject || ')', 'Cours en cours sans mensualité fixée' from public.course_requests cr where cr.status = 'assigned' and cr.monthly_fee is null
+  union all
+  select 'Rémunération', cr.student_name || ' (' || cr.subject || ')', 'Enseignant payé ' || tr.monthly_amount || ' F pour ' || cr.monthly_fee || ' F de mensualité (attendu ' || round(cr.monthly_fee * (100 - fr.taux) / 100) || ' F selon le taux de frais de service)'
+  from public.teacher_rates tr join public.course_requests cr on cr.id = tr.course_request_id
+  cross join (select value::numeric as taux from private.settings where key = 'teacher_fee_rate') fr
+  where cr.status = 'assigned' and cr.monthly_fee is not null and abs(tr.monthly_amount - cr.monthly_fee * (100 - fr.taux) / 100) > greatest(100, cr.monthly_fee * 0.01)
+  union all
+  select 'Versement', tp.teacher_name || ' · ' || to_char(tp.month, 'MM/YYYY'), 'Enseignant payé alors que la mensualité de la famille n’est pas encore encaissée'
+  from public.teacher_payouts tp join public.invoices i on i.course_request_id = tp.course_request_id and i.month = tp.month
+  where tp.status = 'paid' and i.status <> 'paid'
+  union all
+  select 'Facture', to_char(i.month, 'MM/YYYY') || ' · ' || i.amount || ' F', 'Facture impayée depuis plus de 15 jours après l’échéance'
+  from public.invoices i where i.status = 'unpaid' and i.due_date < current_date - 15;
+end;
+$$;
+revoke execute on function public.integrity_check() from public, anon;
+grant execute on function public.integrity_check() to authenticated;
+
+-- Contrôle nocturne : l'équipe est prévenue s'il y a des anomalies
+create or replace function public.nightly_integrity() returns integer
+language plpgsql security definer set search_path = public as $$
+declare v_n integer; v_txt text;
+begin
+  select count(*), string_agg(domaine || ' ' || reference || ' : ' || probleme, ' · ') into v_n, v_txt from (select * from public.integrity_check() limit 50) x;
+  if v_n > 0 then
+    insert into public.notifications (recipient_id, title, body, link)
+    select a.id, 'Contrôle de cohérence : ' || v_n || ' point(s) à vérifier', left(v_txt, 900), 'espace-admin.html#shoplog'
+    from public.profiles a where a.role = 'admin';
+  end if;
+  return v_n;
+end;
+$$;
+revoke execute on function public.nightly_integrity() from public, anon, authenticated;
+
+do $$ begin
+  perform cron.schedule('kone-educ-boutique-delais', '23 * * * *', 'select public.shop_housekeeping()');
+  perform cron.schedule('kone-educ-coherence', '41 2 * * *', 'select public.nightly_integrity()');
+exception when others then raise notice 'Tâches automatiques indisponibles (pg_cron : %).', sqlerrm;
+end $$;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';
