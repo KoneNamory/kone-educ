@@ -2,6 +2,7 @@
 (function () {
   // Numéro WhatsApp au format international sans « + » ni espaces, ex. '2250700000000'. Vide = bouton masqué.
   var WHATSAPP = '2250161701361';
+  if (/[?&]embed=1\b/.test(location.search)) { document.documentElement.classList.add('ke-embed'); var se = document.createElement('script'); se.src = 'embed.js'; document.head.appendChild(se); return; }
   var header = document.querySelector('.ke-header');
   var burger = document.querySelector('.ke-burger');
   if (header && burger) {
@@ -90,3 +91,16 @@
 
 // Application installable : enregistrement du service worker.
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(function () {});
+
+// Réseau faible : bandeau discret quand la connexion est perdue ou rétablie
+(function () {
+  if (window.KE_NET) return; window.KE_NET = true;
+  var b = null, t = null;
+  var show = function (txt, ok) {
+    if (!b) { b = document.createElement('div'); b.className = 'ke-net'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
+    b.textContent = txt; b.classList.toggle('ok', !!ok); b.classList.add('on'); clearTimeout(t);
+    if (ok) t = setTimeout(function () { b.classList.remove('on'); }, 2500);
+  };
+  window.addEventListener('offline', function () { show('📶 Connexion perdue : vous voyez la dernière version enregistrée.'); });
+  window.addEventListener('online', function () { show('✓ Connexion rétablie', true); });
+})();

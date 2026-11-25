@@ -1,4 +1,4 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documents | KONE.EDUC</title><meta name="robots" content="noindex"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documents | KONE.EDUC</title><meta name="robots" content="noindex"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="fichiers.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
 <style>
 .to-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
 .to{position:relative;display:flex!important;flex-direction:column;gap:2px;margin:0!important;padding:12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;font-weight:800!important}
@@ -29,7 +29,7 @@
 <div id="personBox" hidden><label>Rechercher la personne<input id="personSearch" type="search" placeholder="Nom ou téléphone…" autocomplete="off"></label><select id="person" size="6" aria-label="Personne destinataire"></select></div>
 <label>Titre<input id="title" required maxlength="150" placeholder="Ex. Fiche de révision BEPC — Mathématiques"></label>
 <label>Message (facultatif)<textarea id="description" maxlength="1000" placeholder="Quelques mots pour accompagner le document"></textarea></label>
-<label>Fichier (10 Mo maximum)<input id="file" type="file" required></label>
+<label>Fichier (600 Ko maximum ; les images sont compressées automatiquement)<input id="file" type="file" required></label>
 <button id="publish" class="d-btn" type="submit">Envoyer le document</button>
 <p id="msg" class="status" role="status"></p>
 </form></section>
@@ -82,12 +82,12 @@ form.addEventListener('submit', async e => {
   e.preventDefault();
   const file = document.getElementById('file').files[0], to = toValue();
   if (!file) { show('Choisissez un fichier.', 'err'); return; }
-  if (file.size > 10485760) { show('Fichier trop lourd : 10 Mo maximum.', 'err'); return; }
+  let prep; try { prep = await KE_prepareUpload(file); } catch (er) { show(er.message, 'err'); return; }
   if (to === 'person' && !person.value) { show('Choisissez la personne destinataire.', 'err'); return; }
   button.disabled = true; button.textContent = 'Envoi en cours…'; show('Téléversement du document…', 'ok');
   try {
-    const path = to + '/' + crypto.randomUUID() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const up = await db.storage.from('documents').upload(path, file);
+    const path = to + '/' + crypto.randomUUID() + '-' + file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, '_') + '.' + prep.ext;
+    const up = await db.storage.from('documents').upload(path, prep.blob, { contentType: prep.type });
     if (up.error) throw up.error;
     const row = { title: title.value.trim(), description: description.value.trim() || null, audience: to, storage_path: path, file_name: file.name };
     if (to === 'person') row.recipient_id = person.value;

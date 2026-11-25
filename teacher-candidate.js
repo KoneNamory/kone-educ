@@ -119,7 +119,7 @@ teacherForm.addEventListener('submit', async function (event) {
     const file = form.get(name);
     if (!file || !file.size) continue;
     if (!FILES[name].types.includes(file.type)) { say('Format non accepté pour ' + FILES[name].label + ' : utilisez JPG, PNG, WEBP' + (name === 'photo' ? '.' : ' ou PDF.'), true); return; }
-    if (file.size > MAX_SIZE) { say('Le fichier pour ' + FILES[name].label + ' dépasse 5 Mo.', true); return; }
+    if (!/^image\//.test(file.type) && file.size > KE_FILE_MAX) { say('Le fichier pour ' + FILES[name].label + ' pèse ' + KE_fileSize(file.size) + ' : 600 Ko maximum. Envoyez plutôt une photo du document (compressée automatiquement) ou réduisez le PDF.', true); return; }
   }
 
   const button = this.querySelector('button[type="submit"]');
@@ -139,11 +139,11 @@ teacherForm.addEventListener('submit', async function (event) {
       const file = form.get(name);
       if (!file || !file.size) continue;
       say('Envoi de ' + FILES[name].label + '…');
-      const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const path = user.id + '/' + name + '-' + Date.now() + '.' + ext;
+      const prep = await KE_prepareUpload(file, { maxSide: name === 'photo' ? 800 : 1800 });
+      const path = user.id + '/' + name + '-' + Date.now() + '.' + prep.ext;
       const bucket = name === 'photo' ? 'avatars' : 'teacher-files';
       // Nom de fichier unique : pas de remplacement (qui exigerait des droits de lecture en plus)
-      const upload = await teacherDb.storage.from(bucket).upload(path, file, { contentType: file.type, upsert: false });
+      const upload = await teacherDb.storage.from(bucket).upload(path, prep.blob, { contentType: prep.type, upsert: false });
       if (upload.error) throw new Error('envoi de ' + FILES[name].label + ' refusé (' + upload.error.message + ')');
       row[FILES[name].column] = name === 'photo' ? teacherDb.storage.from('avatars').getPublicUrl(path).data.publicUrl : path;
     }

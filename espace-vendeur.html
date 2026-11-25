@@ -1,4 +1,4 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Vendeur | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Espace Vendeur | KONE.EDUC</title><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="KONE.EDUC"><meta name="theme-color" content="#1559eb"><link rel="icon" href="assets/icons/favicon-48.png" type="image/png" sizes="48x48"><script src="supabase-config.js"></script><script src="fichiers.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{margin:0}</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="dash.css">
 <style>
 .v-status{margin:16px 0 0;padding:14px 18px;border-radius:16px;font-weight:700;line-height:1.5}
 .v-status.wait{background:var(--waitbg);color:var(--wait);border:1px solid #ffd7b0}.v-status.bad{background:var(--badbg);color:var(--bad)}.v-status.ok{background:var(--okbg);color:var(--ok)}
@@ -68,7 +68,7 @@ dialog.v-dlg::backdrop{background:rgba(10,20,45,.55)}
 <script>
 const db = supabase.createClient(KONE_EDUC_SUPABASE.url, KONE_EDUC_SUPABASE.publishableKey);
 const B = KE_BOUTIQUE, esc = B.esc;
-const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {}));
+const COMMUNES = Object.keys(window.KONE_EDUC_ABIDJAN || {}).concat(Object.keys(window.KONE_EDUC_ENVIRONS || {})).concat(Object.keys(window.KONE_EDUC_VILLES || {}));
 let user = null, prof = null, shop = null, products = [], orders = [], items = {}, litiges = {}, tab = 'orders', ofilter = 'todo', known = null, pq = '';
 const MONTH0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
@@ -228,7 +228,7 @@ function reduire(file, max) {
   return new Promise((ok, ko) => { const img = new Image(); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); c.toBlob(b => b ? ok(b) : ko(new Error('Image illisible')), 'image/jpeg', .82); URL.revokeObjectURL(img.src); }; img.onerror = () => ko(new Error('Image illisible')); img.src = URL.createObjectURL(file); });
 }
 async function envoyerPhoto(file, prefix) {
-  const blob = await reduire(file, 1000);
+  const blob = await KE_compressImage(file, 1000);
   const path = user.id + '/' + prefix + '-' + Date.now() + '.jpg';
   const up = await db.storage.from('shop-images').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
   if (up.error) throw up.error;

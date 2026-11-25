@@ -39,12 +39,13 @@
       ['Mes achats', [['mes-commandes.html', 'Mes achats', 'bag']]]],
     admin: [['Pilotage', [['espace-admin.html', 'Administration', 'shield'], ['tableau-de-bord.html', 'Tableau de bord', 'chart'], ['planning.html', 'Planning', 'cal']]],
       ['Finances', [['versements.html', 'Versements', 'coins']]],
-      ['Contenus', [['gestion-documents.html', 'Documents', 'file'], ['ressources.html', 'Ressources', 'book'], ['espace-admin.html#joboffers', 'Offres KONE.EDUC', 'mega'], ['espace-admin.html#shops', 'Boutiques', 'store']]]]
+      ['Contenus', [['gestion-documents.html', 'Documents', 'file'], ['ressources.html', 'Ressources', 'book'], ['espace-admin.html#joboffers', 'Offres KONE.EDUC', 'mega'], ['espace-admin.html#shops', 'Boutiques', 'store'], ['espace-admin.html#examresults', 'Résultats aux examens', 'chart']]]]
   };
   var ROLE = { parent: 'Parent', teacher: 'Enseignant', seller: 'Vendeur', admin: 'Administration' };
   var page = location.pathname.split('/').pop() || 'index.html';
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var avatarHtml = function (url, name, cls) { return url ? '<img class="' + cls + '" src="' + esc(url) + '" alt="">' : '<span class="' + cls + '" aria-hidden="true">' + esc((name || '?').trim().charAt(0).toUpperCase() || '?') + '</span>'; };
+  if (/[?&]embed=1\b/.test(location.search)) { document.documentElement.classList.add('ke-embed'); var se = document.createElement('script'); se.src = 'embed.js'; document.head.appendChild(se); return; }
   var bar = document.createElement('header');
   bar.className = 'ke-app';
   bar.innerHTML = '<div class="ke-app-in"><button type="button" class="ke-app-burger" aria-label="Ouvrir le menu" aria-expanded="false" hidden>' + icon('menu') + '</button><a class="ke-app-brand" href="index.html"><img src="assets/logo/kone-educ-embleme.jpg" alt="" width="38" height="38"><span>KONE.<b>EDUC</b></span></a><span class="ke-app-sp"></span><div class="ke-app-user"></div></div>';
@@ -75,6 +76,34 @@
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
       side.querySelector('.ke-side-out').onclick = function () { client.auth.signOut().then(function () { location.href = 'connexion.html'; }); };
       user.innerHTML = '<a class="ke-app-me" href="mon-profil.html" aria-label="Mon profil">' + avatarHtml(prof.avatar_url, name, 'ke-app-avatar') + '</a>';
+      // Fenêtre « Explorer » : voir d'autres pages (offres, boutique, concours, paramètres) sans quitter son espace
+      var EXP = {
+        parent: [['preparation-concours.html', '🎯 Concours'], ['enseignants.html', '👩‍🏫 Enseignants'], ['boutique.html', '🛒 Boutique'], ['tarifs.html', '💰 Tarifs'], ['conseils.html', '💡 Conseils'], ['mon-profil.html', '⚙️ Paramètres']],
+        teacher: [['offres-enseignants.html', '📢 Offres KONE.EDUC'], ['offres.html', '💼 Offres de cours'], ['preparation-concours.html', '🎯 Concours'], ['boutique.html', '🛒 Boutique'], ['conseils.html', '💡 Conseils'], ['mon-profil.html', '⚙️ Paramètres']],
+        seller: [['boutique.html', '🛒 La boutique'], ['devenir-vendeur.html', '📘 Guide vendeur'], ['reglement-interieur.html', '📜 Règlement'], ['mon-profil.html', '⚙️ Paramètres']],
+        admin: [['tableau-de-bord.html', '📊 Tableau de bord'], ['offres-enseignants.html', '📢 Offres'], ['boutique.html', '🛒 Boutique'], ['enseignants.html', '🏆 Classement'], ['mon-profil.html', '⚙️ Paramètres']]
+      }[prof.role] || [];
+      if (EXP.length) {
+        var xb = document.createElement('button'); xb.type = 'button'; xb.className = 'ke-xbtn'; xb.setAttribute('aria-label', 'Explorer sans quitter mon espace');
+        xb.innerHTML = icon('grid') + '<span>Explorer</span>';
+        user.insertBefore(xb, user.firstChild);
+        var px = document.createElement('aside'); px.className = 'ke-peek'; px.setAttribute('aria-label', 'Explorer');
+        px.innerHTML = '<div class="ke-peek-top"><b>Explorer</b><a class="ke-peek-big" target="_top" href="#">Ouvrir en grand ↗</a><button type="button" class="ke-peek-x" aria-label="Fermer">' + icon('close') + '</button></div><div class="ke-peek-tabs">' + EXP.map(function (t, i) { return '<button type="button" data-i="' + i + '">' + t[1] + '</button>'; }).join('') + '</div><div class="ke-peek-body"><p class="ke-peek-load">Chargement…</p></div>';
+        document.body.appendChild(px);
+        var frames = {}, body = px.querySelector('.ke-peek-body'), big = px.querySelector('.ke-peek-big');
+        var show = function (i) {
+          px.querySelectorAll('.ke-peek-tabs button').forEach(function (b) { b.classList.toggle('on', Number(b.dataset.i) === i); });
+          Object.keys(frames).forEach(function (k) { frames[k].hidden = Number(k) !== i; });
+          if (!frames[i]) { var f = document.createElement('iframe'); f.title = EXP[i][1]; f.loading = 'lazy'; f.src = EXP[i][0] + '?embed=1'; frames[i] = f; body.appendChild(f); f.onload = function () { var l = body.querySelector('.ke-peek-load'); if (l) l.remove(); }; }
+          big.href = EXP[i][0];
+          try { localStorage.setItem('ke_peek_tab', String(i)); } catch (e) {}
+        };
+        px.querySelectorAll('.ke-peek-tabs button').forEach(function (b) { b.onclick = function () { show(Number(b.dataset.i)); }; });
+        var setPeek = function (o) { document.body.classList.toggle('ke-peek-open', o); if (o && !Object.keys(frames).length) { var k = 0; try { k = Math.min(EXP.length - 1, Number(localStorage.getItem('ke_peek_tab')) || 0); } catch (e) {} show(k); } };
+        xb.onclick = function () { setPeek(!document.body.classList.contains('ke-peek-open')); };
+        px.querySelector('.ke-peek-x').onclick = function () { setPeek(false); };
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setPeek(false); });
+      }
       window.KE_ME = { id: u.id, name: name, role: prof.role, avatar: prof.avatar_url, num: num };
       document.dispatchEvent(new CustomEvent('ke-me', { detail: window.KE_ME }));
       // Cloche et messages : non-lus visibles partout, panneau au clic, chaque notification mène à sa page
@@ -131,3 +160,17 @@
 
 // Application installable : enregistrement du service worker.
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(function () {});
+
+// Réseau faible : bandeau discret quand la connexion est perdue ou rétablie
+(function () {
+  if (window.KE_NET) return; window.KE_NET = true;
+  var b = null, t = null;
+  var show = function (txt, ok) {
+    if (!b) { b = document.createElement('div'); b.className = 'ke-net'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
+    b.textContent = txt; b.classList.toggle('ok', !!ok); b.classList.add('on'); clearTimeout(t);
+    if (ok) t = setTimeout(function () { b.classList.remove('on'); }, 2500);
+  };
+  window.addEventListener('offline', function () { show('📶 Connexion perdue : vous voyez la dernière version enregistrée. Réessayez dès que le réseau revient.'); });
+  window.addEventListener('online', function () { show('✓ Connexion rétablie', true); });
+  if (navigator.onLine === false) setTimeout(function () { show('📶 Hors connexion : vous voyez la dernière version enregistrée.'); }, 600);
+})();

@@ -2814,5 +2814,145 @@ $$;
 revoke execute on function public.set_my_avatar(text) from public, anon;
 grant execute on function public.set_my_avatar(text) to authenticated;
 
+-- ============================================================
+-- Salle de cours en ligne : un code de salle secret par cours (visio + tableau blanc partagé)
+-- ============================================================
+alter table public.course_requests add column if not exists online_room text;
+create or replace function public.course_room(p_course bigint)
+returns table (room text, subject text, student_name text, school_level text, parent_name text, teacher_name text, my_role text)
+language plpgsql security definer set search_path = public as $$
+declare v public.course_requests; v_role text;
+begin
+  select * into v from public.course_requests where id = p_course;
+  if v.id is null then raise exception 'Cours introuvable'; end if;
+  if auth.uid() = v.parent_id then v_role := 'parent';
+  elsif auth.uid() = v.teacher_id then v_role := 'teacher';
+  elsif public.is_admin() then v_role := 'admin';
+  else raise exception 'Accès réservé à la famille et à l’enseignant de ce cours'; end if;
+  if v.status = 'cancelled' then raise exception 'Ce cours est annulé'; end if;
+  if v.online_room is null then
+    update public.course_requests set online_room = 'KoneEduc-' || substr(md5(random()::text || clock_timestamp()::text || v.id::text), 1, 20)
+    where id = v.id and online_room is null;
+    select * into v from public.course_requests where id = p_course;
+  end if;
+  return query select v.online_room, v.subject, v.student_name, v.school_level,
+    (select full_name from public.profiles where id = v.parent_id),
+    (select full_name from public.profiles where id = v.teacher_id), v_role;
+end;
+$$;
+revoke execute on function public.course_room(bigint) from public, anon;
+grant execute on function public.course_room(bigint) to authenticated;
+
+-- ============================================================
+-- Résultats aux examens, badges et classement des enseignants
+-- ============================================================
+-- L'enseignant déclare les résultats de ses élèves ; seuls les résultats vérifiés par KONE.EDUC sont publics.
+create table if not exists public.exam_results (
+  id bigint generated always as identity primary key,
+  teacher_id uuid not null references public.profiles(id) on delete cascade,
+  course_request_id bigint references public.course_requests(id) on delete set null,
+  exam text not null check (char_length(exam) between 2 and 60),
+  year integer not null check (year between 2000 and 2100),
+  student_label text not null check (char_length(student_label) between 1 and 40),
+  result text not null check (result in ('admis','echoue')),
+  mention text check (mention is null or char_length(mention) <= 40),
+  proof text check (proof is null or char_length(proof) <= 300),
+  status text not null default 'pending' check (status in ('pending','verified','rejected')),
+  verified_by uuid references public.profiles(id) on delete set null,
+  verified_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists exam_results_teacher_idx on public.exam_results (teacher_id);
+alter table public.exam_results enable row level security;
+grant select, insert, delete on public.exam_results to authenticated;
+drop policy if exists "Teachers read own exam results" on public.exam_results;
+create policy "Teachers read own exam results" on public.exam_results for select to authenticated
+  using (teacher_id = auth.uid() or public.is_admin());
+drop policy if exists "Teachers declare exam results" on public.exam_results;
+create policy "Teachers declare exam results" on public.exam_results for insert to authenticated
+  with check (teacher_id = auth.uid() and status = 'pending' and verified_by is null
+              and exists (select 1 from public.profiles where id = auth.uid() and role = 'teacher'));
+drop policy if exists "Teachers delete pending results" on public.exam_results;
+create policy "Teachers delete pending results" on public.exam_results for delete to authenticated
+  using ((teacher_id = auth.uid() and status = 'pending') or public.is_admin());
+
+create or replace function public.admin_verify_exam_result(p_id bigint, p_ok boolean)
+returns void language plpgsql security definer set search_path = public as $$
+declare v public.exam_results;
+begin
+  if not public.is_admin() then raise exception 'Réservé à l’administration'; end if;
+  update public.exam_results set status = case when p_ok then 'verified' else 'rejected' end, verified_by = auth.uid(), verified_at = now()
+  where id = p_id returning * into v;
+  if v.id is null then raise exception 'Résultat introuvable'; end if;
+  insert into public.notifications (recipient_id, title, body, link)
+  values (v.teacher_id, case when p_ok then 'Résultat validé' else 'Résultat non retenu' end,
+          v.exam || ' ' || v.year || ' – ' || v.student_label || case when p_ok then ' : ce résultat apparaît maintenant sur votre fiche publique.' else ' : contactez KONE.EDUC pour plus de détails.' end,
+          'espace-enseignant.html');
+end;
+$$;
+revoke execute on function public.admin_verify_exam_result(bigint, boolean) from public, anon;
+grant execute on function public.admin_verify_exam_result(bigint, boolean) to authenticated;
+
+-- Statistiques et badges d'un enseignant validé (visibles par tous)
+create or replace function public.teacher_badges(p_id uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare v_sessions bigint; v_students bigint; v_rating numeric; v_reviews bigint; v_adm bigint; v_tot bigint; v_exams jsonb; v_b jsonb := '[]'::jsonb; v_since timestamptz;
+begin
+  if not exists (select 1 from public.teacher_profiles where id = p_id and approved) then return null; end if;
+  select count(*) into v_sessions from public.session_reports where teacher_id = p_id;
+  select count(distinct id) into v_students from public.course_requests where teacher_id = p_id and status in ('assigned','completed');
+  select round(avg(rating)::numeric, 1), count(*) into v_rating, v_reviews from public.reviews where teacher_id = p_id;
+  select count(*) filter (where result = 'admis'), count(*) into v_adm, v_tot from public.exam_results where teacher_id = p_id and status = 'verified';
+  select created_at into v_since from public.profiles where id = p_id;
+  select coalesce(jsonb_agg(jsonb_build_object('exam', exam, 'admis', a, 'total', t, 'annee', y) order by t desc), '[]'::jsonb) into v_exams
+  from (select exam, count(*) filter (where result = 'admis') a, count(*) t, max(year) y
+        from public.exam_results where teacher_id = p_id and status = 'verified' group by exam) e;
+  v_b := v_b || jsonb_build_array(jsonb_build_object('ic','✅','t','Profil vérifié','d','Diplôme et identité contrôlés par KONE.EDUC'));
+  if v_reviews >= 3 and v_rating >= 4.5 then v_b := v_b || jsonb_build_array(jsonb_build_object('ic','⭐','t','Très bien noté','d', v_rating || '/5 sur ' || v_reviews || ' avis')); end if;
+  if v_sessions >= 100 then v_b := v_b || jsonb_build_array(jsonb_build_object('ic','🏆','t','100 séances','d','Plus de 100 séances suivies'));
+  elsif v_sessions >= 20 then v_b := v_b || jsonb_build_array(jsonb_build_object('ic','📝','t','Suivi régulier','d', v_sessions || ' comptes rendus de séance')); end if;
+  if v_tot >= 3 and v_adm::numeric / v_tot >= 0.8 then v_b := v_b || jsonb_build_array(jsonb_build_object('ic','🎓','t','Réussite aux examens','d', round(100.0 * v_adm / v_tot) || ' % d’élèves admis')); end if;
+  v_b := v_b || coalesce((select jsonb_agg(jsonb_build_object('ic','🎯','t','Spécialiste ' || exam,'d', a || ' élèves admis')) from
+            (select exam, count(*) filter (where result = 'admis') a from public.exam_results where teacher_id = p_id and status = 'verified' group by exam) x where a >= 2), '[]'::jsonb);
+  if v_since < now() - interval '1 year' then v_b := v_b || jsonb_build_array(jsonb_build_object('ic','🤝','t','Fidèle','d','Membre depuis plus d’un an')); end if;
+  return jsonb_build_object('sessions', v_sessions, 'students', v_students, 'rating', v_rating, 'reviews', v_reviews,
+    'admis', v_adm, 'results', v_tot, 'success_rate', case when v_tot > 0 then round(100.0 * v_adm / v_tot) end, 'exams', v_exams, 'badges', v_b);
+end;
+$$;
+revoke execute on function public.teacher_badges(uuid) from public;
+grant execute on function public.teacher_badges(uuid) to anon, authenticated;
+
+-- Classement public des enseignants : note, avis, séances et résultats vérifiés
+create or replace function public.public_teacher_ranking()
+returns table (id uuid, display_name text, subject text, location text, photo_url text, rating numeric, reviews_count bigint,
+               sessions bigint, admitted bigint, results bigint, score numeric)
+language sql stable security definer set search_path = public as $$
+  select tp.id, public.short_name(p.full_name), tp.subject, tp.location, tp.photo_url,
+         r.rating, coalesce(r.n, 0), coalesce(s.n, 0), coalesce(e.a, 0), coalesce(e.t, 0),
+         round(coalesce(r.rating, 3.5) * least(coalesce(r.n, 0), 10) * 2 + least(coalesce(s.n, 0), 200) * 0.2
+               + coalesce(e.a, 0) * 6 + case when coalesce(e.t, 0) > 0 then 20.0 * e.a / e.t else 0 end, 1)
+  from public.teacher_profiles tp
+  join public.profiles p on p.id = tp.id and p.role = 'teacher'
+  left join (select teacher_id, round(avg(rating)::numeric, 1) rating, count(*) n from public.reviews group by teacher_id) r on r.teacher_id = tp.id
+  left join (select teacher_id, count(*) n from public.session_reports group by teacher_id) s on s.teacher_id = tp.id
+  left join (select teacher_id, count(*) filter (where result = 'admis') a, count(*) t from public.exam_results where status = 'verified' group by teacher_id) e on e.teacher_id = tp.id
+  where tp.approved
+  order by 11 desc, 6 desc nulls last
+  limit 20;
+$$;
+revoke execute on function public.public_teacher_ranking() from public;
+grant execute on function public.public_teacher_ranking() to anon, authenticated;
+
+do $$ begin
+  drop trigger if exists audit_changes on public.exam_results;
+  create trigger audit_changes after insert or update or delete on public.exam_results for each row execute function public.audit_changes();
+exception when others then raise notice 'Journal des résultats indisponible (%).', sqlerrm;
+end $$;
+
+-- ============================================================
+-- Stockage : 600 Ko maximum par fichier (photos compressées sur le téléphone avant l'envoi)
+-- ============================================================
+update storage.buckets set file_size_limit = 614400 where id in ('avatars', 'teacher-files', 'shop-images', 'documents');
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

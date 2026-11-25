@@ -16,7 +16,7 @@ await ctx.route(/fonts\.(googleapis|gstatic)\.com/,r=>r.abort());
 const p=await ctx.newPage();const errs=[];const issues=[];
 p.on('pageerror',e=>errs.push(p.url().split('/').pop()+': '+e.message));
 p.on('dialog',d=>d.type()==='prompt'&&d.defaultValue()?d.accept(d.defaultValue()):d.accept());
-const FILES={photo:{name:'photo.png',mimeType:'image/png',buffer:Buffer.from('89504e470d0a1a0a','hex')},doc:{name:'piece.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')}};
+const FILES={photo:{name:'photo.png',mimeType:'image/png',buffer:fs.readFileSync('assets/icons/favicon-48.png')},doc:{name:'piece.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')}};
 const go=async f=>{await p.goto(BASE+f,{waitUntil:'load'});await p.waitForTimeout(500)};
 const step=(n,ok,detail='')=>{console.log((ok?'✅':'❌')+' '+n+(detail?' — '+detail:''));if(!ok)issues.push(n)};
 const tick=async sel=>{const ok=await p.evaluate(s=>{const i=document.querySelector(s);if(!i)return 'absent';const l=i.closest('label')||document.querySelector('label[for="'+i.id+'"]');(l||i).click();return i.checked},sel);if(ok!==true)throw new Error('case non cochée: '+sel+' ('+ok+')')};
@@ -350,7 +350,7 @@ await loginAs('teacher','yao@test.ci');await go('offres-enseignants.html');await
 await p.evaluate(()=>{window.prompt=()=>'Professeur certifié, disponible le mercredi'});await p.click('#koneList button:has-text("Postuler")');await p.waitForTimeout(900);
 d=await db();step('Enseignant : candidature envoyée',(d.job_applications||[]).length===1&&(await p.textContent('#koneList')).includes('Candidature envoyée'));
 await go('espace-enseignant.html');await p.waitForTimeout(900);step('Enseignant : lien « Offres KONE.EDUC » dans son menu',(await p.locator('.ke-app-nav a[href="offres-enseignants.html"]').count())===1);
-await go('mon-profil.html');await p.waitForTimeout(700);await p.setInputFiles('#fichier','assets/store/1-accueil.png');await p.waitForTimeout(1500);{const d=await db();const me=d.profiles.find(x=>x.role==='teacher'&&x.avatar_url);step('Mon profil : photo envoyée, enregistrée sur le profil et la fiche enseignant',(await p.textContent('#msgPhoto')).includes('Photo enregistrée')&&!!me&&(d.teacher_profiles||[]).some(t=>t.id===me.id&&t.photo_url===me.avatar_url));}
+await go('mon-profil.html');await p.waitForTimeout(700);await p.setInputFiles('#fichier','assets/store/1-accueil.jpg');await p.waitForTimeout(1500);{const d=await db();const me=d.profiles.find(x=>x.role==='teacher'&&x.avatar_url);step('Mon profil : photo envoyée, enregistrée sur le profil et la fiche enseignant',(await p.textContent('#msgPhoto')).includes('Photo enregistrée')&&!!me&&(d.teacher_profiles||[]).some(t=>t.id===me.id&&t.photo_url===me.avatar_url));}
 step('Menu latéral : photo, numéro de compte et déconnexion',(await p.locator('.ke-side-av').count())===1&&/KE-[0-9A-Z]{2,8}/.test(await p.textContent('.ke-side-id'))&&(await p.locator('.ke-side-out').count())===1);
 await loginAs('admin','admin@kone.ci');await go('espace-admin.html#joboffers');await p.waitForTimeout(1200);
 step('Admin : candidat visible (dossier, message)',(await p.textContent('#joList')).includes('Yao Kouassi')&&(await p.textContent('#joList')).includes('disponible le mercredi'));
@@ -377,6 +377,20 @@ await loginAs('teacher','yao@test.ci');await go('versements.html');await p.waitF
 await logout();await go('index.html');step('Accueil : 6 services, chiffres et démonstration de l’espace',(await p.locator('#services .kh-card').count())===6&&(await p.locator('.kh-strip b').count())===4&&(await p.locator('.kh-phone .kh-n').count())===5);
 await p.selectOption('#khNiv','Lycée');await p.selectOption('#khObj','ENSEA – ISE Maths');await p.selectOption('#khCom','Cocody');await p.click('#khSearch button');await p.waitForTimeout(800);
 step('Accueil : recherche rapide → réservation préremplie (niveau, concours, commune)',(await p.inputValue('select[name="level"]'))==='Lycée'&&(await p.inputValue('#preparation'))==='ENSEA – ISE Maths'&&(await p.inputValue('#commune'))==='Cocody');
+// 9 bis. Cours en ligne, résultats aux examens, badges et classement
+await loginAs('teacher','yao@test.ci');{const d0=await db();const me=d0.profiles.find(x=>x.role==='teacher'&&x.full_name&&d0.__users.find(u=>u.email==='yao@test.ci'&&u.id===x.id));const c=(d0.course_requests||[]).find(x=>x.teacher_id===me.id);
+await go('salle.html?cours='+c.id);await p.waitForTimeout(1000);step('Salle de cours : visio Jitsi et tableau blanc',(await p.getAttribute('#rejoindre','href')).startsWith('https://meet.jit.si/KoneEduc-')&&(await p.locator('#cv').count())===1);
+const bx=await p.locator('#cv').boundingBox();await p.mouse.move(bx.x+50,bx.y+50);await p.mouse.down();await p.mouse.move(bx.x+200,bx.y+120);await p.mouse.up();
+step('Salle de cours : on peut écrire au tableau',await p.evaluate(()=>{const c=document.getElementById('cv');const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let i=3;i<d.length;i+=4)if(d[i])return true;return false}));
+await go('espace-enseignant.html');await p.waitForTimeout(1000);step('Enseignant : lien « Salle de cours en ligne » sur ses cours',(await p.locator('a[href^="salle.html?cours="]').count())>=1);
+for(const [n,res] of [['Ali T.','admis'],['Fanta K.','admis']]){await p.selectOption('#exExam','BEPC');await p.fill('#exStudent',n);await p.selectOption('#exResult',res);await p.click('#examForm button');await p.waitForTimeout(400);}
+let d1=await db();step('Enseignant : résultats aux examens déclarés (en vérification)',(d1.exam_results||[]).filter(x=>x.teacher_id===me.id&&x.status==='pending').length===2);
+await loginAs('admin','admin@kone.ci');await go('espace-admin.html#examresults');await p.waitForTimeout(1200);
+for(let i=0;i<2;i++){await p.click('#examAdmin button:has-text("Valider")');await p.waitForTimeout(500);}
+d1=await db();step('Admin : résultats vérifiés',(d1.exam_results||[]).filter(x=>x.status==='verified').length===2);
+await logout();await go('enseignant.html?id='+me.id);await p.waitForTimeout(1200);step('Fiche publique : badge « Spécialiste BEPC » et résultats',(await p.textContent('#badgesCard')).includes('Spécialiste BEPC')&&(await p.textContent('#exams')).includes('2 / 2 admis'));
+await go('enseignants.html');await p.waitForTimeout(1200);step('Enseignants : classement public',(await p.locator('#rankList li').count())>=1&&(await p.isVisible('#classement')));}
+await go('reservation.html');await p.waitForTimeout(500);step('Réservation : villes de l’intérieur (Bouaké, Yamoussoukro…)',(await p.locator('optgroup[label="Autres villes de Côte d’Ivoire"] option').count())>=40);
 // 10. Visiteur : formulaire de contact
 await logout();await go('contact.html');await p.fill('input[name=name]','Visiteur');await p.fill('input[name=email]','v@test.ci');
 const so=await p.$$eval('select[name=subject] option',o=>o.map(x=>x.value||x.textContent).filter(Boolean));await p.selectOption('select[name=subject]',{index:1});await p.fill('textarea[name=message]','Bonjour');
