@@ -1,7 +1,7 @@
 {
   "name": "KONE.EDUC – Cours particuliers à domicile",
   "short_name": "KONE.EDUC",
-  "description": "Cours particuliers à domicile et en ligne à Abidjan : enseignants vérifiés, planning des séances, compte rendu après chaque séance, bilan mensuel et paiement Mobile Money.",
+  "description": "Cours particuliers à domicile et en ligne à Abidjan, préparation CEPE, BEPC, BAC et concours ENSEA et INPHB, boutique scolaire. Enseignants vérifiés, compte rendu après chaque séance, paiement Wave, Orange Money, MTN MoMo et Moov Money avec reçu.",
   "lang": "fr",
   "start_url": "index.html",
   "scope": "./",
@@ -34,12 +34,16 @@
       "url": "reservation.html"
     },
     {
-      "name": "Mon espace",
-      "url": "connexion.html"
+      "name": "Examens et concours",
+      "url": "preparation-concours.html"
     },
     {
-      "name": "Mes documents",
-      "url": "ressources.html"
+      "name": "Boutique scolaire",
+      "url": "boutique.html"
+    },
+    {
+      "name": "Mon espace",
+      "url": "connexion.html"
     }
   ],
   "id": "index.html",
@@ -54,7 +58,21 @@
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Accueil"
+      "label": "Accueil : trouver un enseignant en quelques secondes"
+    },
+    {
+      "src": "assets/store/2-concours.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Préparation CEPE, BEPC, BAC, ENSEA et INPHB"
+    },
+    {
+      "src": "assets/store/3-boutique.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Boutique scolaire livrée à domicile"
     },
     {
       "src": "assets/store/2-fiche-enseignant.png",
@@ -76,6 +94,13 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Planning des séances"
+    },
+    {
+      "src": "assets/store/6-recu.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Reçu numéroté pour chaque paiement"
     }
   ]
 }

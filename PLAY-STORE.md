@@ -41,7 +41,7 @@ Les deux empreintes doivent figurer dans `assetlinks.json`.
 Images (dossier `assets/store/` et fichiers fournis) :
 - Icône : `assets/icons/icon-512.png` (512 × 512)
 - Image de présentation : `banniere-1024x500.png`
-- Captures d’écran du téléphone : `1-accueil.png`, `2-fiche-enseignant.png`, `4-bilan.png`, `5-planning.png` (1080 × 1920)
+- Captures d’écran du téléphone (1080 × 1920, dans cet ordre) : `1-accueil.png`, `2-concours.png`, `3-boutique.png`, `2-fiche-enseignant.png`, `4-bilan.png`, `5-planning.png`, `6-recu.png`
 
 Liens à renseigner :
 - Politique de confidentialité : `https://www.kone-educ.com/mentions-legales.html#confidentialite`
@@ -63,7 +63,7 @@ Ensuite : **Tests → Test fermé** (compte Personnel : 12 testeurs, 14 jours), 
 KONE.EDUC – Cours à domicile
 
 **Description courte** (80 caractères max.)
-Cours particuliers à domicile à Abidjan, avec suivi après chaque séance.
+Cours à domicile, préparation BEPC, BAC, concours ENSEA et INPHB à Abidjan.
 
 **Description complète**
 
@@ -76,13 +76,26 @@ KONE.EDUC met en relation les familles et des enseignants vérifiés pour des co
 • Lisez le compte rendu de l’enseignant après chaque séance : notions travaillées, devoirs, compréhension
 • Recevez chaque mois un bilan de progression clair, imprimable en PDF
 • Échangez avec l’enseignant par messagerie
-• Réglez vos factures par Wave, Orange Money, MTN MoMo ou Moov Money
+• Réglez vos factures par Wave, Orange Money, MTN MoMo ou Moov Money et retrouvez vos reçus
 
 👩‍🏫 POUR LES ENSEIGNANTS
 • Déposez votre dossier (diplôme, CV, pièce d’identité) et faites-vous valider
 • Postulez aux offres de cours proches de chez vous
 • Planifiez vos séances et envoyez vos comptes rendus en quelques clics
 • Disposez d’une fiche publique avec les avis des familles
+
+🎯 EXAMENS ET CONCOURS
+• Préparation au CEPE, au BEPC et au BAC
+• Concours ENSEA (AS, ISE Maths, ISE Économie) et INPHB (A2GP, classes préparatoires, ITA)
+• Annales, méthode et épreuves blanches avec un enseignant spécialisé
+
+🛒 BOUTIQUE SCOLAIRE
+• Livres, manuels, annales, cahiers et fournitures livrés à domicile par des boutiques vérifiées
+• Paiement à la livraison ou par mobile money, suivi de la commande en temps réel
+
+🧾 PAIEMENTS ET REÇUS
+• Wave, Orange Money, MTN MoMo et Moov Money
+• Un reçu numéroté pour chaque paiement, conservé dans votre espace
 
 ✅ NOS GARANTIES
 • Enseignants sélectionnés : identité, diplôme et entretien pédagogique vérifiés
