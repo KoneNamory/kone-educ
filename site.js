@@ -104,3 +104,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   window.addEventListener('offline', function () { show('📶 Connexion perdue : vous voyez la dernière version enregistrée.'); });
   window.addEventListener('online', function () { show('✓ Connexion rétablie', true); });
 })();
+
+// Étiquettes flottantes des bandeaux (chargées après la page, sans ralentir l'affichage)
+window.addEventListener('load', function () { if (window.KE_EMBED || document.documentElement.classList.contains('ke-embed')) return; var sc = document.createElement('script'); sc.src = 'hero-deco.js'; document.body.appendChild(sc); });
