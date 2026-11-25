@@ -2786,5 +2786,33 @@ do $$ begin
 exception when others then raise notice 'Journal des reçus indisponible (%).', sqlerrm;
 end $$;
 
+-- ============================================================
+-- Photo de profil pour tous les comptes (parents, enseignants, vendeurs, administrateurs)
+-- ============================================================
+alter table public.profiles add column if not exists avatar_url text;
+-- Les enseignants qui avaient déjà une photo la retrouvent dans leur profil
+update public.profiles p set avatar_url = tp.photo_url
+from public.teacher_profiles tp
+where tp.id = p.id and p.avatar_url is null and tp.photo_url is not null;
+
+-- Enregistre la photo de l'utilisateur connecté : seule une image de son propre dossier « avatars » est acceptée.
+-- Pour un enseignant, la photo de sa fiche publique est mise à jour en même temps.
+create or replace function public.set_my_avatar(p_url text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_role text;
+begin
+  if auth.uid() is null then raise exception 'Connexion requise'; end if;
+  if p_url is not null and p_url not like '%/storage/v1/object/public/avatars/' || auth.uid()::text || '/%' then
+    raise exception 'Photo invalide';
+  end if;
+  update public.profiles set avatar_url = p_url where id = auth.uid() returning role into v_role;
+  if v_role = 'teacher' then
+    update public.teacher_profiles set photo_url = p_url where id = auth.uid();
+  end if;
+end;
+$$;
+revoke execute on function public.set_my_avatar(text) from public, anon;
+grant execute on function public.set_my_avatar(text) to authenticated;
+
 -- Recharger la liste des tables de l’API Supabase après les modifications
 notify pgrst, 'reload schema';

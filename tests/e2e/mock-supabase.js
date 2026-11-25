@@ -110,6 +110,9 @@
     }
   };
   var rpc = async function (name, a) {
+    if (name === 'set_my_avatar') { var za = load(), meA = JSON.parse(localStorage.getItem('__ke_user') || 'null'); if (!meA) return { data: null, error: { message: 'Connexion requise' } };
+      var pa = (za.profiles || []).find(function (x) { return x.id === meA.id; }); if (pa) pa.avatar_url = a.p_url;
+      var ta = (za.teacher_profiles || []).find(function (x) { return x.id === meA.id; }); if (ta && pa && pa.role === 'teacher') ta.photo_url = a.p_url; save(za); return { data: null, error: null }; }
     // ---------- Offres KONE.EDUC
     if (['public_job_offers', 'apply_job_offer', 'withdraw_job_application', 'admin_decide_job_application'].indexOf(name) >= 0) {
       var jz = load(), meJ = JSON.parse(localStorage.getItem('__ke_user') || 'null'); jz.job_offers = jz.job_offers || []; jz.job_applications = jz.job_applications || [];
